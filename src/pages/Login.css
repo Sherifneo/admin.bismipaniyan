@@ -48,7 +48,7 @@
   margin: 0 0 4px;
   font-size: 21px;
   font-weight: 700;
-  color: var(--bp-brand);
+  color: var(--bp-brand-text);
   letter-spacing: -0.01em;
 }
 

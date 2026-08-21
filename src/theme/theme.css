@@ -19,6 +19,13 @@
   --bp-amber-dark: #c97e0b;
   --bp-maroon: #8b1a2e;
 
+  /* Brand color AS TEXT on the page background — never use --bp-brand
+     directly for text/headings, it's tuned as a fill color (buttons,
+     sidebar) and fails contrast in dark mode. This token is the one to
+     reach for instead: readable purple on light, light lavender on dark.
+     --bp-brand itself stays fine for borders/fills in both themes. */
+  --bp-brand-text: #5b1f97;
+
   --bp-success: #1e7e34;
   --bp-success-bg: #e8f5e9;
   --bp-danger: #b3261e;
@@ -138,6 +145,8 @@
     --bp-warning: #fbbf24;
     --bp-warning-bg: rgba(251, 191, 36, 0.14);
 
+    --bp-brand-text: #c9a6f5;
+
     color-scheme: dark;
   }
 }
@@ -158,22 +167,22 @@
   --bp-surface: #221c17;
   --bp-surface-alt: #2a221b;
 
-  --bp-glass-blur: 22px;
-  --bp-glass-saturate: 1.8;
-  --bp-glass-tint: rgba(38, 32, 28, 0.5);
-  --bp-glass-tint-strong: rgba(38, 32, 28, 0.68);
-  --bp-glass-border: rgba(255, 255, 255, 0.14);
-  --bp-glass-border-soft: rgba(255, 255, 255, 0.08);
-  --bp-glass-highlight: rgba(255, 255, 255, 0.16);
-  --bp-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --bp-glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
-  --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --bp-glass-blur: 30px;
+  --bp-glass-saturate: 2.4;
+  --bp-glass-tint: rgba(38, 32, 28, 0.32);
+  --bp-glass-tint-strong: rgba(38, 32, 28, 0.5);
+  --bp-glass-border: rgba(255, 255, 255, 0.18);
+  --bp-glass-border-soft: rgba(255, 255, 255, 0.1);
+  --bp-glass-highlight: rgba(255, 255, 255, 0.22);
+  --bp-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --bp-glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 
-  --bp-glass-content-bg: rgba(28, 23, 19, 0.88);
-  --bp-glass-content-bg-alt: rgba(34, 28, 23, 0.92);
-  --bp-glass-row-hover: rgba(232, 148, 15, 0.07);
+  --bp-glass-content-bg: rgba(28, 23, 19, 0.8);
+  --bp-glass-content-bg-alt: rgba(34, 28, 23, 0.88);
+  --bp-glass-row-hover: rgba(232, 148, 15, 0.08);
 
-  --bp-sidebar-tint: rgba(20, 14, 10, 0.75);
+  --bp-sidebar-tint: rgba(20, 14, 10, 0.5);
   --bp-sidebar-text: rgba(255, 255, 255, 0.78);
   --bp-sidebar-text-strong: #ffffff;
   --bp-sidebar-border: rgba(255, 255, 255, 0.08);
@@ -189,6 +198,8 @@
   --bp-danger-bg: rgba(248, 113, 113, 0.14);
   --bp-warning: #fbbf24;
   --bp-warning-bg: rgba(251, 191, 36, 0.14);
+
+  --bp-brand-text: #c9a6f5;
 
   color-scheme: dark;
 }

@@ -37,7 +37,7 @@
 }
 
 .bp-tab.is-active {
-  color: var(--bp-brand);
+  color: var(--bp-brand-text);
   border-bottom-color: var(--bp-amber);
 }
 
@@ -129,7 +129,7 @@
   background: var(--bp-glass-tint);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  color: var(--bp-brand);
+  color: var(--bp-brand-text);
   font-size: 11.5px;
   font-weight: 600;
   padding: 5px 10px;
