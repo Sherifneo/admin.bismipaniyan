@@ -20,8 +20,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--bp-border);
-  background: #fff;
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-content-bg);
   color: var(--bp-text);
   font-size: 12.5px;
   font-weight: 600;
@@ -29,11 +29,12 @@
   border-radius: var(--bp-radius-sm);
   cursor: pointer;
   text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .bp-quick-action:hover {
   border-color: var(--bp-brand);
-  background: var(--bp-surface-alt);
+  background: var(--bp-glass-content-bg-alt);
 }
 
 @media (max-width: 860px) {

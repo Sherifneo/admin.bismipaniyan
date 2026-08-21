@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { useTheme } from "../theme/ThemeContext";
 import { NAV_ITEMS } from "./navConfig";
 import "./Header.css";
 
@@ -14,10 +15,14 @@ function currentModuleLabel(pathname) {
 
 export default function Header({ onMenuClick, onRefresh }) {
   const { admin, logout } = useAuth();
+  const { preference, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [signingOut, setSigningOut] = useState(false);
   const [spinning, setSpinning] = useState(false);
+
+  const systemPrefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  const isDark = preference === "dark" || (preference === "system" && systemPrefersDark);
 
   function handleRefresh() {
     setSpinning(true);
@@ -69,6 +74,15 @@ export default function Header({ onMenuClick, onRefresh }) {
         />
       </div>
       <div className="bp-header-spacer" />
+      <button
+        type="button"
+        className="bp-header-theme-btn"
+        onClick={toggleTheme}
+        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      >
+        {isDark ? "☀️" : "🌙"}
+      </button>
       <div className="bp-header-user">
         <span className="bp-header-avatar" aria-hidden="true">
           {initial}

@@ -9,12 +9,12 @@
 }
 
 .bp-partner-type-external_shop {
-  background: #fff4e0;
+  background: var(--bp-warning-bg);
   color: var(--bp-warning);
 }
 
 .bp-partner-type-supplying_partner {
-  background: #e8f5e9;
+  background: var(--bp-success-bg);
   color: var(--bp-success);
 }
 

@@ -1,24 +1,23 @@
-/* Bismi Admin — theme tokens.
-   Dense, back-office look (system font, sharp corners, muted neutrals) —
-   accent colors survive only as accents (primary buttons, active-nav
-   state, badges), not as dominant fills, so this reads as a real ERP
-   backend rather than a consumer-facing site. */
+/* Bismi Admin — theme tokens: Liquid Glass, light + dark.
+   Every surface in this app is built from two layers:
+     1. the GLASS SHELL — backdrop-filter blur + translucent tint +
+        a 1px specular border + a soft top highlight. This is the material.
+     2. the CONTENT BACKING — a near-opaque fill (--bp-glass-content-bg)
+        that sits *under* text/data inside that shell.
+   Rule: text never sits directly on raw blur. Chrome (sidebar, header,
+   modals, floating menus) can lean more translucent since it has little
+   or no dense text over the blur itself. Content surfaces (tables,
+   cards, inputs) stay glass at the edges but the row/field backing is
+   deliberately closer to opaque, so a busy data table stays legible.
+   Switch theme by setting data-theme="light" | "dark" on <html> (see
+   ThemeContext). No attribute + prefers-color-scheme:dark = dark. */
 
 :root {
   --bp-brand: #5b1f97;
   --bp-brand-dark: #431671;
   --bp-amber: #e8940f;
   --bp-amber-dark: #c97e0b;
-  --bp-cream: #fbf6ef;
   --bp-maroon: #8b1a2e;
-
-  --bp-ink: #211a16;
-  --bp-text: #2b2420;
-  --bp-text-muted: #6a625c;
-  --bp-border: #e7e0d8;
-  --bp-surface: #ffffff;
-  --bp-surface-alt: #f7f3ee;
-  --bp-bg: #faf8f6;
 
   --bp-success: #1e7e34;
   --bp-success-bg: #e8f5e9;
@@ -27,18 +26,171 @@
   --bp-warning: #a15c00;
   --bp-warning-bg: #fff4e0;
 
-  --bp-radius-sm: 3px;
-  --bp-radius-md: 4px;
-  --bp-radius-lg: 6px;
+  --bp-radius-sm: 6px;
+  --bp-radius-md: 10px;
+  --bp-radius-lg: 16px;
+
+  --bp-sidebar-width: 232px;
+  --bp-header-height: 56px;
+
+  --bp-font: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+
+  /* ---- Light theme (default) ---- */
+  --bp-text: #211a16;
+  --bp-text-muted: #6a625c;
+  --bp-border: rgba(43, 36, 32, 0.12);
+
+  /* Page backdrop: glass needs something with texture/depth behind it to
+     read as glass at all — a flat single color makes blur invisible. A
+     soft multi-stop wash does the job without image assets. */
+  --bp-bg: #f2eee8;
+  --bp-bg-image:
+    radial-gradient(1100px 620px at 8% -10%, rgba(232, 148, 15, 0.16), transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, rgba(91, 31, 151, 0.14), transparent 55%),
+    radial-gradient(1000px 800px at 50% 120%, rgba(139, 26, 46, 0.08), transparent 60%),
+    linear-gradient(180deg, #f6f2ec 0%, #efe9e1 100%);
+
+  --bp-surface: #ffffff;
+  --bp-surface-alt: #f7f3ee;
+
+  /* Glass shell tuning */
+  --bp-glass-blur: 20px;
+  --bp-glass-saturate: 1.5;
+  --bp-glass-tint: rgba(255, 255, 255, 0.55);
+  --bp-glass-tint-strong: rgba(255, 255, 255, 0.72);
+  --bp-glass-border: rgba(255, 255, 255, 0.6);
+  --bp-glass-border-soft: rgba(43, 36, 32, 0.08);
+  --bp-glass-highlight: rgba(255, 255, 255, 0.85);
+  --bp-glass-shadow: 0 8px 32px rgba(60, 40, 20, 0.14), 0 1px 2px rgba(60, 40, 20, 0.08);
+  --bp-glass-shadow-lg: 0 20px 60px rgba(60, 40, 20, 0.22), 0 2px 6px rgba(60, 40, 20, 0.1);
+  --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+
+  /* Content backing: near-opaque so dense text/table rows stay crisp.
+     This sits *inside* the glass shell, not instead of it. */
+  --bp-glass-content-bg: rgba(255, 255, 255, 0.86);
+  --bp-glass-content-bg-alt: rgba(247, 243, 238, 0.92);
+  --bp-glass-row-hover: rgba(91, 31, 151, 0.05);
+
+  /* Sidebar keeps the brand color but as a glass tint, not a flat fill */
+  --bp-sidebar-tint: rgba(67, 22, 113, 0.82);
+  --bp-sidebar-text: rgba(255, 255, 255, 0.86);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: rgba(255, 255, 255, 0.14);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.12);
 
   --bp-shadow-sm: 0 1px 2px rgba(20, 20, 24, 0.06);
   --bp-shadow-md: 0 2px 8px rgba(20, 20, 24, 0.08);
   --bp-shadow-lg: 0 8px 24px rgba(20, 20, 24, 0.12);
 
-  --bp-sidebar-width: 232px;
-  --bp-header-height: 52px;
+  color-scheme: light;
+}
 
-  --bp-font: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+/* ---- Dark theme ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bp-text: #f1ede8;
+    --bp-text-muted: #a89f96;
+    --bp-border: rgba(255, 255, 255, 0.1);
+
+    --bp-bg: #17130f;
+    --bp-bg-image:
+      radial-gradient(1100px 620px at 8% -10%, rgba(232, 148, 15, 0.12), transparent 60%),
+      radial-gradient(900px 700px at 100% 0%, rgba(140, 90, 220, 0.16), transparent 55%),
+      radial-gradient(1000px 800px at 50% 120%, rgba(139, 26, 46, 0.14), transparent 60%),
+      linear-gradient(180deg, #1c1712 0%, #120e0b 100%);
+
+    --bp-surface: #221c17;
+    --bp-surface-alt: #2a221b;
+
+    --bp-glass-blur: 22px;
+    --bp-glass-saturate: 1.8;
+    --bp-glass-tint: rgba(38, 32, 28, 0.5);
+    --bp-glass-tint-strong: rgba(38, 32, 28, 0.68);
+    --bp-glass-border: rgba(255, 255, 255, 0.14);
+    --bp-glass-border-soft: rgba(255, 255, 255, 0.08);
+    --bp-glass-highlight: rgba(255, 255, 255, 0.16);
+    --bp-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --bp-glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+    --bp-glass-content-bg: rgba(28, 23, 19, 0.88);
+    --bp-glass-content-bg-alt: rgba(34, 28, 23, 0.92);
+    --bp-glass-row-hover: rgba(232, 148, 15, 0.07);
+
+    --bp-sidebar-tint: rgba(20, 14, 10, 0.75);
+    --bp-sidebar-text: rgba(255, 255, 255, 0.78);
+    --bp-sidebar-text-strong: #ffffff;
+    --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+    --bp-sidebar-hover: rgba(255, 255, 255, 0.08);
+
+    --bp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --bp-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --bp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+    --bp-success: #4ade80;
+    --bp-success-bg: rgba(74, 222, 128, 0.14);
+    --bp-danger: #f87171;
+    --bp-danger-bg: rgba(248, 113, 113, 0.14);
+    --bp-warning: #fbbf24;
+    --bp-warning-bg: rgba(251, 191, 36, 0.14);
+
+    color-scheme: dark;
+  }
+}
+
+/* Manual override wins over prefers-color-scheme in both directions */
+:root[data-theme="dark"] {
+  --bp-text: #f1ede8;
+  --bp-text-muted: #a89f96;
+  --bp-border: rgba(255, 255, 255, 0.1);
+
+  --bp-bg: #17130f;
+  --bp-bg-image:
+    radial-gradient(1100px 620px at 8% -10%, rgba(232, 148, 15, 0.12), transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, rgba(140, 90, 220, 0.16), transparent 55%),
+    radial-gradient(1000px 800px at 50% 120%, rgba(139, 26, 46, 0.14), transparent 60%),
+    linear-gradient(180deg, #1c1712 0%, #120e0b 100%);
+
+  --bp-surface: #221c17;
+  --bp-surface-alt: #2a221b;
+
+  --bp-glass-blur: 22px;
+  --bp-glass-saturate: 1.8;
+  --bp-glass-tint: rgba(38, 32, 28, 0.5);
+  --bp-glass-tint-strong: rgba(38, 32, 28, 0.68);
+  --bp-glass-border: rgba(255, 255, 255, 0.14);
+  --bp-glass-border-soft: rgba(255, 255, 255, 0.08);
+  --bp-glass-highlight: rgba(255, 255, 255, 0.16);
+  --bp-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --bp-glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+  --bp-glass-content-bg: rgba(28, 23, 19, 0.88);
+  --bp-glass-content-bg-alt: rgba(34, 28, 23, 0.92);
+  --bp-glass-row-hover: rgba(232, 148, 15, 0.07);
+
+  --bp-sidebar-tint: rgba(20, 14, 10, 0.75);
+  --bp-sidebar-text: rgba(255, 255, 255, 0.78);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.08);
+
+  --bp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --bp-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --bp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  --bp-success: #4ade80;
+  --bp-success-bg: rgba(74, 222, 128, 0.14);
+  --bp-danger: #f87171;
+  --bp-danger-bg: rgba(248, 113, 113, 0.14);
+  --bp-warning: #fbbf24;
+  --bp-warning-bg: rgba(251, 191, 36, 0.14);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 /* Shared mobile breakpoint — below this width the sidebar becomes a
@@ -60,8 +212,10 @@ body {
   margin: 0;
   font-family: var(--bp-font);
   color: var(--bp-text);
-  background: var(--bp-bg);
+  background: var(--bp-bg-image), var(--bp-bg);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 button {
@@ -70,4 +224,55 @@ button {
 
 a {
   color: var(--bp-amber-dark);
+}
+
+/* ---- Reusable glass shell mixin-equivalents ---- */
+
+/* Chrome glass: sidebar, header, modals, dropdowns, toasts. Leans more
+   translucent — these surfaces don't carry dense body text directly on
+   the blur (nav labels / short strings only), so more see-through reads
+   as "glass" without hurting legibility. */
+.bp-glass-chrome {
+  background: var(--bp-glass-tint);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border: 1px solid var(--bp-glass-border);
+  box-shadow: var(--bp-glass-shadow), var(--bp-glass-inset);
+}
+
+/* Content glass: cards, tables, kpi tiles, form panels. Same blur/border
+   treatment, but a near-opaque content backing sits inside it so table
+   rows and form fields stay solidly legible. */
+.bp-glass-content {
+  background: var(--bp-glass-tint-strong);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border: 1px solid var(--bp-glass-border-soft);
+  box-shadow: var(--bp-glass-shadow), var(--bp-glass-inset);
+}
+
+/* Thin top specular highlight — the detail that reads as "glass" rather
+   than "frosted panel." A soft bright line along the top inner edge. */
+.bp-glass-specular {
+  position: relative;
+}
+
+.bp-glass-specular::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, var(--bp-glass-highlight) 0%, transparent 30%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bp-glass-chrome,
+  .bp-glass-content {
+    background: var(--bp-surface);
+  }
 }

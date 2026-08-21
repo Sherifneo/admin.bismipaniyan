@@ -1,8 +1,9 @@
 .bp-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(31, 26, 34, 0.72);
-  backdrop-filter: blur(2px);
+  background: rgba(20, 14, 12, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,13 +12,23 @@
 }
 
 .bp-modal {
+  position: relative;
   width: 100%;
   max-width: 420px;
-  background: #fff;
+  background: var(--bp-glass-tint-strong);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border: 1px solid var(--bp-glass-border);
   border-radius: var(--bp-radius-lg);
-  box-shadow: var(--bp-shadow-lg);
+  box-shadow: var(--bp-glass-shadow-lg), var(--bp-glass-inset);
   max-height: 90vh;
   overflow: auto;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bp-modal {
+    background: var(--bp-surface);
+  }
 }
 
 .bp-modal-header {

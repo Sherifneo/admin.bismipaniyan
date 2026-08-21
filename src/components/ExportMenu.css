@@ -9,17 +9,20 @@
   justify-content: center;
   width: 34px;
   height: 34px;
-  border: 1px solid var(--bp-border);
-  background: #fff;
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-tint);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: var(--bp-brand);
   border-radius: var(--bp-radius-sm);
   cursor: pointer;
   padding: 0;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .bp-export-btn:hover {
   border-color: var(--bp-brand);
-  background: var(--bp-surface-alt);
+  background: var(--bp-glass-tint-strong);
 }
 
 .bp-export-btn svg {
@@ -33,11 +36,19 @@
   right: 0;
   z-index: 50;
   min-width: 220px;
-  background: #fff;
-  border: 1px solid var(--bp-border);
+  background: var(--bp-glass-tint-strong);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border: 1px solid var(--bp-glass-border);
   border-radius: var(--bp-radius-md);
-  box-shadow: var(--bp-shadow-md);
+  box-shadow: var(--bp-glass-shadow-lg), var(--bp-glass-inset);
   overflow: hidden;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bp-export-menu {
+    background: var(--bp-surface);
+  }
 }
 
 .bp-export-item {
@@ -54,7 +65,7 @@
 }
 
 .bp-export-item:hover:not(:disabled) {
-  background: var(--bp-surface-alt);
+  background: var(--bp-glass-content-bg-alt);
 }
 
 .bp-export-item:disabled {

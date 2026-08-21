@@ -7,18 +7,22 @@
 }
 
 .bp-pagination-btn {
-  border: 1px solid var(--bp-border);
-  background: #fff;
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-tint);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: var(--bp-text);
   font-size: 13px;
   font-weight: 600;
   padding: 8px 16px;
   border-radius: var(--bp-radius-md);
   cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .bp-pagination-btn:hover:not(:disabled) {
   border-color: var(--bp-brand);
+  background: var(--bp-glass-tint-strong);
 }
 
 .bp-pagination-btn:disabled {

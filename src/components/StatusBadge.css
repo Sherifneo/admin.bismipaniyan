@@ -14,7 +14,7 @@
 }
 
 .bp-badge-info {
-  background: #fff4e0;
+  background: var(--bp-warning-bg);
   color: var(--bp-warning);
 }
 

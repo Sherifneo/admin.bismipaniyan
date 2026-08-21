@@ -3,20 +3,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(1100px 620px at 12% 6%, #fbe9d6 0%, var(--bp-cream) 46%, #ffffff 100%);
+  background: var(--bp-bg-image), var(--bp-bg);
   padding: 24px;
 }
 
 .bp-login-card {
+  position: relative;
   width: 100%;
   max-width: 380px;
-  background: var(--bp-surface);
-  border: 1px solid var(--bp-border);
+  background: var(--bp-glass-tint-strong);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border: 1px solid var(--bp-glass-border);
   border-radius: var(--bp-radius-lg);
-  box-shadow: var(--bp-shadow-lg);
+  box-shadow: var(--bp-glass-shadow-lg), var(--bp-glass-inset);
   padding: 36px 32px 32px;
   display: flex;
   flex-direction: column;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bp-login-card {
+    background: var(--bp-surface);
+  }
 }
 
 .bp-login-mark {
@@ -66,12 +75,14 @@
 .bp-login-input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--bp-border);
+  border: 1px solid var(--bp-glass-border-soft);
   border-radius: var(--bp-radius-md);
   font-size: 14.5px;
   font-family: inherit;
   color: var(--bp-text);
+  background: var(--bp-glass-content-bg);
   margin-bottom: 16px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .bp-login-input:focus {
@@ -83,18 +94,19 @@
 .bp-login-submit {
   margin-top: 4px;
   border: none;
-  background: var(--bp-amber);
+  background: linear-gradient(160deg, var(--bp-amber) 0%, var(--bp-amber-dark) 100%);
   color: var(--bp-brand-dark);
   font-size: 14.5px;
   font-weight: 700;
   padding: 13px;
   border-radius: var(--bp-radius-md);
   cursor: pointer;
-  transition: background 0.14s ease;
+  box-shadow: 0 4px 16px rgba(232, 148, 15, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: filter 0.14s ease;
 }
 
 .bp-login-submit:hover:not(:disabled) {
-  background: var(--bp-amber-dark);
+  filter: brightness(1.05);
 }
 
 .bp-login-submit:disabled {

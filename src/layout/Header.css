@@ -5,11 +5,20 @@
   align-items: center;
   gap: 16px;
   padding: 0 20px;
-  background: var(--bp-surface);
-  border-bottom: 1px solid var(--bp-border);
+  background: var(--bp-glass-tint-strong);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border-bottom: 1px solid var(--bp-glass-border-soft);
+  box-shadow: var(--bp-glass-shadow);
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bp-header {
+    background: var(--bp-surface);
+  }
 }
 
 .bp-header-menu-btn {
@@ -52,9 +61,12 @@
   padding: 4px 10px;
 }
 
-.bp-header-refresh-btn {
-  border: 1px solid var(--bp-border);
-  background: var(--bp-surface-alt);
+.bp-header-refresh-btn,
+.bp-header-theme-btn {
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-tint);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: var(--bp-text);
   font-size: 15px;
   line-height: 1;
@@ -66,11 +78,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.14s ease;
+  transition: border-color 0.14s ease, background 0.14s ease;
 }
 
-.bp-header-refresh-btn:hover {
+.bp-header-refresh-btn:hover,
+.bp-header-theme-btn:hover {
   border-color: var(--bp-brand);
+  background: var(--bp-glass-tint-strong);
+}
+
+.bp-header-theme-btn {
+  font-size: 14px;
 }
 
 .bp-header-refresh-btn.is-spinning {
@@ -86,8 +104,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bp-surface-alt);
-  border: 1px solid var(--bp-border);
+  background: var(--bp-glass-tint);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--bp-glass-border-soft);
   border-radius: var(--bp-radius-md);
   padding: 6px 10px;
   max-width: 320px;
@@ -160,15 +180,17 @@
 
 .bp-header-signout {
   margin-left: 8px;
-  border: 1px solid var(--bp-border);
-  background: #fff;
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-tint);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: var(--bp-text);
   font-size: 13px;
   font-weight: 600;
   padding: 8px 14px;
   border-radius: var(--bp-radius-md);
   cursor: pointer;
-  transition: border-color 0.14s ease;
+  transition: border-color 0.14s ease, background 0.14s ease;
 }
 
 .bp-header-signout:hover {
