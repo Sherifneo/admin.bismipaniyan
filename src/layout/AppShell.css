@@ -1,0 +1,26 @@
+.bp-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.bp-shell-main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.bp-shell-content {
+  flex: 1;
+  padding: 20px 24px;
+  max-width: 1500px;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .bp-shell-content {
+    padding: 14px 12px;
+  }
+}

@@ -1,0 +1,16 @@
+.bp-inventory-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.bp-inventory-filters .bp-field-input {
+  width: auto;
+}
+
+.bp-stock-low {
+  color: var(--bp-danger);
+  font-weight: 700;
+}

@@ -1,0 +1,348 @@
+/* Shared page-chrome classes reused across every admin module: page
+   titles, tabs, tables, buttons, and form fields. Kept in one file and
+   imported once (in main.jsx) rather than per-page, since virtually every
+   page needs all of it. */
+
+.bp-page-title {
+  margin: 0 0 14px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--bp-text);
+}
+
+/* ---- tabs ---- */
+.bp-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--bp-border);
+}
+
+.bp-tab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--bp-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+
+.bp-tab:hover {
+  color: var(--bp-text);
+}
+
+.bp-tab.is-active {
+  color: var(--bp-brand);
+  border-bottom-color: var(--bp-amber);
+}
+
+/* ---- table ---- */
+.bp-table-wrap {
+  background: var(--bp-surface);
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius-md);
+  overflow: auto;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.bp-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bp-text-muted);
+  background: var(--bp-surface-alt);
+  border-bottom: 1px solid var(--bp-border);
+  white-space: nowrap;
+}
+
+.bp-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bp-border);
+  vertical-align: middle;
+}
+
+.bp-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bp-table tr:hover td {
+  background: var(--bp-surface-alt);
+}
+
+.bp-td-strong {
+  font-weight: 600;
+  color: var(--bp-text);
+}
+
+.bp-td-muted {
+  font-size: 11px;
+  color: var(--bp-text-muted);
+  margin-top: 1px;
+}
+
+.bp-td-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bp-table-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--bp-text-muted);
+  font-size: 12.5px;
+}
+
+/* ---- buttons ---- */
+.bp-btn-sm {
+  border: 1px solid var(--bp-border);
+  background: #fff;
+  color: var(--bp-brand);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--bp-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bp-btn-sm:hover:not(:disabled) {
+  border-color: var(--bp-brand);
+  background: var(--bp-surface-alt);
+}
+
+.bp-btn-sm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bp-btn-primary {
+  border: 1px solid var(--bp-amber-dark);
+  background: var(--bp-amber);
+  color: var(--bp-brand-dark);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--bp-radius-sm);
+  cursor: pointer;
+}
+
+.bp-btn-primary:hover:not(:disabled) {
+  background: var(--bp-amber-dark);
+}
+
+.bp-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.bp-btn-outline {
+  border: 1px solid var(--bp-border);
+  background: #fff;
+  color: var(--bp-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--bp-radius-sm);
+  cursor: pointer;
+}
+
+.bp-btn-outline:hover:not(:disabled) {
+  border-color: var(--bp-brand);
+}
+
+.bp-btn-danger {
+  border: 1px solid var(--bp-danger);
+  background: var(--bp-danger);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--bp-radius-sm);
+  cursor: pointer;
+}
+
+.bp-btn-danger:hover:not(:disabled) {
+  background: #93190f;
+  border-color: #93190f;
+}
+
+.bp-btn-danger:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+/* ---- forms ---- */
+.bp-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.bp-field-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--bp-text);
+  margin: 10px 0 5px;
+}
+
+.bp-field-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--bp-text);
+}
+
+.bp-field-input:focus {
+  outline: none;
+  border-color: var(--bp-amber);
+  box-shadow: 0 0 0 3px rgba(232, 148, 15, 0.18);
+}
+
+.bp-field-input:focus + .bp-td-muted {
+  margin-top: 2px !important;
+}
+
+.bp-searchbox {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  max-width: 380px;
+}
+
+.bp-searchbox .bp-field-input {
+  flex: 1;
+}
+
+.bp-searchbox .bp-btn-outline {
+  flex: none;
+}
+
+.bp-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.bp-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 560px) {
+  .bp-form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+/* ---- misc ---- */
+.bp-inline-error {
+  background: var(--bp-danger-bg);
+  color: var(--bp-danger);
+  border-radius: var(--bp-radius-sm);
+  padding: 8px 12px;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
+/* ---- kpi / cards / dashboard (shared with Dashboard.jsx) ---- */
+.nh-kpi-grid,
+.bp-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.bp-kpi-card {
+  background: var(--bp-surface);
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius-md);
+  padding: 14px 16px;
+}
+
+.bp-kpi-clickable {
+  cursor: pointer;
+}
+
+.bp-kpi-clickable:hover {
+  border-color: var(--bp-brand);
+}
+
+.bp-kpi-label {
+  font-size: 11.5px;
+  color: var(--bp-text-muted);
+  margin-bottom: 6px;
+}
+
+.bp-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--bp-text);
+}
+
+.bp-kpi-sub {
+  font-size: 11px;
+  color: var(--bp-text-muted);
+  margin-top: 2px;
+}
+
+.bp-kpi-warning .bp-kpi-value { color: var(--bp-warning); }
+.bp-kpi-danger .bp-kpi-value { color: var(--bp-danger); }
+.bp-kpi-success .bp-kpi-value { color: var(--bp-success); }
+
+.bp-card {
+  background: var(--bp-surface);
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius-md);
+  padding: 16px;
+}
+
+.bp-card-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--bp-text);
+}
+
+@media (max-width: 860px) {
+  .bp-table {
+    font-size: 12px;
+  }
+
+  .bp-searchbox {
+    max-width: none;
+  }
+
+  .bp-btn-primary,
+  .bp-btn-outline {
+    padding: 9px 14px;
+  }
+
+  .bp-form-actions {
+    flex-wrap: wrap;
+  }
+
+  .bp-form-actions button {
+    flex: 1;
+    min-width: 120px;
+  }
+}

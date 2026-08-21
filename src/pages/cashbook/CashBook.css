@@ -1,0 +1,22 @@
+.bp-cashbook-totals {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.bp-cashbook-totals .bp-kpi-card {
+  flex: 1 1 180px;
+}
+
+.bp-cashbook-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.bp-cashbook-filters .bp-field-input {
+  width: auto;
+}

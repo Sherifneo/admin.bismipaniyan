@@ -1,0 +1,135 @@
+.bp-sidebar {
+  width: var(--bp-sidebar-width);
+  flex: none;
+  background: var(--bp-brand);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.bp-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.bp-sidebar-close {
+  display: none;
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.bp-sidebar-overlay {
+  display: none;
+}
+
+.bp-sidebar-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bp-amber);
+  color: var(--bp-brand-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex: none;
+}
+
+.bp-sidebar-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: 0;
+}
+
+.bp-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bp-sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 8px 16px;
+}
+
+.bp-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 8px;
+  padding: 9px 12px;
+  border-radius: var(--bp-radius-md);
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bp-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.bp-sidebar-link.is-active {
+  background: var(--bp-amber);
+  color: var(--bp-brand-dark);
+  font-weight: 600;
+}
+
+.bp-sidebar-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex: none;
+}
+
+/* Below the shared mobile breakpoint (see theme.css), the sidebar becomes
+   an off-canvas drawer: fixed position, translated fully off-screen by
+   default, slid in via .is-open. A tap-outside overlay closes it. */
+@media (max-width: 860px) {
+  .bp-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 200;
+    width: min(82vw, 300px);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: var(--bp-shadow-lg);
+  }
+
+  .bp-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .bp-sidebar-close {
+    display: block;
+  }
+
+  .bp-sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    background: rgba(20, 10, 22, 0.45);
+  }
+}

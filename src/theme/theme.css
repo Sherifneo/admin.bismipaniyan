@@ -1,0 +1,73 @@
+/* Bismi Admin — theme tokens.
+   Dense, back-office look (system font, sharp corners, muted neutrals) —
+   accent colors survive only as accents (primary buttons, active-nav
+   state, badges), not as dominant fills, so this reads as a real ERP
+   backend rather than a consumer-facing site. */
+
+:root {
+  --bp-brand: #5b1f97;
+  --bp-brand-dark: #431671;
+  --bp-amber: #e8940f;
+  --bp-amber-dark: #c97e0b;
+  --bp-cream: #fbf6ef;
+  --bp-maroon: #8b1a2e;
+
+  --bp-ink: #211a16;
+  --bp-text: #2b2420;
+  --bp-text-muted: #6a625c;
+  --bp-border: #e7e0d8;
+  --bp-surface: #ffffff;
+  --bp-surface-alt: #f7f3ee;
+  --bp-bg: #faf8f6;
+
+  --bp-success: #1e7e34;
+  --bp-success-bg: #e8f5e9;
+  --bp-danger: #b3261e;
+  --bp-danger-bg: #fdecea;
+  --bp-warning: #a15c00;
+  --bp-warning-bg: #fff4e0;
+
+  --bp-radius-sm: 3px;
+  --bp-radius-md: 4px;
+  --bp-radius-lg: 6px;
+
+  --bp-shadow-sm: 0 1px 2px rgba(20, 20, 24, 0.06);
+  --bp-shadow-md: 0 2px 8px rgba(20, 20, 24, 0.08);
+  --bp-shadow-lg: 0 8px 24px rgba(20, 20, 24, 0.12);
+
+  --bp-sidebar-width: 232px;
+  --bp-header-height: 52px;
+
+  --bp-font: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Shared mobile breakpoint — below this width the sidebar becomes a
+   slide-in drawer and pages should collapse to a single column. Keep
+   every "@media (max-width: 860px)" in this repo in sync with this
+   number if it ever changes. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--bp-font);
+  color: var(--bp-text);
+  background: var(--bp-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--bp-amber-dark);
+}

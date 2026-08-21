@@ -1,0 +1,264 @@
+import { useEffect, useState } from "react";
+import { cashbookApi, locationsApi } from "../../api/admin";
+import { ApiError } from "../../api/client";
+import ExportMenu from "../../components/ExportMenu";
+import Pagination from "../../components/Pagination";
+import Modal from "../../components/Modal";
+import ReasonConfirmModal from "../../components/ReasonConfirmModal";
+import "./CashBook.css";
+
+const LIMIT = 20;
+
+function inr(n) {
+  return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+const CSV_COLUMNS = [
+  { label: "Date", accessor: (e) => e.entry_date },
+  { label: "Location", accessor: (e) => e.location_name },
+  { label: "Type", accessor: (e) => e.entry_type },
+  { label: "Category", accessor: (e) => e.category },
+  { label: "Amount", accessor: (e) => e.amount },
+  { label: "Description", accessor: (e) => e.description },
+];
+
+// Single company-wide cash book, entries tagged by location — head office
+// enters each location's prior day's cash position manually (no POS
+// integration; this screen IS the source of truth, per the confirmed
+// "no POS, back-office ledger, next-day manual entry" requirement).
+export default function CashBookList() {
+  const [locations, setLocations] = useState([]);
+  const [entries, setEntries] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totals, setTotals] = useState({ total_income: 0, total_expense: 0, net: 0 });
+  const [page, setPage] = useState(1);
+  const [locationId, setLocationId] = useState("");
+  const [entryType, setEntryType] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  useEffect(() => {
+    locationsApi.list().then(setLocations).catch(() => {});
+  }, []);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await cashbookApi.list({ page, limit: LIMIT, locationId, entryType });
+      setEntries(data.items || []);
+      setTotal(data.total);
+      setTotals({ total_income: data.total_income, total_expense: data.total_expense, net: data.net });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load cash book entries.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, locationId, entryType]);
+
+  async function onSaved() {
+    setShowAdd(false);
+    await load();
+  }
+
+  async function onDeleteConfirmed(reason) {
+    await cashbookApi.remove(deleteTarget.entry_id, reason);
+    setDeleteTarget(null);
+    await load();
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
+        <h1 className="bp-page-title">Cash Book</h1>
+        <div style={{ display: "flex", gap: 8 }}>
+          <ExportMenu filename="cashbook" rows={entries} columns={CSV_COLUMNS} />
+          <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add entry</button>
+        </div>
+      </div>
+
+      <div className="bp-cashbook-totals">
+        <div className="bp-kpi-card bp-kpi-success">
+          <div className="bp-kpi-label">Income (filtered)</div>
+          <div className="bp-kpi-value">{inr(totals.total_income)}</div>
+        </div>
+        <div className="bp-kpi-card bp-kpi-danger">
+          <div className="bp-kpi-label">Expense (filtered)</div>
+          <div className="bp-kpi-value">{inr(totals.total_expense)}</div>
+        </div>
+        <div className="bp-kpi-card">
+          <div className="bp-kpi-label">Net</div>
+          <div className="bp-kpi-value">{inr(totals.net)}</div>
+        </div>
+      </div>
+
+      <div className="bp-cashbook-filters">
+        <select className="bp-field-input" value={locationId} onChange={(e) => { setLocationId(e.target.value); setPage(1); }}>
+          <option value="">All locations</option>
+          {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+        </select>
+        <select className="bp-field-input" value={entryType} onChange={(e) => { setEntryType(e.target.value); setPage(1); }}>
+          <option value="">Income &amp; expense</option>
+          <option value="income">Income only</option>
+          <option value="expense">Expense only</option>
+        </select>
+      </div>
+
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      <div className="bp-table-wrap">
+        <table className="bp-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Location</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+            ) : entries.length === 0 ? (
+              <tr><td colSpan={7} className="bp-table-empty">No cash book entries found.</td></tr>
+            ) : (
+              entries.map((e) => (
+                <tr key={e.entry_id}>
+                  <td className="bp-td-muted">{e.entry_date}</td>
+                  <td className="bp-td-strong">{e.location_name}</td>
+                  <td>
+                    <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
+                      {e.entry_type === "income" ? "Income" : "Expense"}
+                    </span>
+                  </td>
+                  <td>{e.category}</td>
+                  <td className="bp-td-muted">{e.description || "—"}</td>
+                  <td className="bp-td-strong">{inr(e.amount)}</td>
+                  <td className="bp-td-actions">
+                    <button type="button" className="bp-btn-sm" onClick={() => setDeleteTarget(e)}>Delete</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
+
+      {showAdd && <AddEntryModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />}
+      {deleteTarget && (
+        <ReasonConfirmModal
+          title="Delete cash book entry"
+          message={`This permanently removes the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${deleteTarget.entry_date}.`}
+          confirmLabel="Delete"
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={onDeleteConfirmed}
+        />
+      )}
+    </div>
+  );
+}
+
+const INCOME_CATEGORIES = ["Store sales", "Bulk order", "Partner settlement received", "Other income"];
+const EXPENSE_CATEGORIES = ["Raw materials", "Salaries", "Rent", "Utilities", "Transport", "Partner/shop payout", "Other expense"];
+
+function AddEntryModal({ locations, onClose, onDone }) {
+  const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
+  const [entryType, setEntryType] = useState("income");
+  const [category, setCategory] = useState(INCOME_CATEGORIES[0]);
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const categories = entryType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  function changeType(type) {
+    setEntryType(type);
+    setCategory(type === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!locationId) {
+      setError("Select a location.");
+      return;
+    }
+    const amountNum = Number(amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      setError("Enter a valid amount.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await cashbookApi.create({
+        location_id: locationId,
+        entry_type: entryType,
+        category,
+        amount: amountNum,
+        description: description || undefined,
+        entry_date: entryDate,
+      });
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save this entry.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Add cash book entry" onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+
+        <label className="bp-field-label" htmlFor="cbLocation">Location</label>
+        <select id="cbLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
+          {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+        </select>
+
+        <label className="bp-field-label" htmlFor="cbType">Type</label>
+        <select id="cbType" className="bp-field-input" value={entryType} onChange={(e) => changeType(e.target.value)}>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+
+        <label className="bp-field-label" htmlFor="cbCategory">Category</label>
+        <select id="cbCategory" className="bp-field-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="cbAmount">Amount (₹)</label>
+            <input id="cbAmount" type="number" min="0.01" step="0.01" className="bp-field-input" value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="cbDate">Date</label>
+            <input id="cbDate" type="date" className="bp-field-input" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} required />
+          </div>
+        </div>
+
+        <label className="bp-field-label" htmlFor="cbDesc">Description (optional)</label>
+        <input id="cbDesc" type="text" className="bp-field-input" value={description} onChange={(e) => setDescription(e.target.value)} />
+
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Save entry"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
