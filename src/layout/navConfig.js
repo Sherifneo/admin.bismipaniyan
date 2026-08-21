@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   { key: "bankaccounts", label: "Bank Accounts", icon: "🏦", path: "/bank-accounts", requiredPermission: "bank.manage" },
   { key: "products", label: "Products", icon: "🛍️", path: "/products", requiredPermission: "products.manage" },
   { key: "inventory", label: "Inventory", icon: "📊", path: "/inventory", requiredPermission: "inventory.manage" },
+  { key: "partners", label: "Partners & Shops", icon: "🤝", path: "/partners", requiredPermission: "partners.manage" },
   { key: "vendors", label: "Vendors", icon: "🏭", path: "/vendors", requiredPermission: "purchasing.manage" },
   { key: "purchaseorders", label: "Purchase Orders", icon: "📋", path: "/purchase-orders", requiredPermission: "purchasing.manage" },
   { key: "production", label: "Production", icon: "⚙️", path: "/production", requiredPermission: "production.manage" },

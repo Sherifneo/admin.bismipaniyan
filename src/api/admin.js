@@ -38,6 +38,16 @@ export const waOrdersApi = {
   updateStatus: (id, status) => PUT(`/api/admin/wa-orders/${id}`, { status }),
 };
 
+export const partnersApi = {
+  list: (params = {}) => GET(`/api/admin/partners?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/partners", body),
+  update: (id, body) => PUT(`/api/admin/partners/${id}`, body),
+  remove: (id) => DEL(`/api/admin/partners/${id}`),
+  listSettlements: (partnerId, params = {}) => GET(`/api/admin/partners/${partnerId}/settlements?${new URLSearchParams(cleanParams(params))}`),
+  createSettlement: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/settlements`, body),
+  updateSettlementStatus: (settlementId, status) => PUT(`/api/admin/partners/settlements/${settlementId}/status`, { status }),
+};
+
 export const vendorsApi = {
   list: (params = "") => GET(`/api/admin/vendors${params}`),
   create: (body) => POST("/api/admin/vendors", body),
