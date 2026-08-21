@@ -13,7 +13,17 @@ import PartnersList from "./pages/partners/PartnersList";
 import ProductsList from "./pages/products/ProductsList";
 import VendorsList from "./pages/vendors/VendorsList";
 import PurchaseOrdersList from "./pages/purchasing/PurchaseOrdersList";
+import BankAccountsList from "./pages/bank-accounts/BankAccountsList";
+import FinancialControlPage from "./pages/financial-control/FinancialControlPage";
+import MachinesList from "./pages/machines/MachinesList";
+import CostParametersList from "./pages/production/CostParametersList";
+import ProductionRunsList from "./pages/production/ProductionRunsList";
+import ReportsPage from "./pages/reports/ReportsPage";
 import SettingsPage from "./pages/settings/SettingsPage";
+import TeamList from "./pages/team/TeamList";
+import SecurityRolesList from "./pages/security/SecurityRolesList";
+import NumberSequencesPage from "./pages/settings/NumberSequencesPage";
+import ActivityLogPage from "./pages/settings/ActivityLogPage";
 import { NAV_ITEMS } from "./layout/navConfig";
 
 // Modules with a real page built go here instead of the ComingSoon
@@ -27,7 +37,17 @@ const BUILT_PAGES = {
   products: ProductsList,
   vendors: VendorsList,
   purchaseorders: PurchaseOrdersList,
+  bankaccounts: BankAccountsList,
+  financialcontrol: FinancialControlPage,
+  machines: MachinesList,
+  costparameters: CostParametersList,
+  production: ProductionRunsList,
+  reports: ReportsPage,
   settings: SettingsPage,
+  team: TeamList,
+  security: SecurityRolesList,
+  numbersequences: NumberSequencesPage,
+  systemerrors: ActivityLogPage,
 };
 
 // Every nav item without a built page renders the shared placeholder.

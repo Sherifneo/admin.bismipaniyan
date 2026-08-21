@@ -63,24 +63,50 @@ export const purchasingApi = {
   update: (id, body) => PUT(`/api/admin/purchase-orders/${id}`, body),
 };
 
+export const bankAccountsApi = {
+  list: (params = {}) => GET(`/api/admin/bank-accounts?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/bank-accounts", body),
+  update: (id, body) => PUT(`/api/admin/bank-accounts/${id}`, body),
+  listTransactions: (accountId, params = {}) => GET(`/api/admin/bank-accounts/${accountId}/transactions?${new URLSearchParams(cleanParams(params))}`),
+  addTransaction: (accountId, body) => POST(`/api/admin/bank-accounts/${accountId}/transactions`, body),
+};
+
+export const financialControlApi = {
+  getSummary: () => GET("/api/admin/financial-control/summary"),
+  transfer: (body) => POST("/api/admin/financial-control/transfer", body),
+};
+
 export const productionApi = {
-  listRuns: (params = "") => GET(`/api/admin/production-runs${params}`),
+  listRuns: (params = {}) => GET(`/api/admin/production-runs?${new URLSearchParams(cleanParams(params))}`),
   getRun: (id) => GET(`/api/admin/production-runs/${id}`),
   createRun: (body) => POST("/api/admin/production-runs", body),
   updateRun: (id, body) => PUT(`/api/admin/production-runs/${id}`, body),
-  listMachines: () => GET("/api/admin/machines"),
-  listCostParameters: () => GET("/api/admin/cost-parameters"),
+};
+
+export const machinesApi = {
+  list: (params = {}) => GET(`/api/admin/machines?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/machines", body),
+  update: (id, body) => PUT(`/api/admin/machines/${id}`, body),
+  remove: (id) => DEL(`/api/admin/machines/${id}`),
+};
+
+export const costParametersApi = {
+  list: () => GET("/api/admin/cost-parameters"),
+  create: (body) => POST("/api/admin/cost-parameters", body),
+  update: (id, body) => PUT(`/api/admin/cost-parameters/${id}`, body),
+  remove: (id) => DEL(`/api/admin/cost-parameters/${id}`),
 };
 
 export const teamApi = {
   list: () => GET("/api/admin/team"),
   create: (body) => POST("/api/admin/team", body),
   update: (id, body) => PUT(`/api/admin/team/${id}`, body),
-  remove: (id) => DEL(`/api/admin/team/${id}`),
 };
 
 export const reportsApi = {
-  get: (params = "") => GET(`/api/admin/reports${params}`),
+  cashbookSummary: (params = {}) => GET(`/api/admin/reports/cashbook-summary?${new URLSearchParams(cleanParams(params))}`),
+  stockMovements: (params = {}) => GET(`/api/admin/reports/stock-movements?${new URLSearchParams(cleanParams(params))}`),
+  purchaseOrdersByStatus: (params = {}) => GET(`/api/admin/reports/purchase-orders-by-status?${new URLSearchParams(cleanParams(params))}`),
 };
 
 export const settingsApi = {
@@ -90,8 +116,12 @@ export const settingsApi = {
 };
 
 export const securityApi = {
-  listRoles: () => GET("/api/admin/security/roles"),
-  updateRole: (id, body) => PUT(`/api/admin/security/roles/${id}`, body),
+  getRoles: (adminId) => GET(`/api/admin/security/roles/${adminId}`),
+  updateRoles: (adminId, body) => PUT(`/api/admin/security/roles/${adminId}`, body),
+};
+
+export const activityLogApi = {
+  list: (params = {}) => GET(`/api/admin/activity-log?${new URLSearchParams(cleanParams(params))}`),
 };
 
 // Drops undefined/null/empty-string values before building a query string,
