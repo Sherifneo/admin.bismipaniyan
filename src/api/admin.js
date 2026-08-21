@@ -4,6 +4,7 @@ export const authApi = {
   login: (email, password) => POST("/api/admin/auth/login", { email, password }, { noAuth: true }),
   logout: () => POST("/api/admin/auth/logout"),
   me: () => GET("/api/admin/auth/me"),
+  changePassword: (current_password, new_password) => POST("/api/admin/auth/change-password", { current_password, new_password }),
 };
 
 export const dashboardApi = {
@@ -49,13 +50,14 @@ export const partnersApi = {
 };
 
 export const vendorsApi = {
-  list: (params = "") => GET(`/api/admin/vendors${params}`),
+  list: (params = {}) => GET(`/api/admin/vendors?${new URLSearchParams(cleanParams(params))}`),
   create: (body) => POST("/api/admin/vendors", body),
   update: (id, body) => PUT(`/api/admin/vendors/${id}`, body),
+  remove: (id) => DEL(`/api/admin/vendors/${id}`),
 };
 
 export const purchasingApi = {
-  list: (params = "") => GET(`/api/admin/purchase-orders${params}`),
+  list: (params = {}) => GET(`/api/admin/purchase-orders?${new URLSearchParams(cleanParams(params))}`),
   get: (id) => GET(`/api/admin/purchase-orders/${id}`),
   create: (body) => POST("/api/admin/purchase-orders", body),
   update: (id, body) => PUT(`/api/admin/purchase-orders/${id}`, body),

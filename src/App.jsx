@@ -9,6 +9,10 @@ import CashBookList from "./pages/cashbook/CashBookList";
 import InventoryList from "./pages/inventory/InventoryList";
 import WaOrdersList from "./pages/waorders/WaOrdersList";
 import PartnersList from "./pages/partners/PartnersList";
+import ProductsList from "./pages/products/ProductsList";
+import VendorsList from "./pages/vendors/VendorsList";
+import PurchaseOrdersList from "./pages/purchasing/PurchaseOrdersList";
+import SettingsPage from "./pages/settings/SettingsPage";
 import { NAV_ITEMS } from "./layout/navConfig";
 
 // Modules with a real page built go here instead of the ComingSoon
@@ -19,6 +23,10 @@ const BUILT_PAGES = {
   inventory: InventoryList,
   waorders: WaOrdersList,
   partners: PartnersList,
+  products: ProductsList,
+  vendors: VendorsList,
+  purchaseorders: PurchaseOrdersList,
+  settings: SettingsPage,
 };
 
 // Every nav item without a built page renders the shared placeholder.

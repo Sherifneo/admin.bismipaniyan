@@ -263,6 +263,15 @@
   margin-bottom: 12px;
 }
 
+.bp-inline-success {
+  background: var(--bp-success-bg);
+  color: var(--bp-success);
+  border-radius: var(--bp-radius-sm);
+  padding: 8px 12px;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
 /* ---- kpi / cards / dashboard (shared with Dashboard.jsx) ---- */
 .nh-kpi-grid,
 .bp-kpi-grid {
@@ -345,4 +354,28 @@
     flex: 1;
     min-width: 120px;
   }
+}
+
+/* Generic "sales value -> commission/cost -> net total" breakdown box,
+   used by Partners settlements and Purchase Order line-item totals. */
+.bp-settlement-calc {
+  background: var(--bp-surface-alt);
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius-sm);
+  padding: 12px 14px;
+  margin: 12px 0;
+  font-size: 12.5px;
+}
+
+.bp-settlement-calc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.bp-settlement-calc-row.bp-settlement-calc-total {
+  border-top: 1px solid var(--bp-border);
+  margin-top: 6px;
+  padding-top: 8px;
+  font-weight: 700;
 }

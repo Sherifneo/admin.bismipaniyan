@@ -18,24 +18,3 @@
   color: var(--bp-success);
 }
 
-.bp-settlement-calc {
-  background: var(--bp-surface-alt);
-  border: 1px solid var(--bp-border);
-  border-radius: var(--bp-radius-sm);
-  padding: 12px 14px;
-  margin: 12px 0;
-  font-size: 12.5px;
-}
-
-.bp-settlement-calc-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 3px 0;
-}
-
-.bp-settlement-calc-row.bp-settlement-calc-total {
-  border-top: 1px solid var(--bp-border);
-  margin-top: 6px;
-  padding-top: 8px;
-  font-weight: 700;
-}
