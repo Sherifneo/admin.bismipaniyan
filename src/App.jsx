@@ -35,9 +35,20 @@ const BUILT_PAGES = {
 // route can never exist without a corresponding nav entry (or vice versa).
 const placeholderRoutes = NAV_ITEMS.filter((item) => item.path !== "/");
 
+function GlassOrbs() {
+  return (
+    <div className="bp-glass-orbs" aria-hidden="true">
+      <div className="bp-glass-orb bp-glass-orb-1" />
+      <div className="bp-glass-orb bp-glass-orb-2" />
+      <div className="bp-glass-orb bp-glass-orb-3" />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
+      <GlassOrbs />
       <BrowserRouter>
         <AuthProvider>
           <Routes>

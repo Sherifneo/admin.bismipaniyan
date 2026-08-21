@@ -53,26 +53,30 @@
   --bp-surface: #ffffff;
   --bp-surface-alt: #f7f3ee;
 
-  /* Glass shell tuning */
-  --bp-glass-blur: 20px;
-  --bp-glass-saturate: 1.5;
-  --bp-glass-tint: rgba(255, 255, 255, 0.55);
-  --bp-glass-tint-strong: rgba(255, 255, 255, 0.72);
-  --bp-glass-border: rgba(255, 255, 255, 0.6);
-  --bp-glass-border-soft: rgba(43, 36, 32, 0.08);
-  --bp-glass-highlight: rgba(255, 255, 255, 0.85);
-  --bp-glass-shadow: 0 8px 32px rgba(60, 40, 20, 0.14), 0 1px 2px rgba(60, 40, 20, 0.08);
-  --bp-glass-shadow-lg: 0 20px 60px rgba(60, 40, 20, 0.22), 0 2px 6px rgba(60, 40, 20, 0.1);
-  --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  /* Glass shell tuning. Pushed noticeably higher than a subtle "hint of
+     blur" — the point is for the effect to be unmistakable even over
+     low-contrast content, so blur/saturate are strong and the shell tint
+     is see-through enough that the floating orbs (below) read clearly
+     through every glass surface. */
+  --bp-glass-blur: 28px;
+  --bp-glass-saturate: 2.2;
+  --bp-glass-tint: rgba(255, 255, 255, 0.38);
+  --bp-glass-tint-strong: rgba(255, 255, 255, 0.52);
+  --bp-glass-border: rgba(255, 255, 255, 0.75);
+  --bp-glass-border-soft: rgba(43, 36, 32, 0.1);
+  --bp-glass-highlight: rgba(255, 255, 255, 0.95);
+  --bp-glass-shadow: 0 8px 32px rgba(60, 40, 20, 0.16), 0 1px 2px rgba(60, 40, 20, 0.08);
+  --bp-glass-shadow-lg: 0 20px 60px rgba(60, 40, 20, 0.24), 0 2px 6px rgba(60, 40, 20, 0.1);
+  --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
 
   /* Content backing: near-opaque so dense text/table rows stay crisp.
      This sits *inside* the glass shell, not instead of it. */
-  --bp-glass-content-bg: rgba(255, 255, 255, 0.86);
-  --bp-glass-content-bg-alt: rgba(247, 243, 238, 0.92);
-  --bp-glass-row-hover: rgba(91, 31, 151, 0.05);
+  --bp-glass-content-bg: rgba(255, 255, 255, 0.82);
+  --bp-glass-content-bg-alt: rgba(247, 243, 238, 0.9);
+  --bp-glass-row-hover: rgba(91, 31, 151, 0.06);
 
   /* Sidebar keeps the brand color but as a glass tint, not a flat fill */
-  --bp-sidebar-tint: rgba(67, 22, 113, 0.82);
+  --bp-sidebar-tint: rgba(67, 22, 113, 0.58);
   --bp-sidebar-text: rgba(255, 255, 255, 0.86);
   --bp-sidebar-text-strong: #ffffff;
   --bp-sidebar-border: rgba(255, 255, 255, 0.14);
@@ -102,22 +106,22 @@
     --bp-surface: #221c17;
     --bp-surface-alt: #2a221b;
 
-    --bp-glass-blur: 22px;
-    --bp-glass-saturate: 1.8;
-    --bp-glass-tint: rgba(38, 32, 28, 0.5);
-    --bp-glass-tint-strong: rgba(38, 32, 28, 0.68);
-    --bp-glass-border: rgba(255, 255, 255, 0.14);
-    --bp-glass-border-soft: rgba(255, 255, 255, 0.08);
-    --bp-glass-highlight: rgba(255, 255, 255, 0.16);
-    --bp-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --bp-glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
-    --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --bp-glass-blur: 30px;
+    --bp-glass-saturate: 2.4;
+    --bp-glass-tint: rgba(38, 32, 28, 0.32);
+    --bp-glass-tint-strong: rgba(38, 32, 28, 0.5);
+    --bp-glass-border: rgba(255, 255, 255, 0.18);
+    --bp-glass-border-soft: rgba(255, 255, 255, 0.1);
+    --bp-glass-highlight: rgba(255, 255, 255, 0.22);
+    --bp-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --bp-glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --bp-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 
-    --bp-glass-content-bg: rgba(28, 23, 19, 0.88);
-    --bp-glass-content-bg-alt: rgba(34, 28, 23, 0.92);
-    --bp-glass-row-hover: rgba(232, 148, 15, 0.07);
+    --bp-glass-content-bg: rgba(28, 23, 19, 0.8);
+    --bp-glass-content-bg-alt: rgba(34, 28, 23, 0.88);
+    --bp-glass-row-hover: rgba(232, 148, 15, 0.08);
 
-    --bp-sidebar-tint: rgba(20, 14, 10, 0.75);
+    --bp-sidebar-tint: rgba(20, 14, 10, 0.5);
     --bp-sidebar-text: rgba(255, 255, 255, 0.78);
     --bp-sidebar-text-strong: #ffffff;
     --bp-sidebar-border: rgba(255, 255, 255, 0.08);
@@ -216,6 +220,63 @@ body {
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.2s ease, color 0.2s ease;
+  position: relative;
+}
+
+/* Fixed, vivid color blobs behind the entire app — every glass surface
+   (sidebar, header, cards, tables) sits above these and blurs/tints them.
+   This is what makes the effect obvious: a flat page background gives
+   backdrop-filter nothing worth distorting, these give it real color and
+   edges to melt together. Purely decorative, no interaction. */
+.bp-glass-orbs {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bp-glass-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(10px);
+  opacity: 0.75;
+}
+
+.bp-glass-orb-1 {
+  width: 46vw;
+  height: 46vw;
+  max-width: 620px;
+  max-height: 620px;
+  top: -14vw;
+  left: -10vw;
+  background: radial-gradient(circle at 35% 35%, var(--bp-amber) 0%, transparent 70%);
+}
+
+.bp-glass-orb-2 {
+  width: 40vw;
+  height: 40vw;
+  max-width: 560px;
+  max-height: 560px;
+  top: 6vh;
+  right: -12vw;
+  background: radial-gradient(circle at 60% 40%, var(--bp-brand) 0%, transparent 70%);
+}
+
+.bp-glass-orb-3 {
+  width: 34vw;
+  height: 34vw;
+  max-width: 480px;
+  max-height: 480px;
+  bottom: -12vw;
+  left: 22vw;
+  background: radial-gradient(circle at 50% 50%, var(--bp-maroon) 0%, transparent 70%);
+}
+
+@media (max-width: 860px) {
+  .bp-glass-orbs {
+    display: none;
+  }
 }
 
 button {

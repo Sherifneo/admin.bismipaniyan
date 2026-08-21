@@ -2,7 +2,7 @@
   width: var(--bp-sidebar-width);
   flex: none;
   background:
-    linear-gradient(165deg, rgba(91, 31, 151, 0.55), rgba(67, 22, 113, 0.4)),
+    linear-gradient(165deg, rgba(91, 31, 151, 0.32), rgba(67, 22, 113, 0.22)),
     var(--bp-sidebar-tint);
   -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
   backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
