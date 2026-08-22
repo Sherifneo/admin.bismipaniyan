@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { exportCsv } from "../utils/exportCsv";
 import "./ExportMenu.css";
 
@@ -294,7 +295,31 @@ export function ColumnHeader({ table, column }) {
   const active = table.filters[column.key];
   const [operator, setOperator] = useState(active?.operator || DEFAULT_OPERATOR[colType(column)]);
   const [draft, setDraft] = useState(active || {});
-  const wrapRef = useRef(null);
+  const [menuPos, setMenuPos] = useState(null);
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // The menu is portaled to document.body with position: fixed (see
+  // render below) instead of a plain CSS-absolute child of the <th> —
+  // .bp-table-wrap has overflow: auto for wide/short tables, and any
+  // overflow ancestor clips+scroll-traps an absolutely positioned
+  // descendant regardless of z-index. Recomputing on scroll/resize keeps
+  // the menu glued to the header button while it's open.
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setMenuPos({ top: r.bottom + 4, left: r.left });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -302,7 +327,12 @@ export function ColumnHeader({ table, column }) {
     setOperator(current?.operator || DEFAULT_OPERATOR[colType(column)]);
     setDraft(current || {});
     function onOutside(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        menuRef.current && !menuRef.current.contains(e.target)
+      ) {
+        setOpen(false);
+      }
     }
     document.addEventListener("mousedown", onOutside);
     return () => document.removeEventListener("mousedown", onOutside);
@@ -333,8 +363,9 @@ export function ColumnHeader({ table, column }) {
   const needsValue = !["isEmpty", "isNotEmpty", "isYes", "isNo"].includes(operator);
 
   return (
-    <th className="bp-colheader" ref={wrapRef}>
+    <th className="bp-colheader">
       <button
+        ref={btnRef}
         type="button"
         className={"bp-colheader-btn" + (isSorted || isFiltered ? " is-active" : "")}
         onClick={() => setOpen((v) => !v)}
@@ -344,8 +375,13 @@ export function ColumnHeader({ table, column }) {
           {isSorted ? (table.sort.dir === "desc" ? "▼" : "▲") : "▾"}
         </span>
       </button>
-      {open && (
-        <div className="bp-colheader-menu" onClick={(e) => e.stopPropagation()}>
+      {open && menuPos && createPortal(
+        <div
+          ref={menuRef}
+          className="bp-colheader-menu bp-colheader-menu-portal"
+          style={{ top: menuPos.top, left: menuPos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <button type="button" className="bp-colheader-menu-item" onClick={() => applySort("asc")}>↑ Sort A to Z</button>
           <button type="button" className="bp-colheader-menu-item" onClick={() => applySort("desc")}>↓ Sort Z to A</button>
           {canFilter && (
@@ -371,7 +407,8 @@ export function ColumnHeader({ table, column }) {
               </div>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </th>
   );

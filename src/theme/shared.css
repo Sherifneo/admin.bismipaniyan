@@ -181,10 +181,6 @@
 }
 
 .bp-colheader-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 40;
   min-width: 190px;
   background: var(--bp-surface);
   border: 1px solid var(--bp-border);
@@ -197,6 +193,20 @@
   text-transform: none;
   letter-spacing: normal;
   font-weight: 400;
+}
+
+/* Rendered via a portal into document.body (see DataTable.jsx's
+   ColumnHeader) so it floats above the page instead of being clipped and
+   scroll-trapped by .bp-table-wrap's overflow: auto — any overflow
+   ancestor confines a plain CSS-absolute descendant regardless of
+   z-index, which is what made this menu render squeezed/scrollable
+   inside the table on wide or short tables. top/left are set inline per
+   instance from the trigger button's real screen position. */
+.bp-colheader-menu-portal {
+  position: fixed;
+  z-index: 200;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
 }
 
 .bp-colheader-menu-item {
