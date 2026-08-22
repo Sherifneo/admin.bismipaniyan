@@ -218,10 +218,25 @@
    needed. Toggle by setting data-mode="standard" on <html> (see
    ModeContext) — default (no attribute, or data-mode="glass") is the
    Liquid Glass system defined above. */
+/* Standard mode's own palette — not a flattened version of Glass's warm
+   purple/amber wash. Cool neutral off-white background, near-black/navy
+   chrome (sidebar + header), a calmer blue accent standing in for
+   --bp-amber's role as the "selected/active" color. Loosely inspired by
+   dense enterprise dashboards (dark top chrome, clean white cards, flat
+   colorful icons) without copying any one product's exact palette. */
 :root[data-mode="standard"] {
-  --bp-radius-sm: 5px;
-  --bp-radius-md: 7px;
-  --bp-radius-lg: 10px;
+  --bp-radius-sm: 4px;
+  --bp-radius-md: 6px;
+  --bp-radius-lg: 8px;
+
+  --bp-text: #202225;
+  --bp-text-muted: #5f6368;
+  --bp-border: #dfe1e5;
+
+  --bp-bg: #f5f6f8;
+  --bp-bg-image: none;
+  --bp-surface: #ffffff;
+  --bp-surface-alt: #f1f2f4;
 
   --bp-glass-blur: 0px;
   --bp-glass-saturate: 1;
@@ -230,16 +245,130 @@
   --bp-glass-border: var(--bp-border);
   --bp-glass-border-soft: var(--bp-border);
   --bp-glass-highlight: transparent;
-  --bp-glass-shadow: var(--bp-shadow-sm);
-  --bp-glass-shadow-lg: var(--bp-shadow-lg);
+  --bp-glass-shadow: 0 1px 2px rgba(20, 20, 24, 0.06);
+  --bp-glass-shadow-lg: 0 4px 16px rgba(20, 20, 24, 0.12);
   --bp-glass-inset: none;
 
   --bp-glass-content-bg: var(--bp-surface);
   --bp-glass-content-bg-alt: var(--bp-surface-alt);
-  --bp-glass-row-hover: var(--bp-surface-alt);
+  --bp-glass-row-hover: #eef1f7;
 
-  --bp-sidebar-tint: var(--bp-brand);
-  --bp-sidebar-hover: rgba(255, 255, 255, 0.1);
+  /* Chrome: dark navy/near-black, not the brand purple — the one
+     deliberate palette break from Glass mode, matching a dense
+     enterprise-dashboard convention (dark top-level chrome framing a
+     light, airy content area). */
+  --bp-sidebar-tint: #12141c;
+  --bp-sidebar-text: rgba(255, 255, 255, 0.72);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.08);
+
+  /* Calm blue accent standing in for amber's "active/selected" role in
+     this mode — amber/purple stay for data semantics (warning badges,
+     brand text) but the UI's own selection color shifts cooler here. */
+  --bp-standard-accent: #2f6fed;
+  --bp-standard-accent-dark: #1f52b8;
+}
+
+/* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
+   mode's brand-tinted glass) — Standard mode's navy chrome needs that
+   gone, not tinted purple underneath. Header gets the same dark
+   treatment as the sidebar (rather than staying white), matching the
+   "dark top-level chrome framing a light content area" convention this
+   mode is going for — a plain white header next to a navy sidebar would
+   read as unfinished, not intentional. */
+:root[data-mode="standard"] .bp-sidebar {
+  background: var(--bp-sidebar-tint) !important;
+}
+
+:root[data-mode="standard"] .bp-header {
+  background: var(--bp-sidebar-tint) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-mode="standard"] .bp-header-name,
+:root[data-mode="standard"] .bp-breadcrumb-current {
+  color: #ffffff !important;
+}
+
+:root[data-mode="standard"] .bp-header-role,
+:root[data-mode="standard"] .bp-breadcrumb span:not(.bp-breadcrumb-current) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:root[data-mode="standard"] .bp-breadcrumb-sep {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+:root[data-mode="standard"] .bp-header-refresh-btn,
+:root[data-mode="standard"] .bp-header-theme-btn,
+:root[data-mode="standard"] .bp-header-signout {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+:root[data-mode="standard"] .bp-header-search {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+:root[data-mode="standard"] .bp-header-search-input {
+  color: #ffffff !important;
+}
+
+:root[data-mode="standard"] .bp-header-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+:root[data-mode="standard"] .bp-header-profile-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+:root[data-mode="standard"] .bp-admin-badge {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:root[data-mode="standard"] .bp-sidebar-link.is-active {
+  background: var(--bp-standard-accent) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+:root[data-mode="standard"] .bp-btn-primary,
+:root[data-mode="standard"] .bp-login-submit {
+  background: var(--bp-standard-accent) !important;
+  border-color: var(--bp-standard-accent-dark) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+:root[data-mode="standard"] .bp-btn-primary:hover:not(:disabled),
+:root[data-mode="standard"] .bp-login-submit:hover:not(:disabled) {
+  background: var(--bp-standard-accent-dark) !important;
+  filter: none !important;
+}
+
+:root[data-mode="standard"] .bp-btn-danger {
+  background: #c0392b !important;
+  box-shadow: none !important;
+}
+
+:root[data-mode="standard"] .bp-btn-danger:hover:not(:disabled) {
+  background: #a5301f !important;
+  filter: none !important;
+}
+
+:root[data-mode="standard"] .bp-tab.is-active {
+  color: var(--bp-standard-accent) !important;
+  border-bottom-color: var(--bp-standard-accent) !important;
+}
+
+:root[data-mode="standard"] .bp-header-refresh-btn.is-spinning,
+:root[data-mode="standard"] a {
+  color: var(--bp-standard-accent);
 }
 
 :root[data-mode="standard"] .bp-glass-orbs {
@@ -274,14 +403,46 @@
 
 @media (prefers-color-scheme: dark) {
   :root[data-mode="standard"]:not([data-theme="light"]) {
-    --bp-sidebar-tint: #2a221b;
+    --bp-text: #e8e9ec;
+    --bp-text-muted: #9096a0;
+    --bp-border: #33363d;
+
+    --bp-bg: #16171b;
+    --bp-surface: #1e2025;
+    --bp-surface-alt: #26282e;
+
+    --bp-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --bp-glass-shadow-lg: 0 4px 18px rgba(0, 0, 0, 0.5);
+    --bp-glass-row-hover: #23262d;
+
+    --bp-sidebar-tint: #0d0e12;
+    --bp-sidebar-text: rgba(255, 255, 255, 0.68);
     --bp-sidebar-hover: rgba(255, 255, 255, 0.06);
+
+    --bp-standard-accent: #5b8dfd;
+    --bp-standard-accent-dark: #3f6fe0;
   }
 }
 
 :root[data-mode="standard"][data-theme="dark"] {
-  --bp-sidebar-tint: #2a221b;
+  --bp-text: #e8e9ec;
+  --bp-text-muted: #9096a0;
+  --bp-border: #33363d;
+
+  --bp-bg: #16171b;
+  --bp-surface: #1e2025;
+  --bp-surface-alt: #26282e;
+
+  --bp-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --bp-glass-shadow-lg: 0 4px 18px rgba(0, 0, 0, 0.5);
+  --bp-glass-row-hover: #23262d;
+
+  --bp-sidebar-tint: #0d0e12;
+  --bp-sidebar-text: rgba(255, 255, 255, 0.68);
   --bp-sidebar-hover: rgba(255, 255, 255, 0.06);
+
+  --bp-standard-accent: #5b8dfd;
+  --bp-standard-accent-dark: #3f6fe0;
 }
 
 /* Shared mobile breakpoint — below this width the sidebar becomes a
