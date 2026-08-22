@@ -13,7 +13,7 @@ function inr(n) {
 // `admins` (who can sign into this portal); employees are tracked for
 // payroll (see Salary Payments) and, on Production Runs, assigned to the
 // Mixing/Baking/Packing stages.
-export default function EmployeesList() {
+export default function EmployeesList({ onManagePositions }) {
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,13 +118,13 @@ export default function EmployeesList() {
         </table>
       </div>
 
-      {showAdd && <EmployeeModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />}
-      {editEmployee && <EmployeeModal employee={editEmployee} locations={locations} onClose={() => setEditEmployee(null)} onDone={onSaved} />}
+      {showAdd && <EmployeeModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} onManagePositions={onManagePositions} />}
+      {editEmployee && <EmployeeModal employee={editEmployee} locations={locations} onClose={() => setEditEmployee(null)} onDone={onSaved} onManagePositions={onManagePositions} />}
     </div>
   );
 }
 
-function EmployeeModal({ employee, locations, onClose, onDone }) {
+function EmployeeModal({ employee, locations, onClose, onDone, onManagePositions }) {
   const isEdit = !!employee;
   const [fullName, setFullName] = useState(employee?.full_name || "");
   const [aadharNumber, setAadharNumber] = useState(employee?.aadhar_number || "");
@@ -222,7 +222,9 @@ function EmployeeModal({ employee, locations, onClose, onDone }) {
                   <option value={roleDesignation}>{roleDesignation}</option>
                 )}
               </select>
-              <a href="/positions" target="_blank" rel="noopener noreferrer" className="bp-btn-sm" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage</a>
+              {onManagePositions && (
+                <button type="button" className="bp-btn-sm" onClick={() => { onClose(); onManagePositions(); }}>Manage</button>
+              )}
             </div>
           </div>
           <div style={{ flex: 1 }}>
