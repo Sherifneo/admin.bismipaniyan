@@ -19,7 +19,7 @@
         } catch (e) {}
         try {
           var mode = localStorage.getItem("bp_admin_mode");
-          document.documentElement.setAttribute("data-mode", mode === "glass" ? "glass" : "standard");
+          document.documentElement.setAttribute("data-mode", mode === "standard" ? "standard" : "glass");
         } catch (e) {}
         try {
           var textSize = localStorage.getItem("bp_admin_text_size");
