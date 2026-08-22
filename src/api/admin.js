@@ -190,6 +190,7 @@ export const numberSequencesApi = {
   reset: (key) => POST(`/api/admin/number-sequences/${key}/reset`),
   lastRecord: (key) => GET(`/api/admin/number-sequences/${key}/last-record`),
   clearLast: (key, pk) => POST(`/api/admin/number-sequences/${key}/clear-last`, { pk }),
+  sync: (key) => POST(`/api/admin/number-sequences/${key}/sync`),
 };
 
 export const securityApi = {

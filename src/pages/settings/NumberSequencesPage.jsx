@@ -107,10 +107,31 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
   const [checkingCollisions, setCheckingCollisions] = useState(false);
   const [lastRecord, setLastRecord] = useState(undefined); // undefined = loading, null = none found
   const [clearing, setClearing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  function loadLastRecord() {
+    setLastRecord(undefined);
+    numberSequencesApi.lastRecord(counter.counter_key).then(setLastRecord).catch(() => setLastRecord(null));
+  }
 
   useEffect(() => {
-    numberSequencesApi.lastRecord(counter.counter_key).then(setLastRecord).catch(() => setLastRecord(null));
+    loadLastRecord();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counter.counter_key]);
+
+  async function syncToReality() {
+    setSyncing(true);
+    setError("");
+    try {
+      const result = await numberSequencesApi.sync(counter.counter_key);
+      setCurrentValue(String(result.current_value));
+      loadLastRecord();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not sync this sequence.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function resetSequence() {
     if (!window.confirm(`Reset "${counter.counter_key}" back to 0? The next number issued will restart from 1.`)) return;
@@ -258,15 +279,18 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
           </p>
         )}
 
-        <label className="bp-field-label">Last record</label>
+        <label className="bp-field-label">Last record (holds the highest code in use)</label>
         {lastRecord === undefined ? (
           <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -4, marginBottom: 10 }}>Loading…</p>
         ) : lastRecord === null ? (
           <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -4, marginBottom: 10 }}>No records created under this sequence yet.</p>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
             <span className="bp-td-muted" style={{ fontSize: 13 }}>
               <strong className="bp-td-strong">{lastRecord.code}</strong> — {lastRecord.label}
+              {lastRecord.is_active === false && (
+                <span className="bp-badge bp-badge-warning" style={{ marginLeft: 8 }}>Inactive — still reserves this code</span>
+              )}
             </span>
             <button type="button" className="bp-btn-sm bp-btn-outline" onClick={clearLastRecord} disabled={clearing}>
               {clearing ? "Clearing…" : "Clear"}
@@ -274,10 +298,15 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
           </div>
         )}
         <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 12 }}>
-          If you Reset and a code collides with an existing record (e.g. C-00012 still exists after resetting), clear that record here first to free the code up.
+          A code stays reserved even if the record holding it was later deactivated — "Clear" permanently deletes that
+          record to free the code up. If the record is real data you don't want to delete, use "Sync to match records"
+          instead — it moves the current value past this code without touching the record.
         </p>
 
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={syncToReality} disabled={syncing}>
+            {syncing ? "Syncing…" : "Sync to match records"}
+          </button>
           <button type="button" className="bp-btn-sm bp-btn-outline" onClick={resetSequence} disabled={resetting}>
             {resetting ? "Resetting…" : "Reset to 0"}
           </button>

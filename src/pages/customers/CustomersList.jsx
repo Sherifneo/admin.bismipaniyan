@@ -26,7 +26,7 @@ export default function CustomersList() {
     setLoading(true);
     setError("");
     try {
-      const data = await customersApi.list({ q });
+      const data = await customersApi.list({ q, includeInactive: true });
       setCustomers(data.items || []);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load customers.");
@@ -47,8 +47,13 @@ export default function CustomersList() {
   }
 
   async function remove(customer) {
-    if (!window.confirm(`Remove ${customer.name} from customers?`)) return;
+    if (!window.confirm(`Deactivate ${customer.name}? Their code stays reserved, and they'll be hidden from Sales Order pickers, but you can reactivate them here.`)) return;
     await customersApi.remove(customer.customer_id);
+    await load();
+  }
+
+  async function reactivate(customer) {
+    await customersApi.update(customer.customer_id, { is_active: true });
     await load();
   }
 
@@ -58,6 +63,10 @@ export default function CustomersList() {
     { key: "phone", label: "Phone", accessor: (c) => c.phone || "" },
     { key: "address", label: "Address", accessor: (c) => c.address || "" },
     { key: "gstin", label: "GSTIN", accessor: (c) => c.gstin || "" },
+    {
+      key: "is_active", label: "Active", accessor: (c) => (c.is_active ? "yes" : "no"), filter: "select",
+      options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }],
+    },
     { key: "created_by_name", label: "Created by", accessor: (c) => c.created_by_name || "", hiddenByDefault: true },
     { key: "created_at", label: "Created at", accessor: (c) => c.created_at || "", filter: "dateRange", hiddenByDefault: true },
     { key: "updated_by_name", label: "Updated by", accessor: (c) => c.updated_by_name || "", hiddenByDefault: true },
@@ -99,23 +108,25 @@ export default function CustomersList() {
               {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
               {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={12} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={11} className="bp-table-empty">No customers found.</td></tr>
+              <tr><td colSpan={12} className="bp-table-empty">No customers found.</td></tr>
             ) : (
               table.filteredRows.map((c) => (
-                <tr key={c.customer_id} onClick={() => setEditCustomer(c)} style={{ cursor: "pointer" }}>
+                <tr key={c.customer_id} onClick={() => setEditCustomer(c)} style={{ cursor: "pointer", opacity: c.is_active ? 1 : 0.55 }}>
                   <SelectRowCell table={table} row={c} />
                   {table.isColumnVisible("customer_code") && <td className="bp-td-muted">{c.customer_code || "—"}</td>}
                   {table.isColumnVisible("name") && <td className="bp-td-strong">{c.name}</td>}
                   {table.isColumnVisible("phone") && <td className="bp-td-muted">{c.phone || "—"}</td>}
                   {table.isColumnVisible("address") && <td className="bp-td-muted">{c.address || "—"}</td>}
                   {table.isColumnVisible("gstin") && <td className="bp-td-muted">{c.gstin || "—"}</td>}
+                  {table.isColumnVisible("is_active") && <td className="bp-td-muted">{c.is_active ? "Yes" : "No"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{c.created_by_name || "—"}</td>}
                   {table.isColumnVisible("created_at") && <td className="bp-td-muted">{c.created_at ? new Date(c.created_at).toLocaleString("en-IN") : "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{c.updated_by_name || "—"}</td>}
@@ -123,7 +134,11 @@ export default function CustomersList() {
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }}>Edit</button>
                     {hasPermission("sales.manage", "full_control") && (
-                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(c); }}>Remove</button>
+                      c.is_active ? (
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(c); }}>Deactivate</button>
+                      ) : (
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); reactivate(c); }}>Reactivate</button>
+                      )
                     )}
                   </td>
                 </tr>
