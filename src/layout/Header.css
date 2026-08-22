@@ -100,42 +100,9 @@
   to { transform: rotate(360deg); }
 }
 
-.bp-header-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bp-glass-tint);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--bp-glass-border-soft);
-  border-radius: var(--bp-radius-md);
-  padding: 6px 10px;
-  max-width: 320px;
-  flex: 1;
-}
-
-.bp-header-search-icon {
-  font-size: 12px;
-  opacity: 0.6;
-}
-
-.bp-header-search-input {
-  border: none;
-  background: none;
-  outline: none;
-  font-size: 12.5px;
-  font-family: inherit;
-  color: var(--bp-text);
-  width: 100%;
-}
-
-.bp-header-search-input::placeholder {
-  color: var(--bp-text-muted);
-}
-
-.bp-header-search-input:disabled {
-  cursor: not-allowed;
-}
+/* Global search box styling lives in GlobalSearch.css (imported by
+   GlobalSearch.jsx) — .bp-header-search and friends were a disabled
+   placeholder here before that component existed. */
 
 .bp-header-spacer {
   flex: 1;

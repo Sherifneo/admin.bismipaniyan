@@ -6,6 +6,8 @@ import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./Partners.css";
 
 const LIMIT = 20;
@@ -26,11 +28,12 @@ const TYPE_LABELS = {
 // Bismi gets the rest) and supplying_partner's product sells in a Bismi
 // store (Bismi keeps the commission%, the partner gets the rest).
 export default function PartnersList() {
+  const urlSearch = useUrlSearch();
   const [partners, setPartners] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [type, setType] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(urlSearch.q);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -67,6 +70,23 @@ export default function PartnersList() {
     await load();
   }
 
+  const columns = [
+    { key: "partner_code", label: "Code", accessor: (p) => p.partner_code || "" },
+    { key: "name", label: "Name", accessor: (p) => p.name },
+    {
+      key: "type", label: "Type", accessor: (p) => p.type, filter: "select",
+      options: Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label })),
+    },
+    { key: "contact", label: "Contact", accessor: (p) => (p.contact_name || "") + (p.contact_phone ? ` · ${p.contact_phone}` : "") },
+    { key: "location", label: "Location", accessor: (p) => p.location || "" },
+    { key: "commission_percent", label: "Commission", accessor: (p) => Number(p.commission_percent) },
+    {
+      key: "settlement_frequency", label: "Settlement", accessor: (p) => p.settlement_frequency, filter: "select",
+      options: [{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }],
+    },
+  ];
+  const table = useDataTable({ rows: partners, columns, rowKey: (p) => p.partner_id });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -85,14 +105,18 @@ export default function PartnersList() {
         </select>
       </div>
 
-      <SearchBox placeholder="Search by name…" onSearch={submitSearch} />
+      <SearchBox placeholder="Search by name…" onSearch={submitSearch} initialValue={urlSearch.q} />
 
       {error && <div className="bp-inline-error">{error}</div>}
+
+      <DataTableToolbar table={table} filename="partners" totalCount={partners.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Code</th>
               <th>Name</th>
               <th>Type</th>
@@ -105,12 +129,13 @@ export default function PartnersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
-            ) : partners.length === 0 ? (
-              <tr><td colSpan={8} className="bp-table-empty">No partners found.</td></tr>
+              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={9} className="bp-table-empty">No partners found.</td></tr>
             ) : (
-              partners.map((p) => (
+              table.filteredRows.map((p) => (
                 <tr key={p.partner_id} onClick={() => setEditPartner(p)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={p} />
                   <td className="bp-td-muted">{p.partner_code || "—"}</td>
                   <td className="bp-td-strong">{p.name}</td>
                   <td><span className={`bp-partner-type-badge bp-partner-type-${p.type}`}>{TYPE_LABELS[p.type]}</span></td>
@@ -289,9 +314,30 @@ function SettlementsModal({ partner, onClose }) {
 
   const owedLabel = partner.type === "external_shop" ? "Shop owes Bismi" : "Bismi owes partner";
 
+  const columns = [
+    { key: "period", label: "Period", accessor: (s) => s.period_start },
+    { key: "sales_value", label: "Sales", accessor: (s) => s.sales_value },
+    { key: "net_amount", label: owedLabel, accessor: (s) => s.net_amount },
+    {
+      key: "status", label: "Status", accessor: (s) => s.status, filter: "select",
+      options: [{ value: "pending", label: "Pending" }, { value: "paid", label: "Paid" }],
+    },
+  ];
+  const table = useDataTable({ rows: settlements, columns, rowKey: (s) => s.settlement_id });
+
   return (
     <Modal title={`Settlements — ${partner.name}`} onClose={onClose}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        {table.selectedRows.length > 0 && (
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected(`settlements-${partner.partner_code || partner.partner_id}`)}>
+            Export selected ({table.selectedRows.length})
+          </button>
+        )}
+        {settlements.length > 0 && (
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportAll(`settlements-${partner.partner_code || partner.partner_id}`)}>
+            Export all
+          </button>
+        )}
         <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New settlement</button>
       </div>
 
@@ -302,32 +348,37 @@ function SettlementsModal({ partner, onClose }) {
       ) : settlements.length === 0 ? (
         <div className="bp-td-muted">No settlements recorded yet.</div>
       ) : (
-        <table className="bp-table">
-          <thead>
-            <tr>
-              <th>Period</th>
-              <th>Sales</th>
-              <th>{owedLabel}</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {settlements.map((s) => (
-              <tr key={s.settlement_id}>
-                <td className="bp-td-muted">{s.period_start} → {s.period_end}</td>
-                <td>{inr(s.sales_value)}</td>
-                <td className="bp-td-strong">{inr(s.net_amount)}</td>
-                <td><StatusBadge status={s.status} /></td>
-                <td className="bp-td-actions">
-                  {s.status === "pending" && (
-                    <button type="button" className="bp-btn-sm" onClick={() => markPaid(s)}>Mark paid</button>
-                  )}
-                </td>
+        <>
+          <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+          <table className="bp-table">
+            <thead>
+              <tr>
+                <SelectAllHeaderCell table={table} />
+                <th>Period</th>
+                <th>Sales</th>
+                <th>{owedLabel}</th>
+                <th>Status</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {table.filteredRows.map((s) => (
+                <tr key={s.settlement_id}>
+                  <SelectRowCell table={table} row={s} />
+                  <td className="bp-td-muted">{s.period_start} → {s.period_end}</td>
+                  <td>{inr(s.sales_value)}</td>
+                  <td className="bp-td-strong">{inr(s.net_amount)}</td>
+                  <td><StatusBadge status={s.status} /></td>
+                  <td className="bp-td-actions">
+                    {s.status === "pending" && (
+                      <button type="button" className="bp-btn-sm" onClick={() => markPaid(s)}>Mark paid</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
 
       {showAdd && (

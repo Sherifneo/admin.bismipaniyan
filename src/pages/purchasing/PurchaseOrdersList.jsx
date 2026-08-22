@@ -5,6 +5,8 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
 
@@ -21,6 +23,7 @@ function todayStr() {
 // one status change that writes stock into inventory_movements (see
 // backend/src/routes/purchase-orders.js).
 export default function PurchaseOrdersList() {
+  const urlSearch = useUrlSearch();
   const [vendors, setVendors] = useState([]);
   const [locations, setLocations] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -71,6 +74,30 @@ export default function PurchaseOrdersList() {
     await load();
   }
 
+  const columns = [
+    { key: "po_number", label: "PO #", accessor: (po) => po.po_number },
+    { key: "vendor_name", label: "Vendor", accessor: (po) => po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name },
+    { key: "location_name", label: "Location", accessor: (po) => po.location_name },
+    { key: "order_date", label: "Order date", accessor: (po) => po.order_date, filter: "dateRange" },
+    { key: "expected_date", label: "Expected", accessor: (po) => po.expected_date || "", filter: "dateRange" },
+    { key: "total", label: "Total", accessor: (po) => po.total },
+    {
+      key: "status", label: "Status", accessor: (po) => po.status, filter: "select",
+      options: [{ value: "draft", label: "Draft" }, { value: "ordered", label: "Ordered" }, { value: "received", label: "Received" }, { value: "cancelled", label: "Cancelled" }],
+    },
+    {
+      key: "payment_status", label: "Payment", accessor: (po) => (po.status === "received" ? (po.payment_status === "paid" ? "paid" : "unpaid") : ""), filter: "select",
+      options: [{ value: "paid", label: "Paid" }, { value: "unpaid", label: "Unpaid" }],
+    },
+  ];
+  const table = useDataTable({ rows: orders, columns, rowKey: (po) => po.po_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("vendor_name", urlSearch.q);
+    if (urlSearch.from || urlSearch.to) table.setFilter("order_date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -103,10 +130,14 @@ export default function PurchaseOrdersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="purchase-orders" totalCount={orders.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>PO #</th>
               <th>Vendor</th>
               <th>Location</th>
@@ -120,12 +151,13 @@ export default function PurchaseOrdersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
-            ) : orders.length === 0 ? (
-              <tr><td colSpan={9} className="bp-table-empty">No purchase orders found.</td></tr>
+              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={10} className="bp-table-empty">No purchase orders found.</td></tr>
             ) : (
-              orders.map((po) => (
+              table.filteredRows.map((po) => (
                 <tr key={po.po_id} onClick={() => setViewPo(po)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={po} />
                   <td className="bp-td-strong">{po.po_number}</td>
                   <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>
                   <td className="bp-td-muted">{po.location_name}</td>

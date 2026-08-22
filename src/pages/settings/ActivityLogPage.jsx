@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { activityLogApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Pagination from "../../components/Pagination";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
 const LIMIT = 20;
 
@@ -33,6 +34,15 @@ export default function ActivityLogPage() {
     })();
   }, [page]);
 
+  const columns = [
+    { key: "created_at", label: "When", accessor: (e) => e.created_at, filter: "dateRange" },
+    { key: "actor_name", label: "Who", accessor: (e) => e.actor_name || "System" },
+    { key: "action", label: "Action", accessor: (e) => e.action },
+    { key: "entity", label: "Entity", accessor: (e) => `${e.entity_type} · ${e.entity_id}` },
+    { key: "reason", label: "Reason", accessor: (e) => e.reason || "" },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (e) => e.audit_id });
+
   return (
     <div>
       <h1 className="bp-page-title">Activity Log</h1>
@@ -42,10 +52,14 @@ export default function ActivityLogPage() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="activity-log" totalCount={items.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>When</th>
               <th>Who</th>
               <th>Action</th>
@@ -55,12 +69,13 @@ export default function ActivityLogPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No activity recorded yet.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No activity recorded yet.</td></tr>
             ) : (
-              items.map((entry) => (
+              table.filteredRows.map((entry) => (
                 <tr key={entry.audit_id}>
+                  <SelectRowCell table={table} row={entry} />
                   <td className="bp-td-muted">{new Date(entry.created_at).toLocaleString("en-IN")}</td>
                   <td>{entry.actor_name || "System"}</td>
                   <td style={{ textTransform: "capitalize" }}>{entry.action}</td>

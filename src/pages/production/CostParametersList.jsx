@@ -3,12 +3,15 @@ import { costParametersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Reference numbers used in production costing (e.g. flour cost per kg,
 // electricity per unit) — not historical records, so edits/deletes are
 // hard, not soft-deleted like most other reference data.
 export default function CostParametersList() {
   const { hasPermission } = useAuth();
+  const urlSearch = useUrlSearch();
   const [params, setParams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -44,6 +47,19 @@ export default function CostParametersList() {
     await load();
   }
 
+  const columns = [
+    { key: "name", label: "Name", accessor: (p) => p.name },
+    { key: "value", label: "Value", accessor: (p) => p.value },
+    { key: "unit", label: "Unit", accessor: (p) => p.unit || "" },
+    { key: "notes", label: "Notes", accessor: (p) => p.notes || "" },
+  ];
+  const table = useDataTable({ rows: params, columns, rowKey: (p) => p.param_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("name", urlSearch.q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -56,10 +72,14 @@ export default function CostParametersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="cost-parameters" totalCount={params.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Name</th>
               <th>Value</th>
               <th>Unit</th>
@@ -69,12 +89,13 @@ export default function CostParametersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : params.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No cost parameters found.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No cost parameters found.</td></tr>
             ) : (
-              params.map((p) => (
+              table.filteredRows.map((p) => (
                 <tr key={p.param_id} onClick={() => setEditParam(p)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={p} />
                   <td className="bp-td-strong">{p.name}</td>
                   <td>{p.value}</td>
                   <td className="bp-td-muted">{p.unit || "—"}</td>

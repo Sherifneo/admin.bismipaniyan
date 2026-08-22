@@ -6,6 +6,8 @@ import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
+import { useDataTable, FilterBar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./Inventory.css";
 
 const LIMIT = 20;
@@ -23,12 +25,13 @@ const CSV_COLUMNS = [
 // store (Model C of the 3-way commission model) — a store's shelf is not
 // one undifferentiated pool of stock.
 export default function InventoryList() {
+  const urlSearch = useUrlSearch();
   const [locations, setLocations] = useState([]);
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(urlSearch.q);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showMovement, setShowMovement] = useState(false);
@@ -66,11 +69,25 @@ export default function InventoryList() {
     await load();
   }
 
+  const columns = [
+    { key: "name", label: "Product", accessor: (r) => r.name },
+    { key: "sku", label: "SKU", accessor: (r) => r.sku || "" },
+    { key: "location_name", label: "Location", accessor: (r) => r.location_name },
+    { key: "stock_qty", label: "Bismi stock", accessor: (r) => r.stock_qty },
+    { key: "consignment_stock_qty", label: "Consignment stock", accessor: (r) => r.consignment_stock_qty ?? "" },
+  ];
+  const table = useDataTable({ rows, columns, rowKey: (r) => `${r.product_id}:${r.location_id}` });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
         <h1 className="bp-page-title">Inventory</h1>
         <div style={{ display: "flex", gap: 8 }}>
+          {table.selectedRows.length > 0 && (
+            <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("inventory")}>
+              Export selected ({table.selectedRows.length})
+            </button>
+          )}
           <ExportMenu filename="inventory" rows={rows} columns={CSV_COLUMNS} />
           <button type="button" className="bp-btn-primary" onClick={() => setShowMovement(true)}>+ Record movement</button>
         </div>
@@ -83,14 +100,17 @@ export default function InventoryList() {
         </select>
       </div>
 
-      <SearchBox placeholder="Search by product name or SKU…" onSearch={submitSearch} />
+      <SearchBox placeholder="Search by product name or SKU…" onSearch={submitSearch} initialValue={urlSearch.q} />
 
       {error && <div className="bp-inline-error">{error}</div>}
+
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Product</th>
               <th>SKU</th>
               <th>Location</th>
@@ -100,14 +120,15 @@ export default function InventoryList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No stock movements recorded yet.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No stock movements recorded yet.</td></tr>
             ) : (
-              rows.map((r) => {
+              table.filteredRows.map((r) => {
                 const isLow = r.low_stock_alert && Number(r.stock_qty) <= Number(r.low_stock_alert);
                 return (
                   <tr key={`${r.product_id}:${r.location_id}`}>
+                    <SelectRowCell table={table} row={r} />
                     <td className="bp-td-strong">{r.name}</td>
                     <td className="bp-td-muted">{r.sku || "—"}</td>
                     <td>{r.location_name}</td>

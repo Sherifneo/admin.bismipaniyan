@@ -4,6 +4,8 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import StatusBadge from "../../components/StatusBadge";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const ROLE_LABELS = {
   owner: "Owner",
@@ -17,6 +19,7 @@ const ROLE_LABELS = {
 // columns elsewhere, so soft-delete avoids FK issues).
 export default function TeamList() {
   const { admin: me } = useAuth();
+  const urlSearch = useUrlSearch();
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,6 +49,25 @@ export default function TeamList() {
     await load();
   }
 
+  const columns = [
+    { key: "full_name", label: "Name", accessor: (a) => a.full_name },
+    { key: "email", label: "Email", accessor: (a) => a.email },
+    {
+      key: "role", label: "Role", accessor: (a) => a.role, filter: "select",
+      options: Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
+    },
+    {
+      key: "status", label: "Status", accessor: (a) => a.status, filter: "select",
+      options: [{ value: "active", label: "Active" }, { value: "suspended", label: "Suspended" }],
+    },
+  ];
+  const table = useDataTable({ rows: admins, columns, rowKey: (a) => a.admin_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("full_name", urlSearch.q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -58,10 +80,14 @@ export default function TeamList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="team" totalCount={admins.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
@@ -71,12 +97,13 @@ export default function TeamList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : admins.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No admins found.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No admins found.</td></tr>
             ) : (
-              admins.map((a) => (
+              table.filteredRows.map((a) => (
                 <tr key={a.admin_id}>
+                  <SelectRowCell table={table} row={a} />
                   <td className="bp-td-strong">{a.full_name}</td>
                   <td className="bp-td-muted">{a.email}</td>
                   <td>{ROLE_LABELS[a.role] || a.role}</td>

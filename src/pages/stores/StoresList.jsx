@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -48,6 +49,21 @@ export default function StoresList() {
 
   const canManage = hasPermission("stores.manage", "edit");
 
+  const columns = [
+    { key: "location_code", label: "Code", accessor: (s) => s.location_code || "" },
+    { key: "name", label: "Name", accessor: (s) => s.name },
+    {
+      key: "kind", label: "Kind", accessor: (s) => s.kind, filter: "select",
+      options: [{ value: "store", label: "Store" }, { value: "factory", label: "Factory" }],
+    },
+    { key: "address", label: "Address", accessor: (s) => s.address || "" },
+    {
+      key: "is_active", label: "Active", accessor: (s) => (s.is_active ? "Yes" : "No"), filter: "select",
+      options: [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }],
+    },
+  ];
+  const table = useDataTable({ rows: stores, columns, rowKey: (s) => s.location_id });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -62,10 +78,14 @@ export default function StoresList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="retail-stores" totalCount={stores.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Code</th>
               <th>Name</th>
               <th>Kind</th>
@@ -76,12 +96,13 @@ export default function StoresList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
-            ) : stores.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No stores found.</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={7} className="bp-table-empty">No stores found.</td></tr>
             ) : (
-              stores.map((s) => (
+              table.filteredRows.map((s) => (
                 <tr key={s.location_id} onClick={() => setDrillStore(s)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={s} />
                   <td className="bp-td-muted">{s.location_code || "—"}</td>
                   <td className="bp-td-strong">{s.name}</td>
                   <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{s.kind}</td>

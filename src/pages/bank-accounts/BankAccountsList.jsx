@@ -4,6 +4,8 @@ import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
 
@@ -23,6 +25,7 @@ const TABS = [
 // just a slim cash+bank overview that points here for the actual transfer
 // form, same tab-switch pattern as ReportsPage.jsx.
 export default function BankAccountsList() {
+  const urlSearch = useUrlSearch();
   const [tab, setTab] = useState("accounts");
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,23 @@ export default function BankAccountsList() {
     await load();
   }
 
+  const columns = [
+    { key: "account_name", label: "Account name", accessor: (a) => a.account_name },
+    { key: "bank_name", label: "Bank", accessor: (a) => a.bank_name },
+    { key: "account_number_last4", label: "Account #", accessor: (a) => a.account_number_last4 ? `•••• ${a.account_number_last4}` : "" },
+    { key: "balance", label: "Balance", accessor: (a) => a.balance },
+    {
+      key: "is_active", label: "Status", accessor: (a) => (a.is_active ? "active" : "inactive"), filter: "select",
+      options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }],
+    },
+  ];
+  const table = useDataTable({ rows: accounts, columns, rowKey: (a) => a.bank_account_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("account_name", urlSearch.q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -80,10 +100,14 @@ export default function BankAccountsList() {
         <>
           {error && <div className="bp-inline-error">{error}</div>}
 
+          <DataTableToolbar table={table} filename="bank-accounts" totalCount={accounts.length} />
+          <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
           <div className="bp-table-wrap">
             <table className="bp-table">
               <thead>
                 <tr>
+                  <SelectAllHeaderCell table={table} />
                   <th>Account name</th>
                   <th>Bank</th>
                   <th>Account #</th>
@@ -94,12 +118,13 @@ export default function BankAccountsList() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
-                ) : accounts.length === 0 ? (
-                  <tr><td colSpan={6} className="bp-table-empty">No bank accounts yet.</td></tr>
+                  <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+                ) : table.filteredRows.length === 0 ? (
+                  <tr><td colSpan={7} className="bp-table-empty">No bank accounts yet.</td></tr>
                 ) : (
-                  accounts.map((a) => (
+                  table.filteredRows.map((a) => (
                     <tr key={a.bank_account_id} onClick={() => setEditAccount(a)} style={{ cursor: "pointer" }}>
+                      <SelectRowCell table={table} row={a} />
                       <td className="bp-td-strong">{a.account_name}</td>
                       <td className="bp-td-muted">{a.bank_name}</td>
                       <td className="bp-td-muted">{a.account_number_last4 ? `•••• ${a.account_number_last4}` : "—"}</td>

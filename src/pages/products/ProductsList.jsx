@@ -7,6 +7,8 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
 
@@ -29,11 +31,12 @@ const CSV_COLUMNS = [
 // maintained separately, not fetched from here.
 export default function ProductsList() {
   const { hasPermission } = useAuth();
+  const urlSearch = useUrlSearch();
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [itemKind, setItemKind] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(urlSearch.q);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -75,11 +78,31 @@ export default function ProductsList() {
     await load();
   }
 
+  const columns = [
+    { key: "product_code", label: "Code", accessor: (p) => p.product_code || "" },
+    { key: "sku", label: "SKU", accessor: (p) => p.sku || "" },
+    { key: "name", label: "Name", accessor: (p) => p.name },
+    {
+      key: "item_kind", label: "Kind", accessor: (p) => p.item_kind, filter: "select",
+      options: [{ value: "finished_good", label: "Finished good" }, { value: "raw_material", label: "Raw material" }],
+    },
+    { key: "uom", label: "UOM", accessor: (p) => p.uom },
+    { key: "cost_price", label: "Cost price", accessor: (p) => p.cost_price ?? "" },
+    { key: "selling_price", label: "Selling price", accessor: (p) => p.selling_price ?? "" },
+    { key: "low_stock_alert", label: "Low stock alert", accessor: (p) => p.low_stock_alert },
+  ];
+  const table = useDataTable({ rows: products, columns, rowKey: (p) => p.product_id });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
         <h1 className="bp-page-title">Products</h1>
         <div style={{ display: "flex", gap: 8 }}>
+          {table.selectedRows.length > 0 && (
+            <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("products")}>
+              Export selected ({table.selectedRows.length})
+            </button>
+          )}
           <ExportMenu filename="products" rows={products} columns={CSV_COLUMNS} />
           <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add product</button>
         </div>
@@ -93,14 +116,17 @@ export default function ProductsList() {
         </select>
       </div>
 
-      <SearchBox placeholder="Search by name or SKU…" onSearch={submitSearch} />
+      <SearchBox placeholder="Search by name or SKU…" onSearch={submitSearch} initialValue={urlSearch.q} />
 
       {error && <div className="bp-inline-error">{error}</div>}
+
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Code</th>
               <th>SKU</th>
               <th>Name</th>
@@ -114,12 +140,13 @@ export default function ProductsList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
-            ) : products.length === 0 ? (
-              <tr><td colSpan={9} className="bp-table-empty">No products found.</td></tr>
+              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={10} className="bp-table-empty">No products found.</td></tr>
             ) : (
-              products.map((p) => (
+              table.filteredRows.map((p) => (
                 <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={p} />
                   <td className="bp-td-muted">{p.product_code || "—"}</td>
                   <td className="bp-td-muted">{p.sku || "—"}</td>
                   <td className="bp-td-strong">{p.name}</td>

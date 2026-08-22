@@ -6,6 +6,8 @@ import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
+import { useDataTable, FilterBar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./CashBook.css";
 
 const LIMIT = 20;
@@ -40,6 +42,7 @@ const TABS = [
 // "no POS, back-office ledger, next-day manual entry" requirement).
 export default function CashBookList() {
   const { hasPermission } = useAuth();
+  const urlSearch = useUrlSearch();
   const [locations, setLocations] = useState([]);
   const [entries, setEntries] = useState([]);
   const [total, setTotal] = useState(0);
@@ -111,11 +114,35 @@ export default function CashBookList() {
     }
   }
 
+  const columns = [
+    { key: "entry_date", label: "Date", accessor: (e) => e.entry_date, filter: "dateRange" },
+    { key: "location_name", label: "Location", accessor: (e) => e.location_name },
+    {
+      key: "entry_type", label: "Type", accessor: (e) => e.entry_type, filter: "select",
+      options: [{ value: "income", label: "Income" }, { value: "expense", label: "Expense" }, { value: "transfer", label: "Transfer" }],
+    },
+    { key: "category", label: "Category", accessor: (e) => e.category },
+    { key: "description", label: "Description", accessor: (e) => e.description || "" },
+    { key: "amount", label: "Amount", accessor: (e) => e.amount },
+  ];
+  const table = useDataTable({ rows: entries, columns, rowKey: (e) => e.entry_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("category", urlSearch.q);
+    if (urlSearch.from || urlSearch.to) table.setFilter("entry_date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
         <h1 className="bp-page-title">Cash Book</h1>
         <div style={{ display: "flex", gap: 8 }}>
+          {table.selectedRows.length > 0 && (
+            <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("cash-book-entries")}>
+              Export selected ({table.selectedRows.length})
+            </button>
+          )}
           <ExportMenu filename="cashbook" rows={entries} columns={CSV_COLUMNS} />
           <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add entry</button>
         </div>
@@ -160,11 +187,14 @@ export default function CashBookList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             {tab === "deleted" ? (
               <tr>
+                <SelectAllHeaderCell table={table} />
                 <th>Date</th>
                 <th>Location</th>
                 <th>Type</th>
@@ -176,6 +206,7 @@ export default function CashBookList() {
               </tr>
             ) : (
               <tr>
+                <SelectAllHeaderCell table={table} />
                 <th>Date</th>
                 <th>Location</th>
                 <th>Type</th>
@@ -188,12 +219,13 @@ export default function CashBookList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={tab === "deleted" ? 8 : 7} className="bp-table-empty">Loading…</td></tr>
-            ) : entries.length === 0 ? (
-              <tr><td colSpan={tab === "deleted" ? 8 : 7} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
+              <tr><td colSpan={tab === "deleted" ? 9 : 8} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={tab === "deleted" ? 9 : 8} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
             ) : (
-              entries.map((e) => (
+              table.filteredRows.map((e) => (
                 <tr key={e.entry_id}>
+                  <SelectRowCell table={table} row={e} />
                   <td className="bp-td-muted">{e.entry_date}</td>
                   <td className="bp-td-strong">{e.location_name}</td>
                   <td>

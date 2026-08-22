@@ -4,6 +4,8 @@ import { ApiError } from "../../api/client";
 import StatusBadge from "../../components/StatusBadge";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
 
@@ -19,6 +21,7 @@ const STATUS_OPTIONS = ["new", "contacted", "confirmed", "closed"];
 // this system, so this screen exists so head office doesn't lose track of
 // who reached out, not to process the order itself.
 export default function WaOrdersList() {
+  const urlSearch = useUrlSearch();
   const [orders, setOrders] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -51,6 +54,22 @@ export default function WaOrdersList() {
     await load();
   }
 
+  const columns = [
+    { key: "created_at", label: "Received", accessor: (o) => o.created_at, filter: "dateRange" },
+    { key: "items", label: "Items", accessor: (o) => o.items.length },
+    { key: "subtotal", label: "Subtotal", accessor: (o) => o.subtotal },
+    {
+      key: "status", label: "Status", accessor: (o) => o.status, filter: "select",
+      options: STATUS_OPTIONS.map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) })),
+    },
+  ];
+  const table = useDataTable({ rows: orders, columns, rowKey: (o) => o.wa_order_id });
+
+  useEffect(() => {
+    if (urlSearch.from || urlSearch.to) table.setFilter("created_at", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <h1 className="bp-page-title">WhatsApp Orders</h1>
@@ -67,10 +86,14 @@ export default function WaOrdersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="wa-orders" totalCount={orders.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Received</th>
               <th>Items</th>
               <th>Subtotal</th>
@@ -80,12 +103,13 @@ export default function WaOrdersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : orders.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No WhatsApp order attempts yet.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No WhatsApp order attempts yet.</td></tr>
             ) : (
-              orders.map((o) => (
+              table.filteredRows.map((o) => (
                 <tr key={o.wa_order_id} onClick={() => setDetailOrder(o)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={o} />
                   <td className="bp-td-muted">{new Date(o.created_at).toLocaleString("en-IN")}</td>
                   <td className="bp-td-strong">{o.items.length} item{o.items.length === 1 ? "" : "s"}</td>
                   <td>{inr(o.subtotal)}</td>

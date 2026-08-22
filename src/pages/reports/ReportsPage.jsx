@@ -3,6 +3,7 @@ import { reportsApi, locationsApi, productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
+import { useDataTable, FilterBar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
 const LIMIT = 30;
 
@@ -77,6 +78,13 @@ function CashbookSummaryTab() {
   }, [from, to, locationId]);
 
   const items = data?.items || [];
+  const columns = [
+    { key: "entry_date", label: "Date", accessor: (r) => r.entry_date, filter: "dateRange" },
+    { key: "total_income", label: "Income", accessor: (r) => r.total_income },
+    { key: "total_expense", label: "Expense", accessor: (r) => r.total_expense },
+    { key: "net", label: "Net", accessor: (r) => r.net },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (r) => r.entry_date });
 
   return (
     <div>
@@ -88,6 +96,11 @@ function CashbookSummaryTab() {
         <input type="date" className="bp-field-input" style={{ width: "auto" }} value={from} onChange={(e) => setFrom(e.target.value)} />
         <span className="bp-td-muted">to</span>
         <input type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => setTo(e.target.value)} />
+        {table.selectedRows.length > 0 && (
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("cashbook-summary")}>
+            Export selected ({table.selectedRows.length})
+          </button>
+        )}
         <ExportMenu filename="cashbook-summary" rows={items} columns={CASHBOOK_CSV_COLUMNS} />
       </div>
 
@@ -110,19 +123,22 @@ function CashbookSummaryTab() {
         </div>
       )}
 
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><th>Date</th><th>Income</th><th>Expense</th><th>Net</th></tr>
+            <tr><SelectAllHeaderCell table={table} /><th>Date</th><th>Income</th><th>Expense</th><th>Net</th></tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={4} className="bp-table-empty">No cash book entries in this range.</td></tr>
+              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={5} className="bp-table-empty">No cash book entries in this range.</td></tr>
             ) : (
-              items.map((r) => (
+              table.filteredRows.map((r) => (
                 <tr key={r.entry_date}>
+                  <SelectRowCell table={table} row={r} />
                   <td className="bp-td-muted">{r.entry_date}</td>
                   <td>{inr(r.total_income)}</td>
                   <td>{inr(r.total_expense)}</td>
@@ -145,6 +161,16 @@ const STOCK_CSV_COLUMNS = [
   { label: "Type", accessor: (r) => r.movement_type },
   { label: "Qty delta", accessor: (r) => r.qty_delta },
   { label: "Note", accessor: (r) => r.note },
+];
+
+const MOVEMENT_TYPE_OPTIONS = [
+  { value: "production_in", label: "production_in" },
+  { value: "purchase_in", label: "purchase_in" },
+  { value: "transfer_in", label: "transfer_in" },
+  { value: "transfer_out", label: "transfer_out" },
+  { value: "sale", label: "sale" },
+  { value: "wastage", label: "wastage" },
+  { value: "adjustment", label: "adjustment" },
 ];
 
 function StockMovementsTab() {
@@ -178,6 +204,17 @@ function StockMovementsTab() {
       .finally(() => setLoading(false));
   }, [productId, locationId, from, to, page]);
 
+  const columns = [
+    { key: "entry_date", label: "Date", accessor: (r) => r.entry_date, filter: "dateRange" },
+    { key: "product_name", label: "Product", accessor: (r) => r.product_name },
+    { key: "sku", label: "SKU", accessor: (r) => r.sku || "" },
+    { key: "location_name", label: "Location", accessor: (r) => r.location_name },
+    { key: "movement_type", label: "Type", accessor: (r) => r.movement_type, filter: "select", options: MOVEMENT_TYPE_OPTIONS },
+    { key: "qty_delta", label: "Qty delta", accessor: (r) => r.qty_delta },
+    { key: "note", label: "Note", accessor: (r) => r.note || "" },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (r) => r.movement_id });
+
   return (
     <div>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
@@ -192,26 +229,35 @@ function StockMovementsTab() {
         <input type="date" className="bp-field-input" style={{ width: "auto" }} value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
         <span className="bp-td-muted">to</span>
         <input type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+        {table.selectedRows.length > 0 && (
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("stock-movements")}>
+            Export selected ({table.selectedRows.length})
+          </button>
+        )}
         <ExportMenu filename="stock-movements" rows={items} columns={STOCK_CSV_COLUMNS} />
       </div>
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Date</th><th>Product</th><th>SKU</th><th>Location</th><th>Type</th><th>Qty delta</th><th>Note</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No stock movements found.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={8} className="bp-table-empty">No stock movements found.</td></tr>
             ) : (
-              items.map((r) => (
+              table.filteredRows.map((r) => (
                 <tr key={r.movement_id}>
+                  <SelectRowCell table={table} row={r} />
                   <td className="bp-td-muted">{r.entry_date}</td>
                   <td className="bp-td-strong">{r.product_name}</td>
                   <td className="bp-td-muted">{r.sku}</td>
@@ -252,27 +298,42 @@ function PurchaseOrdersByStatusTab() {
       .finally(() => setLoading(false));
   }, []);
 
+  const columns = [
+    { key: "status", label: "Status", accessor: (r) => r.status },
+    { key: "count", label: "Count", accessor: (r) => r.count },
+    { key: "total_value", label: "Total value", accessor: (r) => r.total_value },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (r) => r.status });
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, gap: 8 }}>
+        {table.selectedRows.length > 0 && (
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("purchase-orders-by-status")}>
+            Export selected ({table.selectedRows.length})
+          </button>
+        )}
         <ExportMenu filename="purchase-orders-by-status" rows={items} columns={PO_STATUS_CSV_COLUMNS} />
       </div>
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><th>Status</th><th>Count</th><th>Total value</th></tr>
+            <tr><SelectAllHeaderCell table={table} /><th>Status</th><th>Count</th><th>Total value</th></tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={3} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={3} className="bp-table-empty">No purchase orders found.</td></tr>
+              <tr><td colSpan={4} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={4} className="bp-table-empty">No purchase orders found.</td></tr>
             ) : (
-              items.map((r) => (
+              table.filteredRows.map((r) => (
                 <tr key={r.status}>
+                  <SelectRowCell table={table} row={r} />
                   <td className="bp-td-strong">{r.status}</td>
                   <td>{r.count}</td>
                   <td>{inr(r.total_value)}</td>

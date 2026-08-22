@@ -5,14 +5,17 @@ import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Vendors sell raw materials TO Bismi — a purchasing relationship, not
 // a consignment/commission one (that's Partners & Shops). Feeds the
 // vendor dropdown on Purchase Orders.
 export default function VendorsList() {
   const { hasPermission } = useAuth();
+  const urlSearch = useUrlSearch();
   const [vendors, setVendors] = useState([]);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(urlSearch.q);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -48,6 +51,14 @@ export default function VendorsList() {
     await load();
   }
 
+  const columns = [
+    { key: "vendor_code", label: "Vendor ID", accessor: (v) => v.vendor_code || "" },
+    { key: "name", label: "Name", accessor: (v) => v.name },
+    { key: "contact_name", label: "Contact", accessor: (v) => (v.contact_name || "") + (v.contact_phone ? ` · ${v.contact_phone}` : "") },
+    { key: "address", label: "Address", accessor: (v) => v.address || "" },
+  ];
+  const table = useDataTable({ rows: vendors, columns, rowKey: (v) => v.vendor_id });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -58,14 +69,18 @@ export default function VendorsList() {
         Suppliers Bismi buys raw materials from — used on Purchase Orders.
       </p>
 
-      <SearchBox placeholder="Search by name…" onSearch={setQ} />
+      <SearchBox placeholder="Search by name…" onSearch={setQ} initialValue={urlSearch.q} />
 
       {error && <div className="bp-inline-error">{error}</div>}
+
+      <DataTableToolbar table={table} filename="vendors" totalCount={vendors.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Vendor ID</th>
               <th>Name</th>
               <th>Contact</th>
@@ -75,12 +90,13 @@ export default function VendorsList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : vendors.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No vendors found.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No vendors found.</td></tr>
             ) : (
-              vendors.map((v) => (
+              table.filteredRows.map((v) => (
                 <tr key={v.vendor_id} onClick={() => setEditVendor(v)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={v} />
                   <td className="bp-td-muted">{v.vendor_code || "—"}</td>
                   <td className="bp-td-strong">{v.name}</td>
                   <td className="bp-td-muted">{v.contact_name || "—"}{v.contact_phone ? ` · ${v.contact_phone}` : ""}</td>

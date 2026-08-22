@@ -5,6 +5,8 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
 
@@ -25,6 +27,7 @@ function todayStr() {
 // Book's old manual "Store sales" entry isn't the way to record a sale
 // anymore, this is.
 export default function SalesOrdersList() {
+  const urlSearch = useUrlSearch();
   const [customers, setCustomers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -65,6 +68,27 @@ export default function SalesOrdersList() {
     await load();
   }
 
+  const columns = [
+    { key: "so_number", label: "SO #", accessor: (so) => so.so_number },
+    { key: "buyer", label: "Buyer", accessor: (so) => so.customer_name || so.walkin_name || "Walk-in" },
+    { key: "location_name", label: "Location", accessor: (so) => so.location_name },
+    { key: "date", label: "Date", accessor: (so) => so.completed_date || so.order_date, filter: "dateRange" },
+    { key: "total", label: "Total", accessor: (so) => so.total },
+    {
+      key: "status", label: "Status", accessor: (so) => so.status, filter: "select",
+      options: [{ value: "draft", label: "Draft" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }],
+    },
+  ];
+  const table = useDataTable({ rows: orders, columns, rowKey: (so) => so.so_id });
+
+  // Seed from the header's GlobalSearch, once, on arrival — buyer/SO#
+  // free text and the date range column, if either was passed in the URL.
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("buyer", urlSearch.q);
+    if (urlSearch.from || urlSearch.to) table.setFilter("date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -83,10 +107,14 @@ export default function SalesOrdersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="sales-orders" totalCount={orders.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>SO #</th>
               <th>Buyer</th>
               <th>Location</th>
@@ -98,12 +126,13 @@ export default function SalesOrdersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
-            ) : orders.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No sales orders found.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={8} className="bp-table-empty">No sales orders found.</td></tr>
             ) : (
-              orders.map((so) => (
+              table.filteredRows.map((so) => (
                 <tr key={so.so_id} onClick={() => setViewSo(so)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={so} />
                   <td className="bp-td-strong">{so.so_number}</td>
                   <td>{so.customer_name || so.walkin_name || "Walk-in"}</td>
                   <td className="bp-td-muted">{so.location_name}</td>

@@ -4,11 +4,14 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Production equipment (ovens, mixers, etc.) — attached to a production
 // run so output can be traced to the machine that made it.
 export default function MachinesList() {
   const { hasPermission } = useAuth();
+  const urlSearch = useUrlSearch();
   const [machines, setMachines] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,23 @@ export default function MachinesList() {
     await load();
   }
 
+  const columns = [
+    { key: "machine_code", label: "Code", accessor: (m) => m.machine_code || "" },
+    { key: "name", label: "Name", accessor: (m) => m.name },
+    { key: "kind", label: "Kind", accessor: (m) => m.kind || "" },
+    { key: "location_name", label: "Location", accessor: (m) => m.location_name || "" },
+    {
+      key: "is_active", label: "Active", accessor: (m) => (m.is_active ? "yes" : "no"), filter: "select",
+      options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }],
+    },
+  ];
+  const table = useDataTable({ rows: machines, columns, rowKey: (m) => m.machine_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("name", urlSearch.q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -58,10 +78,14 @@ export default function MachinesList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="machines" totalCount={machines.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Code</th>
               <th>Name</th>
               <th>Kind</th>
@@ -72,12 +96,13 @@ export default function MachinesList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
-            ) : machines.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No machines found.</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={7} className="bp-table-empty">No machines found.</td></tr>
             ) : (
-              machines.map((m) => (
+              table.filteredRows.map((m) => (
                 <tr key={m.machine_id} onClick={() => setEditMachine(m)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={m} />
                   <td className="bp-td-muted">{m.machine_code || "—"}</td>
                   <td className="bp-td-strong">{m.name}</td>
                   <td className="bp-td-muted">{m.kind || "—"}</td>

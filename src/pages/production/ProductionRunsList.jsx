@@ -4,6 +4,8 @@ import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
 
@@ -13,6 +15,7 @@ const LIMIT = 20;
 // production_in movement (see backend/src/routes/production-runs.js) —
 // mirroring how a purchase order only touches stock on 'received'.
 export default function ProductionRunsList() {
+  const urlSearch = useUrlSearch();
   const [products, setProducts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [machines, setMachines] = useState([]);
@@ -55,6 +58,25 @@ export default function ProductionRunsList() {
     await load();
   }
 
+  const columns = [
+    { key: "product_name", label: "Product", accessor: (run) => run.product_name },
+    { key: "location_name", label: "Location", accessor: (run) => run.location_name },
+    { key: "machine_name", label: "Machine", accessor: (run) => run.machine_name || "" },
+    { key: "quantity_produced", label: "Qty", accessor: (run) => run.quantity_produced },
+    { key: "run_date", label: "Run date", accessor: (run) => run.run_date, filter: "dateRange" },
+    {
+      key: "status", label: "Status", accessor: (run) => run.status, filter: "select",
+      options: [{ value: "planned", label: "Planned" }, { value: "in_progress", label: "In progress" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }],
+    },
+  ];
+  const table = useDataTable({ rows: runs, columns, rowKey: (run) => run.run_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("product_name", urlSearch.q);
+    if (urlSearch.from || urlSearch.to) table.setFilter("run_date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -74,10 +96,14 @@ export default function ProductionRunsList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <DataTableToolbar table={table} filename="production-runs" totalCount={runs.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Product</th>
               <th>Location</th>
               <th>Machine</th>
@@ -89,12 +115,13 @@ export default function ProductionRunsList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
-            ) : runs.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No production runs found.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={8} className="bp-table-empty">No production runs found.</td></tr>
             ) : (
-              runs.map((run) => (
+              table.filteredRows.map((run) => (
                 <tr key={run.run_id}>
+                  <SelectRowCell table={table} row={run} />
                   <td className="bp-td-strong">{run.product_name}</td>
                   <td className="bp-td-muted">{run.location_name}</td>
                   <td className="bp-td-muted">{run.machine_name || "—"}</td>

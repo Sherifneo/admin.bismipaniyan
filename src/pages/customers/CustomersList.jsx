@@ -5,6 +5,8 @@ import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
+import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Repeat/bulk buyers only — a walk-in counter sale doesn't need a saved
 // record here at all (Sales Orders can be created with just a typed
@@ -12,8 +14,9 @@ import CodeField, { useCodePreview } from "../../components/CodeField";
 // customer picker searches against.
 export default function CustomersList() {
   const { hasPermission } = useAuth();
+  const urlSearch = useUrlSearch();
   const [customers, setCustomers] = useState([]);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(urlSearch.q);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -49,6 +52,15 @@ export default function CustomersList() {
     await load();
   }
 
+  const columns = [
+    { key: "customer_code", label: "Code", accessor: (c) => c.customer_code || "" },
+    { key: "name", label: "Name", accessor: (c) => c.name },
+    { key: "phone", label: "Phone", accessor: (c) => c.phone || "" },
+    { key: "address", label: "Address", accessor: (c) => c.address || "" },
+    { key: "gstin", label: "GSTIN", accessor: (c) => c.gstin || "" },
+  ];
+  const table = useDataTable({ rows: customers, columns, rowKey: (c) => c.customer_id });
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -59,14 +71,18 @@ export default function CustomersList() {
         Repeat and bulk buyers — used on Sales Orders. A one-off walk-in sale doesn't need a saved customer.
       </p>
 
-      <SearchBox placeholder="Search by name or phone…" onSearch={setQ} />
+      <SearchBox placeholder="Search by name or phone…" onSearch={setQ} initialValue={urlSearch.q} />
 
       {error && <div className="bp-inline-error">{error}</div>}
+
+      <DataTableToolbar table={table} filename="customers" totalCount={customers.length} />
+      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
+              <SelectAllHeaderCell table={table} />
               <th>Code</th>
               <th>Name</th>
               <th>Phone</th>
@@ -77,12 +93,13 @@ export default function CustomersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
-            ) : customers.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No customers found.</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={7} className="bp-table-empty">No customers found.</td></tr>
             ) : (
-              customers.map((c) => (
+              table.filteredRows.map((c) => (
                 <tr key={c.customer_id} onClick={() => setEditCustomer(c)} style={{ cursor: "pointer" }}>
+                  <SelectRowCell table={table} row={c} />
                   <td className="bp-td-muted">{c.customer_code || "—"}</td>
                   <td className="bp-td-strong">{c.name}</td>
                   <td className="bp-td-muted">{c.phone || "—"}</td>
