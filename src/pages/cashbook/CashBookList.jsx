@@ -35,6 +35,7 @@ const TABS = [
   { key: "transfer", label: "Transfer" },
   { key: "reversals", label: "Reversals" },
   { key: "deleted", label: "Recently Deleted" },
+  { key: "categories", label: "Categories" },
 ];
 
 // Single company-wide cash book, entries tagged by location — head office
@@ -65,6 +66,7 @@ export default function CashBookList() {
   }, []);
 
   async function load() {
+    if (tab === "categories") return; // CategoriesTab manages its own loading state
     setLoading(true);
     setError("");
     try {
@@ -184,7 +186,7 @@ export default function CashBookList() {
         </div>
       </div>
 
-      {tab !== "deleted" && tab !== "reversals" && (
+      {tab !== "deleted" && tab !== "reversals" && tab !== "categories" && (
         <div className="bp-cashbook-totals">
           <div className="bp-kpi-card bp-kpi-success">
             <div className="bp-kpi-label">Income (filtered)</div>
@@ -214,7 +216,7 @@ export default function CashBookList() {
         ))}
       </div>
 
-      {tab !== "reversals" && (
+      {tab !== "reversals" && tab !== "categories" && (
         <div className="bp-cashbook-filters">
           <select className="bp-field-input" value={locationId} onChange={(e) => { setLocationId(e.target.value); setPage(1); }}>
             <option value="">All locations</option>
@@ -225,7 +227,9 @@ export default function CashBookList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      {tab === "reversals" ? (
+      {tab === "categories" ? (
+        <CategoriesTab />
+      ) : tab === "reversals" ? (
         <div className="bp-table-wrap">
           <table className="bp-table">
             <thead>
@@ -386,9 +390,9 @@ export default function CashBookList() {
         </>
       )}
 
-      {tab !== "reversals" && <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />}
+      {tab !== "reversals" && tab !== "categories" && <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />}
 
-      {showAdd && <AddEntryModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />}
+      {showAdd && <AddEntryModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} onManageCategories={() => changeTab("categories")} />}
       {deleteTarget && (
         <ReasonConfirmModal
           title="Delete cash book entry"
@@ -413,7 +417,7 @@ export default function CashBookList() {
   );
 }
 
-function AddEntryModal({ locations, onClose, onDone }) {
+function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
   const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
   const [entryType, setEntryType] = useState("income");
   const [categories, setCategories] = useState([]);
@@ -423,7 +427,6 @@ function AddEntryModal({ locations, onClose, onDone }) {
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [showCategories, setShowCategories] = useState(false);
 
   async function loadCategories(type) {
     try {
@@ -503,9 +506,11 @@ function AddEntryModal({ locations, onClose, onDone }) {
               {categories.map((c) => <option key={c.category_id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
-          <button type="button" className="bp-btn-sm" onClick={() => setShowCategories(true)} style={{ marginBottom: 2 }}>
-            Manage categories
-          </button>
+          {onManageCategories && (
+            <button type="button" className="bp-btn-sm" onClick={() => { onClose(); onManageCategories(); }} style={{ marginBottom: 2 }}>
+              Manage categories
+            </button>
+          )}
         </div>
 
         <div className="bp-form-row">
@@ -527,21 +532,17 @@ function AddEntryModal({ locations, onClose, onDone }) {
           <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Save entry"}</button>
         </div>
       </form>
-
-      {showCategories && (
-        <CategoriesModal
-          onClose={() => setShowCategories(false)}
-          onChanged={() => loadCategories(entryType)}
-        />
-      )}
     </Modal>
   );
 }
 
-// Lightweight nested modal: list with inline edit/delete, plus a small
-// add-category form. Renders on top of AddEntryModal so the category
-// picker there refreshes the moment something changes here.
-function CategoriesModal({ onClose, onChanged }) {
+// Its own tab on the main Cash Book page (not a nested modal) — list with
+// inline edit/delete, plus a small add-category form. Any manual entry's
+// category picker reads live from cashbook_categories on open, so a
+// rename/add here is reflected the next time Add Entry is opened — no
+// extra "refresh" plumbing needed since that list is a page reload away
+// (switching tabs), not a modal-on-modal render.
+function CategoriesTab() {
   const { hasPermission } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -578,7 +579,6 @@ function CategoriesModal({ onClose, onChanged }) {
       await cashbookCategoriesApi.create({ name: newName.trim(), entry_type: newType });
       setNewName("");
       await load();
-      onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not add this category.");
     } finally {
@@ -599,7 +599,6 @@ function CategoriesModal({ onClose, onChanged }) {
       await cashbookCategoriesApi.update(id, { name: editingName.trim() });
       setEditingId(null);
       await load();
-      onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not rename this category.");
     } finally {
@@ -614,7 +613,6 @@ function CategoriesModal({ onClose, onChanged }) {
     try {
       await cashbookCategoriesApi.remove(c.category_id);
       await load();
-      onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not remove this category.");
     } finally {
@@ -623,7 +621,7 @@ function CategoriesModal({ onClose, onChanged }) {
   }
 
   return (
-    <Modal title="Manage categories" onClose={onClose}>
+    <div>
       {error && <div className="bp-inline-error">{error}</div>}
 
       <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
@@ -689,6 +687,6 @@ function CategoriesModal({ onClose, onChanged }) {
         </div>
         <button type="submit" className="bp-btn-primary" disabled={busy || !newName.trim()}>+ Add</button>
       </form>
-    </Modal>
+    </div>
   );
 }
