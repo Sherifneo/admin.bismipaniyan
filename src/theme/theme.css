@@ -217,19 +217,16 @@
    redefining those same tokens here is most of the mode switch. Toggle
    by setting data-mode="standard" on <html> (see ModeContext) — default
    (no attribute, or data-mode="glass") is the Liquid Glass system
-   defined above.
+   defined above, untouched by anything in this section.
 
-   Chrome (sidebar + header) deliberately INVERTS against the content
-   area instead of matching it: Light theme -> dark/black chrome over a
-   light page; Dark theme -> light/white chrome over a dark page. This
-   is the opposite of Glass mode (where the sidebar always leans toward
-   the brand color) and opposite of a naive "chrome matches theme"
-   default — confirmed explicitly with the user after an earlier version
-   that matched theme read as flat/uninteresting. Implemented as: the
-   base :root[data-mode="standard"] block below sets DARK chrome (the
-   Light-theme case, since light is the default theme), and a
-   [data-theme="dark"] override (plus its prefers-color-scheme:system
-   equivalent) flips chrome to LIGHT. */
+   Chrome (sidebar + header) follows the light/dark THEME the same as
+   every other surface — light theme = light chrome + light content,
+   dark theme = dark chrome + dark content, one coherent look each way.
+   (An earlier version inverted chrome against content instead — picking
+   "Dark" produced a light sidebar — which read as broken, not
+   intentional; the user pointed to a real dashboard reference,
+   hpanel.hostinger.com, showing chrome and content sharing one light
+   palette, and asked for that instead.) */
 :root[data-mode="standard"] {
   --bp-radius-sm: 4px;
   --bp-radius-md: 6px;
@@ -259,16 +256,18 @@
   --bp-glass-content-bg-alt: var(--bp-surface-alt);
   --bp-glass-row-hover: #eef0f2;
 
-  /* Base (Light theme) chrome: dark, inverted against the light page. */
-  --bp-sidebar-tint: #1c1d21;
-  --bp-sidebar-text: rgba(255, 255, 255, 0.68);
-  --bp-sidebar-text-strong: #ffffff;
-  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
-  --bp-sidebar-hover: rgba(255, 255, 255, 0.07);
-  --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.07);
-  --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.12);
-  --bp-standard-chrome-text: #ffffff;
-  --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.55);
+  /* Light theme chrome: light, matching the content area — white
+     sidebar/header with a hairline border, like the Hostinger
+     reference. Not a color-block sidebar. */
+  --bp-sidebar-tint: #ffffff;
+  --bp-sidebar-text: #3c4043;
+  --bp-sidebar-text-strong: #17181b;
+  --bp-sidebar-border: var(--bp-border);
+  --bp-sidebar-hover: #f1f2f4;
+  --bp-standard-chrome-btn-bg: var(--bp-surface-alt);
+  --bp-standard-chrome-btn-border: var(--bp-border);
+  --bp-standard-chrome-text: var(--bp-text);
+  --bp-standard-chrome-text-muted: var(--bp-text-muted);
 
   /* Muted slate accent for "selected/active" — no blue, no glow, a
      restrained neutral-leaning color that reads as a business tool
@@ -336,9 +335,9 @@
   border-color: var(--bp-standard-chrome-btn-border) !important;
 }
 
-/* ---- Standard + Dark theme: chrome flips to LIGHT (inverted against
-   the now-dark content area) — the opposite case from the dark-chrome
-   base above. ---- */
+/* ---- Standard + Dark theme: chrome goes dark too, matching the dark
+   content area — same coherent-palette principle as light, not an
+   inversion. ---- */
 @media (prefers-color-scheme: dark) {
   :root[data-mode="standard"]:not([data-theme="light"]) {
     --bp-text: #e8e9ec;
@@ -353,18 +352,18 @@
     --bp-glass-shadow-lg: 0 3px 14px rgba(0, 0, 0, 0.4);
     --bp-glass-row-hover: #23262d;
 
-    --bp-sidebar-tint: #f4f5f7;
-    --bp-sidebar-text: #3c4043;
-    --bp-sidebar-text-strong: #17181b;
-    --bp-sidebar-border: #dfe1e5;
-    --bp-sidebar-hover: #e7e9ec;
-    --bp-standard-chrome-btn-bg: #e7e9ec;
-    --bp-standard-chrome-btn-border: #d3d6da;
-    --bp-standard-chrome-text: #17181b;
-    --bp-standard-chrome-text-muted: #5f6368;
+    --bp-sidebar-tint: #1c1d21;
+    --bp-sidebar-text: rgba(255, 255, 255, 0.68);
+    --bp-sidebar-text-strong: #ffffff;
+    --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+    --bp-sidebar-hover: rgba(255, 255, 255, 0.07);
+    --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.07);
+    --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.12);
+    --bp-standard-chrome-text: #ffffff;
+    --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.55);
 
-    --bp-standard-accent: #7b8794;
-    --bp-standard-accent-dark: #9aa4af;
+    --bp-standard-accent: #5c6672;
+    --bp-standard-accent-dark: #78828e;
   }
 }
 
@@ -381,38 +380,24 @@
   --bp-glass-shadow-lg: 0 3px 14px rgba(0, 0, 0, 0.4);
   --bp-glass-row-hover: #23262d;
 
-  --bp-sidebar-tint: #f4f5f7;
-  --bp-sidebar-text: #3c4043;
-  --bp-sidebar-text-strong: #17181b;
-  --bp-sidebar-border: #dfe1e5;
-  --bp-sidebar-hover: #e7e9ec;
-  --bp-standard-chrome-btn-bg: #e7e9ec;
-  --bp-standard-chrome-btn-border: #d3d6da;
-  --bp-standard-chrome-text: #17181b;
-  --bp-standard-chrome-text-muted: #5f6368;
+  --bp-sidebar-tint: #1c1d21;
+  --bp-sidebar-text: rgba(255, 255, 255, 0.68);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.07);
+  --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.07);
+  --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.12);
+  --bp-standard-chrome-text: #ffffff;
+  --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.55);
 
-  --bp-standard-accent: #7b8794;
-  --bp-standard-accent-dark: #9aa4af;
+  --bp-standard-accent: #5c6672;
+  --bp-standard-accent-dark: #78828e;
 }
 
 :root[data-mode="standard"] .bp-sidebar-link.is-active {
   background: var(--bp-standard-accent) !important;
   color: #ffffff !important;
   box-shadow: none !important;
-}
-
-/* The light-chrome accent (--bp-standard-accent in Standard+Dark) is a
-   pale slate that fails AA contrast for white text — dark text reads
-   correctly there instead. The base rule above sets white, correct for
-   the dark-chrome (Light theme) case where the accent is dark enough. */
-:root[data-mode="standard"][data-theme="dark"] .bp-sidebar-link.is-active {
-  color: #17181b !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-mode="standard"]:not([data-theme="light"]) .bp-sidebar-link.is-active {
-    color: #17181b !important;
-  }
 }
 
 :root[data-mode="standard"] .bp-btn-primary,
@@ -427,20 +412,6 @@
 :root[data-mode="standard"] .bp-login-submit:hover:not(:disabled) {
   background: var(--bp-standard-accent-dark) !important;
   filter: none !important;
-}
-
-/* Same AA-contrast fix as the active sidebar link above — the
-   Standard+Dark accent is a pale slate, dark text reads correctly on it. */
-:root[data-mode="standard"][data-theme="dark"] .bp-btn-primary,
-:root[data-mode="standard"][data-theme="dark"] .bp-login-submit {
-  color: #17181b !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-mode="standard"]:not([data-theme="light"]) .bp-btn-primary,
-  :root[data-mode="standard"]:not([data-theme="light"]) .bp-login-submit {
-    color: #17181b !important;
-  }
 }
 
 :root[data-mode="standard"] .bp-btn-danger {
