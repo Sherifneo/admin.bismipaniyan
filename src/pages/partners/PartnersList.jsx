@@ -6,7 +6,7 @@ import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./Partners.css";
 
@@ -110,20 +110,20 @@ export default function PartnersList() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="partners" totalCount={partners.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>Code</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Contact</th>
-              <th>Location</th>
-              <th>Commission</th>
-              <th>Settlement</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+              <ColumnHeader table={table} column={columns[4]} />
+              <ColumnHeader table={table} column={columns[5]} />
+              <ColumnHeader table={table} column={columns[6]} />
               <th></th>
             </tr>
           </thead>
@@ -349,15 +349,15 @@ function SettlementsModal({ partner, onClose }) {
         <div className="bp-td-muted">No settlements recorded yet.</div>
       ) : (
         <>
-          <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+          <SearchByBar table={table} columns={columns} />
           <table className="bp-table">
             <thead>
               <tr>
                 <SelectAllHeaderCell table={table} />
-                <th>Period</th>
-                <th>Sales</th>
-                <th>{owedLabel}</th>
-                <th>Status</th>
+                <ColumnHeader table={table} column={columns[0]} />
+                <ColumnHeader table={table} column={columns[1]} />
+                <ColumnHeader table={table} column={columns[2]} />
+                <ColumnHeader table={table} column={columns[3]} />
                 <th></th>
               </tr>
             </thead>

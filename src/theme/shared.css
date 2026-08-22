@@ -123,8 +123,8 @@
   font-size: 12.5px;
 }
 
-/* ---- DataTable: filter bar / toolbar (see components/DataTable.jsx and
-   TABLE-CONVENTIONS.md) ---- */
+/* ---- DataTable: toolbar / column header dropdown / search-by bar (see
+   components/DataTable.jsx and TABLE-CONVENTIONS.md) ---- */
 .bp-datatable-toolbar {
   display: flex;
   justify-content: space-between;
@@ -134,23 +134,124 @@
   margin-bottom: 8px;
 }
 
-.bp-datatable-filterbar {
+/* Dynamics-style: label + chevron inside the <th> itself, opens a small
+   popup with Sort A-Z/Z-A then a filter input + Apply/Clear. */
+.bp-colheader {
+  position: relative;
+  padding: 0 !important;
+}
+
+.bp-colheader-btn {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  margin-bottom: 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  font: inherit;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--bp-text-muted);
 }
 
-.bp-datatable-filter-input {
-  width: auto;
-  min-width: 110px;
-  font-size: 11.5px;
-  padding: 5px 8px;
+.bp-colheader-btn:hover {
+  color: var(--bp-text);
 }
 
-.bp-datatable-daterange {
+.bp-colheader-chevron {
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+.bp-colheader-chevron.is-active {
+  opacity: 1;
+  color: var(--bp-brand-text);
+}
+
+.bp-colheader-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  min-width: 190px;
+  background: var(--bp-surface);
+  border: 1px solid var(--bp-border);
+  border-radius: var(--bp-radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.bp-colheader-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--bp-radius-sm);
+  font-size: 12px;
+  color: var(--bp-text);
+}
+
+.bp-colheader-menu-item:hover {
+  background: var(--bp-glass-row-hover);
+}
+
+.bp-colheader-menu-sep {
+  height: 1px;
+  background: var(--bp-border);
+  margin: 4px 0;
+}
+
+.bp-colheader-menu .bp-field-input {
+  font-size: 12px;
+}
+
+.bp-colheader-menu-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.bp-colheader-menu-actions button {
+  flex: 1;
+}
+
+/* "Search by <column>" bar */
+.bp-searchby {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.bp-searchby-icon {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.bp-searchby-input {
+  width: auto;
+  flex: 1;
+  min-width: 160px;
+}
+
+.bp-searchby-select {
+  width: auto;
 }
 
 /* ---- buttons ---- */

@@ -4,7 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import StatusBadge from "../../components/StatusBadge";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const ROLE_LABELS = {
@@ -81,17 +81,17 @@ export default function TeamList() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="team" totalCount={admins.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
               <th></th>
             </tr>
           </thead>

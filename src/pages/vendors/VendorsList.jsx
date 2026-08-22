@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Vendors sell raw materials TO Bismi — a purchasing relationship, not
@@ -74,17 +74,17 @@ export default function VendorsList() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="vendors" totalCount={vendors.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>Vendor ID</th>
-              <th>Name</th>
-              <th>Contact</th>
-              <th>Address</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
               <th></th>
             </tr>
           </thead>

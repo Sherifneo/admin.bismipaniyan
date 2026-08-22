@@ -6,7 +6,7 @@ import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
-import { useDataTable, FilterBar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./CashBook.css";
 
@@ -187,7 +187,7 @@ export default function CashBookList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
@@ -195,24 +195,24 @@ export default function CashBookList() {
             {tab === "deleted" ? (
               <tr>
                 <SelectAllHeaderCell table={table} />
-                <th>Date</th>
-                <th>Location</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Amount</th>
+                <ColumnHeader table={table} column={columns[0]} />
+                <ColumnHeader table={table} column={columns[1]} />
+                <ColumnHeader table={table} column={columns[2]} />
+                <ColumnHeader table={table} column={columns[3]} />
+                <ColumnHeader table={table} column={columns[4]} />
+                <ColumnHeader table={table} column={columns[5]} />
                 <th>Delete reason</th>
                 <th></th>
               </tr>
             ) : (
               <tr>
                 <SelectAllHeaderCell table={table} />
-                <th>Date</th>
-                <th>Location</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Amount</th>
+                <ColumnHeader table={table} column={columns[0]} />
+                <ColumnHeader table={table} column={columns[1]} />
+                <ColumnHeader table={table} column={columns[2]} />
+                <ColumnHeader table={table} column={columns[3]} />
+                <ColumnHeader table={table} column={columns[4]} />
+                <ColumnHeader table={table} column={columns[5]} />
                 <th></th>
               </tr>
             )}

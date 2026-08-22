@@ -3,7 +3,7 @@ import { costParametersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Reference numbers used in production costing (e.g. flour cost per kg,
@@ -73,17 +73,17 @@ export default function CostParametersList() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="cost-parameters" totalCount={params.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>Name</th>
-              <th>Value</th>
-              <th>Unit</th>
-              <th>Notes</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
               <th></th>
             </tr>
           </thead>

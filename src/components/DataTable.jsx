@@ -1,24 +1,26 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { exportCsv } from "../utils/exportCsv";
 
-// Shared table behavior — Excel-style per-column filtering, row
-// selection with an export-selected action, and export-all — meant to
-// wrap any existing <table>, not replace it. Pages keep their own <tr>
-// markup (click-to-edit, StatusBadge, action buttons); this hook/wrapper
-// only owns: which rows currently pass the column filters, which rows
-// are checked, and turning either into a CSV download. See
-// TABLE-CONVENTIONS.md for how to wire a new or existing table page.
+// Shared table behavior — Dynamics-style per-column header filter/sort,
+// row selection with an export-selected action, and export-all — meant
+// to wrap any existing <table>, not replace it. Pages keep their own
+// <tr> markup (click-to-edit, StatusBadge, action buttons); this hook/
+// wrapper only owns: sort order, which rows currently pass the column
+// filters, which rows are checked, and turning either into a CSV
+// download. See TABLE-CONVENTIONS.md for how to wire a new or existing
+// table page.
 //
 // columns: [{ key, label, accessor: (row) => value, filter: "text" | "select" | "dateRange" | false }]
 // rowKey: (row) => string
 export function useDataTable({ rows, columns, rowKey }) {
   const [filters, setFilters] = useState({}); // { [columnKey]: string | string[] | { from, to } }
+  const [sort, setSort] = useState(null); // { key, dir: 'asc' | 'desc' } | null
   const [selected, setSelected] = useState(() => new Set());
 
   const filterableColumns = columns.filter((c) => c.filter !== false);
 
   const filteredRows = useMemo(() => {
-    return rows.filter((row) =>
+    const matched = rows.filter((row) =>
       filterableColumns.every((col) => {
         const active = filters[col.key];
         if (active === undefined || active === null || active === "") return true;
@@ -39,7 +41,21 @@ export function useDataTable({ rows, columns, rowKey }) {
         return String(raw ?? "").toLowerCase().includes(String(active).toLowerCase());
       })
     );
-  }, [rows, filters, filterableColumns]);
+
+    if (!sort) return matched;
+    const col = columns.find((c) => c.key === sort.key);
+    if (!col) return matched;
+    const dir = sort.dir === "desc" ? -1 : 1;
+    return [...matched].sort((a, b) => {
+      const av = col.accessor(a);
+      const bv = col.accessor(b);
+      if (av === bv) return 0;
+      if (av === null || av === undefined || av === "") return 1;
+      if (bv === null || bv === undefined || bv === "") return -1;
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+      return String(av).localeCompare(String(bv), undefined, { numeric: true }) * dir;
+    });
+  }, [rows, filters, filterableColumns, sort, columns]);
 
   function setFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -53,6 +69,9 @@ export function useDataTable({ rows, columns, rowKey }) {
   }
   function clearAllFilters() {
     setFilters({});
+  }
+  function setSortKey(key, dir) {
+    setSort(key ? { key, dir } : null);
   }
 
   function toggleRow(row) {
@@ -86,46 +105,97 @@ export function useDataTable({ rows, columns, rowKey }) {
   }
 
   return {
+    columns,
     filters, setFilter, clearFilter, clearAllFilters,
+    sort, setSortKey,
     filteredRows,
     selected, toggleRow, toggleAllFiltered, isSelected, allFilteredSelected, selectedRows,
     exportAll, exportSelected,
   };
 }
 
-// The filter-bar row: one compact input/select per filterable column,
-// meant to sit directly above (or as the second <tr> of the <thead> of)
-// the page's own table.
-export function FilterBar({ columns, filters, setFilter, clearAllFilters }) {
-  const filterable = columns.filter((c) => c.filter !== false);
-  const hasActive = Object.keys(filters).length > 0;
+// A <th> replacement: column label + a small chevron that opens a
+// Dynamics-style popup (Sort A-Z / Z-A, then a filter input, Apply/Clear)
+// for that one column. Drop this in wherever a page currently has
+// `<th>Label</th>` for a column defined in `columns`. Columns with
+// `filter: false` still get sort-only (no filter section) unless
+// `sortable: false` is also set, in which case it renders as a plain
+// unclickable header (e.g. an actions column — just use a plain <th> for
+// those instead of this component).
+export function ColumnHeader({ table, column }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(table.filters[column.key]);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft(table.filters[column.key]);
+    function onOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open, column.key, table.filters]);
+
+  const isSorted = table.sort?.key === column.key;
+  const isFiltered = table.filters[column.key] !== undefined && table.filters[column.key] !== "" &&
+    !(Array.isArray(table.filters[column.key]) && table.filters[column.key].length === 0);
+  const canFilter = column.filter !== false;
+
+  function applySort(dir) {
+    table.setSortKey(column.key, dir);
+    setOpen(false);
+  }
+  function applyFilter() {
+    table.setFilter(column.key, draft);
+    setOpen(false);
+  }
+  function clear() {
+    table.clearFilter(column.key);
+    if (isSorted) table.setSortKey(null);
+    setDraft(undefined);
+    setOpen(false);
+  }
 
   return (
-    <div className="bp-datatable-filterbar">
-      {filterable.map((col) => (
-        <ColumnFilter key={col.key} column={col} value={filters[col.key]} onChange={(v) => setFilter(col.key, v)} />
-      ))}
-      {hasActive && (
-        <button type="button" className="bp-btn-sm bp-btn-outline" onClick={clearAllFilters}>
-          Clear filters
-        </button>
+    <th className="bp-colheader" ref={wrapRef}>
+      <button type="button" className="bp-colheader-btn" onClick={() => setOpen((v) => !v)}>
+        <span>{column.label}</span>
+        <span className={"bp-colheader-chevron" + (isSorted || isFiltered ? " is-active" : "")} aria-hidden="true">
+          {isSorted ? (table.sort.dir === "desc" ? "▼" : "▲") : "▾"}
+        </span>
+      </button>
+      {open && (
+        <div className="bp-colheader-menu" onClick={(e) => e.stopPropagation()}>
+          <button type="button" className="bp-colheader-menu-item" onClick={() => applySort("asc")}>↑ Sort A to Z</button>
+          <button type="button" className="bp-colheader-menu-item" onClick={() => applySort("desc")}>↓ Sort Z to A</button>
+          {canFilter && (
+            <>
+              <div className="bp-colheader-menu-sep" />
+              <ColumnFilterInput column={column} value={draft} onChange={setDraft} />
+              <div className="bp-colheader-menu-actions">
+                <button type="button" className="bp-btn-sm bp-btn-primary" onClick={applyFilter}>Apply</button>
+                <button type="button" className="bp-btn-sm bp-btn-outline" onClick={clear}>Clear</button>
+              </div>
+            </>
+          )}
+        </div>
       )}
-    </div>
+    </th>
   );
 }
 
-function ColumnFilter({ column, value, onChange }) {
+function ColumnFilterInput({ column, value, onChange }) {
   if (column.filter === "select") {
     const options = column.options || [];
     const current = Array.isArray(value) ? value : [];
     return (
       <select
-        className="bp-field-input bp-datatable-filter-input"
-        multiple={false}
+        className="bp-field-input"
         value={current[0] || ""}
         onChange={(e) => onChange(e.target.value ? [e.target.value] : [])}
       >
-        <option value="">{column.label} — all</option>
+        <option value="">All</option>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
@@ -135,20 +205,20 @@ function ColumnFilter({ column, value, onChange }) {
   if (column.filter === "dateRange") {
     const current = value || {};
     return (
-      <div className="bp-datatable-daterange">
+      <div style={{ display: "flex", gap: 4 }}>
         <input
           type="date"
-          className="bp-field-input bp-datatable-filter-input"
+          className="bp-field-input"
           value={current.from || ""}
           onChange={(e) => onChange({ ...current, from: e.target.value || undefined })}
-          title={`${column.label} from`}
+          title="From"
         />
         <input
           type="date"
-          className="bp-field-input bp-datatable-filter-input"
+          className="bp-field-input"
           value={current.to || ""}
           onChange={(e) => onChange({ ...current, to: e.target.value || undefined })}
-          title={`${column.label} to`}
+          title="To"
         />
       </div>
     );
@@ -156,11 +226,49 @@ function ColumnFilter({ column, value, onChange }) {
   return (
     <input
       type="text"
-      className="bp-field-input bp-datatable-filter-input"
-      placeholder={column.label}
+      className="bp-field-input"
+      placeholder="Contains…"
       value={value || ""}
       onChange={(e) => onChange(e.target.value)}
+      autoFocus
     />
+  );
+}
+
+// "Search by <column>" — a dropdown to pick which column, plus a text
+// box that live-filters it. Sits above/near the table, same page, no
+// navigation (see TABLE-CONVENTIONS.md's Header search section).
+export function SearchByBar({ table, columns }) {
+  const searchable = columns.filter((c) => c.filter !== false && c.filter !== "select" && c.filter !== "dateRange");
+  const [column, setColumn] = useState(searchable[0]?.key || "");
+  const value = table.filters[column] || "";
+
+  if (searchable.length === 0) return null;
+
+  return (
+    <div className="bp-searchby">
+      <span className="bp-searchby-icon" aria-hidden="true">🔍</span>
+      <input
+        type="text"
+        className="bp-field-input bp-searchby-input"
+        placeholder="Search…"
+        value={value}
+        onChange={(e) => table.setFilter(column, e.target.value)}
+      />
+      <span className="bp-td-muted" style={{ whiteSpace: "nowrap" }}>Search by</span>
+      <select
+        className="bp-field-input bp-searchby-select"
+        value={column}
+        onChange={(e) => {
+          if (value) table.clearFilter(column);
+          setColumn(e.target.value);
+        }}
+      >
+        {searchable.map((c) => (
+          <option key={c.key} value={c.key}>{c.label}</option>
+        ))}
+      </select>
+    </div>
   );
 }
 

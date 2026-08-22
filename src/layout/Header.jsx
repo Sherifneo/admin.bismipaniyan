@@ -3,7 +3,6 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { NAV_ITEMS } from "./navConfig";
-import GlobalSearch from "./GlobalSearch";
 import "./Header.css";
 
 // Breadcrumb is derived from the same NAV_ITEMS list the sidebar uses —
@@ -64,7 +63,6 @@ export default function Header({ onMenuClick, onRefresh }) {
       >
         ↻
       </button>
-      <GlobalSearch />
       <div className="bp-header-spacer" />
       <button
         type="button"

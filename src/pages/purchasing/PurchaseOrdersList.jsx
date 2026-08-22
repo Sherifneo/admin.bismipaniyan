@@ -5,7 +5,7 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useCodePreview } from "../../components/CodeField";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
@@ -131,21 +131,21 @@ export default function PurchaseOrdersList() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="purchase-orders" totalCount={orders.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>PO #</th>
-              <th>Vendor</th>
-              <th>Location</th>
-              <th>Order date</th>
-              <th>Expected</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Payment</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+              <ColumnHeader table={table} column={columns[4]} />
+              <ColumnHeader table={table} column={columns[5]} />
+              <ColumnHeader table={table} column={columns[6]} />
+              <ColumnHeader table={table} column={columns[7]} />
               <th></th>
             </tr>
           </thead>

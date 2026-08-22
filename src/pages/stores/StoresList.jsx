@@ -4,7 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnHeader } from "../../components/DataTable";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -79,18 +79,18 @@ export default function StoresList() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="retail-stores" totalCount={stores.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>Code</th>
-              <th>Name</th>
-              <th>Kind</th>
-              <th>Address</th>
-              <th>Active</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+              <ColumnHeader table={table} column={columns[4]} />
               <th></th>
             </tr>
           </thead>

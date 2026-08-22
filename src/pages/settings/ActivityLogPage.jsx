@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { activityLogApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Pagination from "../../components/Pagination";
-import { useDataTable, FilterBar, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
 const LIMIT = 20;
 
@@ -53,18 +53,18 @@ export default function ActivityLogPage() {
       {error && <div className="bp-inline-error">{error}</div>}
 
       <DataTableToolbar table={table} filename="activity-log" totalCount={items.length} />
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>When</th>
-              <th>Who</th>
-              <th>Action</th>
-              <th>Entity</th>
-              <th>Reason</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+              <ColumnHeader table={table} column={columns[4]} />
             </tr>
           </thead>
           <tbody>

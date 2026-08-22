@@ -3,7 +3,7 @@ import { reportsApi, locationsApi, productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
-import { useDataTable, FilterBar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
 const LIMIT = 30;
 
@@ -123,12 +123,18 @@ function CashbookSummaryTab() {
         </div>
       )}
 
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><SelectAllHeaderCell table={table} /><th>Date</th><th>Income</th><th>Expense</th><th>Net</th></tr>
+            <tr>
+              <SelectAllHeaderCell table={table} />
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+            </tr>
           </thead>
           <tbody>
             {loading ? (
@@ -239,14 +245,20 @@ function StockMovementsTab() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <th>Date</th><th>Product</th><th>SKU</th><th>Location</th><th>Type</th><th>Qty delta</th><th>Note</th>
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+              <ColumnHeader table={table} column={columns[4]} />
+              <ColumnHeader table={table} column={columns[5]} />
+              <ColumnHeader table={table} column={columns[6]} />
             </tr>
           </thead>
           <tbody>
@@ -318,12 +330,17 @@ function PurchaseOrdersByStatusTab() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <FilterBar columns={columns} filters={table.filters} setFilter={table.setFilter} clearAllFilters={table.clearAllFilters} />
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><SelectAllHeaderCell table={table} /><th>Status</th><th>Count</th><th>Total value</th></tr>
+            <tr>
+              <SelectAllHeaderCell table={table} />
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+            </tr>
           </thead>
           <tbody>
             {loading ? (
