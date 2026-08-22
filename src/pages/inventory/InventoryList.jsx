@@ -6,7 +6,7 @@ import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
-import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./Inventory.css";
 
@@ -104,6 +104,9 @@ export default function InventoryList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -111,11 +114,11 @@ export default function InventoryList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
             </tr>
           </thead>
           <tbody>
@@ -129,13 +132,15 @@ export default function InventoryList() {
                 return (
                   <tr key={`${r.product_id}:${r.location_id}`}>
                     <SelectRowCell table={table} row={r} />
-                    <td className="bp-td-strong">{r.name}</td>
-                    <td className="bp-td-muted">{r.sku || "—"}</td>
-                    <td>{r.location_name}</td>
-                    <td className={isLow ? "bp-stock-low" : ""}>{formatQty(r.stock_qty, r.uom)}</td>
-                    <td className="bp-td-muted">
-                      {Number(r.consignment_stock_qty || 0) > 0 ? formatQty(r.consignment_stock_qty, r.uom) : "—"}
-                    </td>
+                    {table.isColumnVisible("name") && <td className="bp-td-strong">{r.name}</td>}
+                    {table.isColumnVisible("sku") && <td className="bp-td-muted">{r.sku || "—"}</td>}
+                    {table.isColumnVisible("location_name") && <td>{r.location_name}</td>}
+                    {table.isColumnVisible("stock_qty") && <td className={isLow ? "bp-stock-low" : ""}>{formatQty(r.stock_qty, r.uom)}</td>}
+                    {table.isColumnVisible("consignment_stock_qty") && (
+                      <td className="bp-td-muted">
+                        {Number(r.consignment_stock_qty || 0) > 0 ? formatQty(r.consignment_stock_qty, r.uom) : "—"}
+                      </td>
+                    )}
                   </tr>
                 );
               })

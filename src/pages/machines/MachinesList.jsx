@@ -4,7 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Production equipment (ovens, mixers, etc.) — attached to a production
@@ -23,7 +23,7 @@ export default function MachinesList() {
     setLoading(true);
     setError("");
     try {
-      const data = await machinesApi.list({});
+      const data = await machinesApi.list({ includeInactive: true });
       setMachines(data.items || []);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load machines.");
@@ -58,6 +58,10 @@ export default function MachinesList() {
       key: "is_active", label: "Active", accessor: (m) => (m.is_active ? "yes" : "no"), filter: "select",
       options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }],
     },
+    { key: "created_by_name", label: "Created by", accessor: (m) => m.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (m) => m.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (m) => m.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (m) => m.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: machines, columns, rowKey: (m) => m.machine_id });
 
@@ -78,7 +82,10 @@ export default function MachinesList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="machines" totalCount={machines.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="machines" totalCount={machines.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -86,28 +93,36 @@ export default function MachinesList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={11} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No machines found.</td></tr>
+              <tr><td colSpan={11} className="bp-table-empty">No machines found.</td></tr>
             ) : (
               table.filteredRows.map((m) => (
                 <tr key={m.machine_id} onClick={() => setEditMachine(m)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={m} />
-                  <td className="bp-td-muted">{m.machine_code || "—"}</td>
-                  <td className="bp-td-strong">{m.name}</td>
-                  <td className="bp-td-muted">{m.kind || "—"}</td>
-                  <td className="bp-td-muted">{m.location_name || "—"}</td>
-                  <td className="bp-td-muted">{m.is_active ? "Yes" : "No"}</td>
+                  {table.isColumnVisible("machine_code") && <td className="bp-td-muted">{m.machine_code || "—"}</td>}
+                  {table.isColumnVisible("name") && <td className="bp-td-strong">{m.name}</td>}
+                  {table.isColumnVisible("kind") && <td className="bp-td-muted">{m.kind || "—"}</td>}
+                  {table.isColumnVisible("location_name") && <td className="bp-td-muted">{m.location_name || "—"}</td>}
+                  {table.isColumnVisible("is_active") && <td className="bp-td-muted">{m.is_active ? "Yes" : "No"}</td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{m.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{m.created_at ? new Date(m.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{m.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{m.updated_at ? new Date(m.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditMachine(m); }}>Edit</button>
                     {hasPermission("production.manage", "full_control") && (

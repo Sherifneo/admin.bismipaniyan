@@ -6,7 +6,7 @@ import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
-import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./CashBook.css";
 
@@ -124,6 +124,10 @@ export default function CashBookList() {
     { key: "category", label: "Category", accessor: (e) => e.category },
     { key: "description", label: "Description", accessor: (e) => e.description || "" },
     { key: "amount", label: "Amount", accessor: (e) => e.amount, filter: "number" },
+    { key: "created_by_name", label: "Created by", accessor: (e) => e.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (e) => e.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (e) => e.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (e) => e.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: entries, columns, rowKey: (e) => e.entry_id });
 
@@ -187,6 +191,9 @@ export default function CashBookList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -195,53 +202,67 @@ export default function CashBookList() {
             {tab === "deleted" ? (
               <tr>
                 <SelectAllHeaderCell table={table} />
-                <ColumnHeader table={table} column={columns[0]} />
-                <ColumnHeader table={table} column={columns[1]} />
-                <ColumnHeader table={table} column={columns[2]} />
-                <ColumnHeader table={table} column={columns[3]} />
-                <ColumnHeader table={table} column={columns[4]} />
-                <ColumnHeader table={table} column={columns[5]} />
+                {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+                {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+                {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+                {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+                {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+                {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+                {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+                {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+                {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+                {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
                 <th>Delete reason</th>
                 <th></th>
               </tr>
             ) : (
               <tr>
                 <SelectAllHeaderCell table={table} />
-                <ColumnHeader table={table} column={columns[0]} />
-                <ColumnHeader table={table} column={columns[1]} />
-                <ColumnHeader table={table} column={columns[2]} />
-                <ColumnHeader table={table} column={columns[3]} />
-                <ColumnHeader table={table} column={columns[4]} />
-                <ColumnHeader table={table} column={columns[5]} />
+                {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+                {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+                {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+                {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+                {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+                {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+                {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+                {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+                {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+                {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
                 <th></th>
               </tr>
             )}
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={tab === "deleted" ? 9 : 8} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={tab === "deleted" ? 13 : 12} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={tab === "deleted" ? 9 : 8} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
+              <tr><td colSpan={tab === "deleted" ? 13 : 12} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
             ) : (
               table.filteredRows.map((e) => (
                 <tr key={e.entry_id}>
                   <SelectRowCell table={table} row={e} />
-                  <td className="bp-td-muted">{e.entry_date}</td>
-                  <td className="bp-td-strong">{e.location_name}</td>
-                  <td>
-                    {e.entry_type === "transfer" ? (
-                      <span className="bp-badge bp-badge-neutral">
-                        {e.direction === "subtract" ? "→ Bank" : "← Bank"}
-                      </span>
-                    ) : (
-                      <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
-                        {e.entry_type === "income" ? "Income" : "Expense"}
-                      </span>
-                    )}
-                  </td>
-                  <td>{e.category}</td>
-                  <td className="bp-td-muted">{e.description || "—"}</td>
-                  <td className="bp-td-strong">{inr(e.amount)}</td>
+                  {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{e.entry_date}</td>}
+                  {table.isColumnVisible("location_name") && <td className="bp-td-strong">{e.location_name}</td>}
+                  {table.isColumnVisible("entry_type") && (
+                    <td>
+                      {e.entry_type === "transfer" ? (
+                        <span className="bp-badge bp-badge-neutral">
+                          {e.direction === "subtract" ? "→ Bank" : "← Bank"}
+                        </span>
+                      ) : (
+                        <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
+                          {e.entry_type === "income" ? "Income" : "Expense"}
+                        </span>
+                      )}
+                    </td>
+                  )}
+                  {table.isColumnVisible("category") && <td>{e.category}</td>}
+                  {table.isColumnVisible("description") && <td className="bp-td-muted">{e.description || "—"}</td>}
+                  {table.isColumnVisible("amount") && <td className="bp-td-strong">{inr(e.amount)}</td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{e.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{e.created_at ? new Date(e.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{e.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{e.updated_at ? new Date(e.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   {tab === "deleted" ? (
                     <>
                       <td className="bp-td-muted">{e.delete_reason || "—"}</td>

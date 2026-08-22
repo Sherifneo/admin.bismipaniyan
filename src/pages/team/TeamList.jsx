@@ -4,7 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import StatusBadge from "../../components/StatusBadge";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const ROLE_LABELS = {
@@ -80,7 +80,10 @@ export default function TeamList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="team" totalCount={admins.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="team" totalCount={admins.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -88,10 +91,10 @@ export default function TeamList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
               <th></th>
             </tr>
           </thead>
@@ -104,10 +107,10 @@ export default function TeamList() {
               table.filteredRows.map((a) => (
                 <tr key={a.admin_id}>
                   <SelectRowCell table={table} row={a} />
-                  <td className="bp-td-strong">{a.full_name}</td>
-                  <td className="bp-td-muted">{a.email}</td>
-                  <td>{ROLE_LABELS[a.role] || a.role}</td>
-                  <td><StatusBadge status={a.status} /></td>
+                  {table.isColumnVisible("full_name") && <td className="bp-td-strong">{a.full_name}</td>}
+                  {table.isColumnVisible("email") && <td className="bp-td-muted">{a.email}</td>}
+                  {table.isColumnVisible("role") && <td>{ROLE_LABELS[a.role] || a.role}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={a.status} /></td>}
                   <td className="bp-td-actions">
                     {a.role !== "owner" && (
                       <button type="button" className="bp-btn-sm" onClick={() => setEditAdmin(a)}>Edit</button>

@@ -112,6 +112,7 @@ export const productionApi = {
   getRun: (id) => GET(`/api/admin/production-runs/${id}`),
   createRun: (body) => POST("/api/admin/production-runs", body),
   updateRun: (id, body) => PUT(`/api/admin/production-runs/${id}`, body),
+  updateStage: (runId, stage, body) => PUT(`/api/admin/production-runs/${runId}/stages/${stage}`, body),
 };
 
 export const machinesApi = {
@@ -126,6 +127,7 @@ export const costParametersApi = {
   create: (body) => POST("/api/admin/cost-parameters", body),
   update: (id, body) => PUT(`/api/admin/cost-parameters/${id}`, body),
   remove: (id) => DEL(`/api/admin/cost-parameters/${id}`),
+  history: (id) => GET(`/api/admin/cost-parameters/${id}/history`),
 };
 
 export const teamApi = {
@@ -162,6 +164,19 @@ export const securityApi = {
 
 export const activityLogApi = {
   list: (params = {}) => GET(`/api/admin/activity-log?${new URLSearchParams(cleanParams(params))}`),
+};
+
+export const employeesApi = {
+  list: (params = {}) => GET(`/api/admin/employees?${new URLSearchParams(cleanParams(params))}`),
+  get: (id) => GET(`/api/admin/employees/${id}`),
+  create: (body) => POST("/api/admin/employees", body),
+  update: (id, body) => PUT(`/api/admin/employees/${id}`, body),
+  listSalaryPayments: (id) => GET(`/api/admin/employees/${id}/salary-payments`),
+};
+
+export const salaryPaymentsApi = {
+  list: (params = {}) => GET(`/api/admin/salary-payments?${new URLSearchParams(cleanParams(params))}`),
+  pay: (body) => POST("/api/admin/salary-payments", body),
 };
 
 // Drops undefined/null/empty-string values before building a query string,

@@ -1,13 +1,21 @@
 import { useEffect, useState } from "react";
-import { productionApi, machinesApi, locationsApi, productsApi } from "../../api/admin";
+import { productionApi, machinesApi, locationsApi, productsApi, employeesApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
+const STAGE_LABELS = { mixing: "Mixing", baking: "Baking", packing: "Packing" };
+
+// Only the factory actually produces anything — the retail stores are
+// never a production location. Mirrors SalesOrdersList.jsx's storesOnly()
+// the same way, just filtered to the opposite kind.
+function factoryOnly(locations) {
+  return locations.filter((l) => l.kind === "factory");
+}
 
 // Turns raw materials into finished goods at a location, optionally on a
 // specific machine. A run starts 'planned', moves through 'in_progress',
@@ -19,6 +27,7 @@ export default function ProductionRunsList() {
   const [products, setProducts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [machines, setMachines] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [runs, setRuns] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -32,6 +41,7 @@ export default function ProductionRunsList() {
     productsApi.list({ limit: 500 }).then((d) => setProducts(d.items || [])).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
     machinesApi.list({}).then((d) => setMachines(d.items || [])).catch(() => {});
+    employeesApi.list({}).then((d) => setEmployees(d.items || [])).catch(() => {});
   }, []);
 
   async function load() {
@@ -68,6 +78,10 @@ export default function ProductionRunsList() {
       key: "status", label: "Status", accessor: (run) => run.status, filter: "select",
       options: [{ value: "planned", label: "Planned" }, { value: "in_progress", label: "In progress" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }],
     },
+    { key: "created_by_name", label: "Created by", accessor: (run) => run.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (run) => run.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (run) => run.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (run) => run.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: runs, columns, rowKey: (run) => run.run_id });
 
@@ -96,7 +110,10 @@ export default function ProductionRunsList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="production-runs" totalCount={runs.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="production-runs" totalCount={runs.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -104,30 +121,38 @@ export default function ProductionRunsList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
-              <ColumnHeader table={table} column={columns[5]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={12} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={8} className="bp-table-empty">No production runs found.</td></tr>
+              <tr><td colSpan={12} className="bp-table-empty">No production runs found.</td></tr>
             ) : (
               table.filteredRows.map((run) => (
                 <tr key={run.run_id}>
                   <SelectRowCell table={table} row={run} />
-                  <td className="bp-td-strong">{run.product_name}</td>
-                  <td className="bp-td-muted">{run.location_name}</td>
-                  <td className="bp-td-muted">{run.machine_name || "—"}</td>
-                  <td className="bp-td-muted">{run.quantity_produced} {run.uom}</td>
-                  <td className="bp-td-muted">{run.run_date}</td>
-                  <td><StatusBadge status={run.status} /></td>
+                  {table.isColumnVisible("product_name") && <td className="bp-td-strong">{run.product_name}</td>}
+                  {table.isColumnVisible("location_name") && <td className="bp-td-muted">{run.location_name}</td>}
+                  {table.isColumnVisible("machine_name") && <td className="bp-td-muted">{run.machine_name || "—"}</td>}
+                  {table.isColumnVisible("quantity_produced") && <td className="bp-td-muted">{run.quantity_produced} {run.uom}</td>}
+                  {table.isColumnVisible("run_date") && <td className="bp-td-muted">{run.run_date}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={run.status} /></td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{run.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{run.created_at ? new Date(run.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{run.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{run.updated_at ? new Date(run.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={() => setViewRun(run)}>View</button>
                   </td>
@@ -141,7 +166,7 @@ export default function ProductionRunsList() {
       <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
 
       {showAdd && (
-        <NewRunModal products={products} locations={locations} machines={machines} onClose={() => setShowAdd(false)} onDone={onSaved} />
+        <NewRunModal products={products} locations={locations} machines={machines} employees={employees} onClose={() => setShowAdd(false)} onDone={onSaved} />
       )}
       {viewRun && (
         <RunDetailModal runId={viewRun.run_id} onClose={() => setViewRun(null)} onChanged={load} />
@@ -150,15 +175,37 @@ export default function ProductionRunsList() {
   );
 }
 
-function NewRunModal({ products, locations, machines, onClose, onDone }) {
+function NewRunModal({ products, locations, machines, employees, onClose, onDone }) {
+  const factoryLocations = factoryOnly(locations);
   const [productId, setProductId] = useState("");
-  const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
+  const [locationId, setLocationId] = useState(factoryLocations[0]?.location_id || "");
   const [machineId, setMachineId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [runDate, setRunDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [defaultEmployeeId, setDefaultEmployeeId] = useState("");
+  // Which stages have been individually overridden — those stop
+  // following the default worker when it changes.
+  const [stageEmployees, setStageEmployees] = useState({ mixing: "", baking: "", packing: "" });
+  const [stageEditedManually, setStageEditedManually] = useState(() => new Set());
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  function changeDefaultEmployee(value) {
+    setDefaultEmployeeId(value);
+    setStageEmployees((prev) => {
+      const next = { ...prev };
+      for (const stage of Object.keys(STAGE_LABELS)) {
+        if (!stageEditedManually.has(stage)) next[stage] = value;
+      }
+      return next;
+    });
+  }
+
+  function changeStageEmployee(stage, value) {
+    setStageEmployees((prev) => ({ ...prev, [stage]: value }));
+    setStageEditedManually((prev) => new Set(prev).add(stage));
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -180,6 +227,12 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
         quantity_produced: Number(quantity),
         run_date: runDate || undefined,
         notes: notes || undefined,
+        default_employee_id: defaultEmployeeId || undefined,
+        stage_employees: {
+          mixing: stageEmployees.mixing || undefined,
+          baking: stageEmployees.baking || undefined,
+          packing: stageEmployees.packing || undefined,
+        },
       });
       onDone();
     } catch (err) {
@@ -204,7 +257,7 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="runLocation">Location</label>
             <select id="runLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-              {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+              {factoryLocations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
             </select>
           </div>
         </div>
@@ -226,6 +279,33 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
         <label className="bp-field-label" htmlFor="runDate">Run date (optional)</label>
         <input id="runDate" type="date" className="bp-field-input" value={runDate} onChange={(e) => setRunDate(e.target.value)} />
 
+        <label className="bp-field-label" htmlFor="runDefaultWorker">Default worker</label>
+        <select id="runDefaultWorker" className="bp-field-input" value={defaultEmployeeId} onChange={(e) => changeDefaultEmployee(e.target.value)}>
+          <option value="">— None —</option>
+          {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
+        </select>
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 10 }}>
+          Auto-fills Mixing, Baking, and Packing below — change any stage individually if a different worker is doing that step.
+        </p>
+
+        <label className="bp-field-label">Stage workers</label>
+        <div className="bp-form-row">
+          {Object.entries(STAGE_LABELS).map(([stage, label]) => (
+            <div key={stage} style={{ flex: 1 }}>
+              <label className="bp-field-label" htmlFor={`runStage-${stage}`} style={{ fontWeight: 400, fontSize: 11.5 }}>{label}</label>
+              <select
+                id={`runStage-${stage}`}
+                className="bp-field-input"
+                value={stageEmployees[stage]}
+                onChange={(e) => changeStageEmployee(stage, e.target.value)}
+              >
+                <option value="">— None —</option>
+                {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+
         <label className="bp-field-label" htmlFor="runNotes">Notes (optional)</label>
         <textarea id="runNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
@@ -240,9 +320,11 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
 
 function RunDetailModal({ runId, onClose, onChanged }) {
   const [run, setRun] = useState(null);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [stageBusy, setStageBusy] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -259,6 +341,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
 
   useEffect(() => {
     load();
+    employeesApi.list({}).then((d) => setEmployees(d.items || [])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
 
@@ -272,6 +355,18 @@ function RunDetailModal({ runId, onClose, onChanged }) {
       setError(err instanceof ApiError ? err.message : "Could not update status.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function updateStage(stage, body) {
+    setStageBusy(stage);
+    try {
+      await productionApi.updateStage(runId, stage, body);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update this stage.");
+    } finally {
+      setStageBusy(null);
     }
   }
 
@@ -290,7 +385,50 @@ function RunDetailModal({ runId, onClose, onChanged }) {
             {run.machine_name && <div><span className="bp-td-muted">Machine:</span> {run.machine_name}</div>}
           </div>
 
-          {run.notes && <p className="bp-td-muted" style={{ marginTop: 10 }}>{run.notes}</p>}
+          {run.notes && <p className="bp-td-muted" style={{ marginTop: 0, marginBottom: 12 }}>{run.notes}</p>}
+
+          {run.stages && run.stages.length > 0 && (
+            <>
+              <label className="bp-field-label">Stages</label>
+              <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
+                <table className="bp-table">
+                  <thead>
+                    <tr><th>Stage</th><th>Worker</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {run.stages.map((s) => (
+                      <tr key={s.stage_id}>
+                        <td className="bp-td-strong">{STAGE_LABELS[s.stage]}</td>
+                        <td>
+                          <select
+                            className="bp-field-input"
+                            value={s.employee_id || ""}
+                            onChange={(e) => updateStage(s.stage, { employee_id: e.target.value || undefined })}
+                            disabled={stageBusy === s.stage}
+                          >
+                            <option value="">— None —</option>
+                            {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className="bp-field-input"
+                            value={s.status}
+                            onChange={(e) => updateStage(s.stage, { status: e.target.value })}
+                            disabled={stageBusy === s.stage}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In progress</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <div className="bp-form-actions">
             {run.status === "planned" && (

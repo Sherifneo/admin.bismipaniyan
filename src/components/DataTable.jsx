@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { exportCsv } from "../utils/exportCsv";
+import "./ExportMenu.css";
 
 // Shared table behavior — Dynamics-style per-column header filter/sort,
 // row selection with an export-selected action, and export-all — meant
@@ -10,18 +11,44 @@ import { exportCsv } from "../utils/exportCsv";
 // download. See TABLE-CONVENTIONS.md for how to wire a new or existing
 // table page.
 //
-// columns: [{ key, label, accessor: (row) => value, filter: "text" | "number" | "select" | "dateRange" | "boolean" | false, options? }]
+// Shared open/outside-click-to-close behavior for the small popup-button
+// components in this file (ColumnHeader's filter menu, the export
+// dropdown, the column chooser) — factored out once three near-identical
+// copies of this logic existed.
+function useDropdown() {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
+
+  return { open, setOpen, wrapRef };
+}
+
+// columns: [{ key, label, accessor: (row) => value, filter: "text" | "number" | "select" | "dateRange" | "boolean" | false, options?, hiddenByDefault? }]
 // `filter` doubles as the column's data type — it picks which operator
 // set the header popup offers (see OPERATORS_BY_TYPE below). Existing
 // pages built before operator support was added keep working unchanged:
 // the default (no `filter` key) is "text", "select"/"dateRange" behave
 // exactly as before with a richer operator list layered on top.
+// `hiddenByDefault` starts a column out of view until shown via the
+// column chooser — used for audit columns (created/updated by & at) so
+// they exist everywhere without cluttering every table by default.
 // rowKey: (row) => string
 export function useDataTable({ rows, columns, rowKey }) {
   // filters: { [columnKey]: { operator, value } | { operator, min, max } | { operator, from, to } }
   const [filters, setFilters] = useState({});
   const [sort, setSort] = useState(null); // { key, dir: 'asc' | 'desc' } | null
   const [selected, setSelected] = useState(() => new Set());
+  const [visibleColumns, setVisibleColumns] = useState(
+    () => new Set(columns.filter((c) => !c.hiddenByDefault).map((c) => c.key))
+  );
 
   const filterableColumns = columns.filter((c) => c.filter !== false);
 
@@ -66,6 +93,18 @@ export function useDataTable({ rows, columns, rowKey }) {
     setSort(key ? { key, dir } : null);
   }
 
+  function isColumnVisible(key) {
+    return visibleColumns.has(key);
+  }
+  function toggleColumnVisibility(key) {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   function toggleRow(row) {
     const key = rowKey(row);
     setSelected((prev) => {
@@ -101,6 +140,7 @@ export function useDataTable({ rows, columns, rowKey }) {
     filters, setFilter, clearFilter, clearAllFilters,
     sort, setSortKey,
     filteredRows,
+    visibleColumns, isColumnVisible, toggleColumnVisibility,
     selected, toggleRow, toggleAllFiltered, isSelected, allFilteredSelected, selectedRows,
     exportAll, exportSelected,
   };
@@ -294,7 +334,11 @@ export function ColumnHeader({ table, column }) {
 
   return (
     <th className="bp-colheader" ref={wrapRef}>
-      <button type="button" className="bp-colheader-btn" onClick={() => setOpen((v) => !v)}>
+      <button
+        type="button"
+        className={"bp-colheader-btn" + (isSorted || isFiltered ? " is-active" : "")}
+        onClick={() => setOpen((v) => !v)}
+      >
         <span>{column.label}</span>
         <span className={"bp-colheader-chevron" + (isSorted || isFiltered ? " is-active" : "")} aria-hidden="true">
           {isSorted ? (table.sort.dir === "desc" ? "▼" : "▲") : "▾"}
@@ -484,26 +528,95 @@ export function SearchByBar({ table, columns }) {
   );
 }
 
-// Toolbar: filtered/selected counts + Export all / Export selected. Sits
-// above the table, next to the page's existing "+ Add …" button.
+// Single icon button -> dropdown with "Download all" / "Download
+// selected" (mirrors the existing ExportMenu.jsx icon+dropdown pattern
+// and reuses its CSS classes, see the ExportMenu.css import at the top
+// of this file) — replaces what used to be two separate always-visible
+// buttons.
+function ExportDropdownButton({ table, filename }) {
+  const { open, setOpen, wrapRef } = useDropdown();
+  const { selectedRows, exportAll, exportSelected } = table;
+
+  return (
+    <div className="bp-export-wrap" ref={wrapRef}>
+      <button type="button" className="bp-export-btn" title="Download" aria-label="Download" onClick={() => setOpen((v) => !v)}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+      </button>
+      {open && (
+        <div className="bp-export-menu">
+          <button type="button" className="bp-export-item" onClick={() => { exportAll(filename); setOpen(false); }}>
+            Download all
+            <span className="bp-export-item-sub">Every row passing the current filters</span>
+          </button>
+          <button
+            type="button"
+            className="bp-export-item"
+            onClick={() => { exportSelected(filename); setOpen(false); }}
+            disabled={selectedRows.length === 0}
+          >
+            Download selected ({selectedRows.length})
+            <span className="bp-export-item-sub">Only the checked rows</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Toolbar: filtered/selected counts + the Download dropdown. Sits above
+// the table, next to the page's existing "+ Add …" button.
 export function DataTableToolbar({ table, filename, totalCount }) {
-  const { filteredRows, selectedRows, exportAll, exportSelected } = table;
+  const { filteredRows, selectedRows } = table;
   return (
     <div className="bp-datatable-toolbar">
       <span className="bp-td-muted">
         {filteredRows.length === totalCount ? `${totalCount} rows` : `${filteredRows.length} of ${totalCount} rows`}
         {selectedRows.length > 0 && ` — ${selectedRows.length} selected`}
       </span>
-      <div style={{ display: "flex", gap: 8 }}>
-        {selectedRows.length > 0 && (
-          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => exportSelected(filename)}>
-            Export selected ({selectedRows.length})
-          </button>
-        )}
-        <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => exportAll(filename)}>
-          Export all
-        </button>
-      </div>
+      <ExportDropdownButton table={table} filename={filename} />
+    </div>
+  );
+}
+
+// Column-visibility chooser — a small icon button opening a checklist of
+// every column, check/uncheck to show/hide it in the table. See
+// TABLE-CONVENTIONS.md for how to wire a page's <thead>/<tbody> to
+// respect `table.isColumnVisible(key)`.
+export function ColumnChooserButton({ table, columns }) {
+  const { open, setOpen, wrapRef } = useDropdown();
+  const chooseable = columns.filter((c) => c.key);
+
+  return (
+    <div className="bp-export-wrap" ref={wrapRef}>
+      <button type="button" className="bp-export-btn" title="Choose columns" aria-label="Choose columns" onClick={() => setOpen((v) => !v)}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <line x1="9" y1="4" x2="9" y2="20" />
+          <line x1="15" y1="4" x2="15" y2="20" />
+        </svg>
+      </button>
+      {open && (
+        <div className="bp-export-menu" style={{ padding: "6px 0", maxHeight: 280, overflowY: "auto" }}>
+          {chooseable.map((c) => (
+            <label
+              key={c.key}
+              className="bp-export-item"
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+            >
+              <input
+                type="checkbox"
+                checked={table.isColumnVisible(c.key)}
+                onChange={() => table.toggleColumnVisibility(c.key)}
+              />
+              {c.label}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

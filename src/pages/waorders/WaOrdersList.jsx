@@ -4,7 +4,7 @@ import { ApiError } from "../../api/client";
 import StatusBadge from "../../components/StatusBadge";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
@@ -62,6 +62,8 @@ export default function WaOrdersList() {
       key: "status", label: "Status", accessor: (o) => o.status, filter: "select",
       options: STATUS_OPTIONS.map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) })),
     },
+    { key: "updated_by_name", label: "Updated by", accessor: (o) => o.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (o) => o.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: orders, columns, rowKey: (o) => o.wa_order_id });
 
@@ -86,7 +88,10 @@ export default function WaOrdersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="wa-orders" totalCount={orders.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="wa-orders" totalCount={orders.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -94,26 +99,30 @@ export default function WaOrdersList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No WhatsApp order attempts yet.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">No WhatsApp order attempts yet.</td></tr>
             ) : (
               table.filteredRows.map((o) => (
                 <tr key={o.wa_order_id} onClick={() => setDetailOrder(o)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={o} />
-                  <td className="bp-td-muted">{new Date(o.created_at).toLocaleString("en-IN")}</td>
-                  <td className="bp-td-strong">{o.items.length} item{o.items.length === 1 ? "" : "s"}</td>
-                  <td>{inr(o.subtotal)}</td>
-                  <td><StatusBadge status={o.status} /></td>
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{new Date(o.created_at).toLocaleString("en-IN")}</td>}
+                  {table.isColumnVisible("items") && <td className="bp-td-strong">{o.items.length} item{o.items.length === 1 ? "" : "s"}</td>}
+                  {table.isColumnVisible("subtotal") && <td>{inr(o.subtotal)}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={o.status} /></td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{o.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{o.updated_at ? new Date(o.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setDetailOrder(o); }}>View</button>
                   </td>

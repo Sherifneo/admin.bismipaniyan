@@ -164,6 +164,12 @@
   color: var(--bp-text);
 }
 
+.bp-colheader-btn.is-active {
+  color: var(--bp-brand-text);
+  font-weight: 800;
+  background: var(--bp-glass-tint);
+}
+
 .bp-colheader-chevron {
   font-size: 9px;
   opacity: 0.55;

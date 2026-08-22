@@ -6,7 +6,7 @@ import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./Partners.css";
 
@@ -84,6 +84,10 @@ export default function PartnersList() {
       key: "settlement_frequency", label: "Settlement", accessor: (p) => p.settlement_frequency, filter: "select",
       options: [{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }],
     },
+    { key: "created_by_name", label: "Created by", accessor: (p) => p.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (p) => p.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (p) => p.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (p) => p.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: partners, columns, rowKey: (p) => p.partner_id });
 
@@ -109,7 +113,10 @@ export default function PartnersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="partners" totalCount={partners.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="partners" totalCount={partners.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -117,32 +124,40 @@ export default function PartnersList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
-              <ColumnHeader table={table} column={columns[5]} />
-              <ColumnHeader table={table} column={columns[6]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+              {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={13} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={9} className="bp-table-empty">No partners found.</td></tr>
+              <tr><td colSpan={13} className="bp-table-empty">No partners found.</td></tr>
             ) : (
               table.filteredRows.map((p) => (
                 <tr key={p.partner_id} onClick={() => setEditPartner(p)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={p} />
-                  <td className="bp-td-muted">{p.partner_code || "—"}</td>
-                  <td className="bp-td-strong">{p.name}</td>
-                  <td><span className={`bp-partner-type-badge bp-partner-type-${p.type}`}>{TYPE_LABELS[p.type]}</span></td>
-                  <td className="bp-td-muted">{p.contact_name || "—"}{p.contact_phone ? ` · ${p.contact_phone}` : ""}</td>
-                  <td className="bp-td-muted">{p.location || "—"}</td>
-                  <td>{Number(p.commission_percent)}%</td>
-                  <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.settlement_frequency}</td>
+                  {table.isColumnVisible("partner_code") && <td className="bp-td-muted">{p.partner_code || "—"}</td>}
+                  {table.isColumnVisible("name") && <td className="bp-td-strong">{p.name}</td>}
+                  {table.isColumnVisible("type") && <td><span className={`bp-partner-type-badge bp-partner-type-${p.type}`}>{TYPE_LABELS[p.type]}</span></td>}
+                  {table.isColumnVisible("contact") && <td className="bp-td-muted">{p.contact_name || "—"}{p.contact_phone ? ` · ${p.contact_phone}` : ""}</td>}
+                  {table.isColumnVisible("location") && <td className="bp-td-muted">{p.location || "—"}</td>}
+                  {table.isColumnVisible("commission_percent") && <td>{Number(p.commission_percent)}%</td>}
+                  {table.isColumnVisible("settlement_frequency") && <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.settlement_frequency}</td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{p.updated_at ? new Date(p.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setSettlementsFor(p); }}>Settlements</button>
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditPartner(p); }}>Edit</button>
@@ -322,6 +337,8 @@ function SettlementsModal({ partner, onClose }) {
       key: "status", label: "Status", accessor: (s) => s.status, filter: "select",
       options: [{ value: "pending", label: "Pending" }, { value: "paid", label: "Paid" }],
     },
+    { key: "updated_by_name", label: "Updated by", accessor: (s) => s.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (s) => s.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: settlements, columns, rowKey: (s) => s.settlement_id });
 
@@ -339,6 +356,7 @@ function SettlementsModal({ partner, onClose }) {
           </button>
         )}
         <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New settlement</button>
+        <ColumnChooserButton table={table} columns={columns} />
       </div>
 
       {error && <div className="bp-inline-error">{error}</div>}
@@ -354,10 +372,12 @@ function SettlementsModal({ partner, onClose }) {
             <thead>
               <tr>
                 <SelectAllHeaderCell table={table} />
-                <ColumnHeader table={table} column={columns[0]} />
-                <ColumnHeader table={table} column={columns[1]} />
-                <ColumnHeader table={table} column={columns[2]} />
-                <ColumnHeader table={table} column={columns[3]} />
+                {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+                {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+                {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+                {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+                {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+                {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
                 <th></th>
               </tr>
             </thead>
@@ -365,10 +385,12 @@ function SettlementsModal({ partner, onClose }) {
               {table.filteredRows.map((s) => (
                 <tr key={s.settlement_id}>
                   <SelectRowCell table={table} row={s} />
-                  <td className="bp-td-muted">{s.period_start} → {s.period_end}</td>
-                  <td>{inr(s.sales_value)}</td>
-                  <td className="bp-td-strong">{inr(s.net_amount)}</td>
-                  <td><StatusBadge status={s.status} /></td>
+                  {table.isColumnVisible("period") && <td className="bp-td-muted">{s.period_start} → {s.period_end}</td>}
+                  {table.isColumnVisible("sales_value") && <td>{inr(s.sales_value)}</td>}
+                  {table.isColumnVisible("net_amount") && <td className="bp-td-strong">{inr(s.net_amount)}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={s.status} /></td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{s.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{s.updated_at ? new Date(s.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     {s.status === "pending" && (
                       <button type="button" className="bp-btn-sm" onClick={() => markPaid(s)}>Mark paid</button>

@@ -4,7 +4,7 @@ import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
@@ -66,6 +66,10 @@ export default function BankAccountsList() {
       key: "is_active", label: "Status", accessor: (a) => (a.is_active ? "active" : "inactive"), filter: "select",
       options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }],
     },
+    { key: "created_by_name", label: "Created by", accessor: (a) => a.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (a) => a.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (a) => a.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (a) => a.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: accounts, columns, rowKey: (a) => a.bank_account_id });
 
@@ -100,7 +104,10 @@ export default function BankAccountsList() {
         <>
           {error && <div className="bp-inline-error">{error}</div>}
 
-          <DataTableToolbar table={table} filename="bank-accounts" totalCount={accounts.length} />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <DataTableToolbar table={table} filename="bank-accounts" totalCount={accounts.length} />
+            <ColumnChooserButton table={table} columns={columns} />
+          </div>
           <SearchByBar table={table} columns={columns} />
 
           <div className="bp-table-wrap">
@@ -108,28 +115,36 @@ export default function BankAccountsList() {
               <thead>
                 <tr>
                   <SelectAllHeaderCell table={table} />
-                  <ColumnHeader table={table} column={columns[0]} />
-                  <ColumnHeader table={table} column={columns[1]} />
-                  <ColumnHeader table={table} column={columns[2]} />
-                  <ColumnHeader table={table} column={columns[3]} />
-                  <ColumnHeader table={table} column={columns[4]} />
+                  {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+                  {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+                  {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+                  {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+                  {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+                  {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+                  {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+                  {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+                  {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+                  <tr><td colSpan={11} className="bp-table-empty">Loading…</td></tr>
                 ) : table.filteredRows.length === 0 ? (
-                  <tr><td colSpan={7} className="bp-table-empty">No bank accounts yet.</td></tr>
+                  <tr><td colSpan={11} className="bp-table-empty">No bank accounts yet.</td></tr>
                 ) : (
                   table.filteredRows.map((a) => (
                     <tr key={a.bank_account_id} onClick={() => setEditAccount(a)} style={{ cursor: "pointer" }}>
                       <SelectRowCell table={table} row={a} />
-                      <td className="bp-td-strong">{a.account_name}</td>
-                      <td className="bp-td-muted">{a.bank_name}</td>
-                      <td className="bp-td-muted">{a.account_number_last4 ? `•••• ${a.account_number_last4}` : "—"}</td>
-                      <td>{inr(a.balance)}</td>
-                      <td><StatusBadge status={a.is_active ? "active" : "inactive"} /></td>
+                      {table.isColumnVisible("account_name") && <td className="bp-td-strong">{a.account_name}</td>}
+                      {table.isColumnVisible("bank_name") && <td className="bp-td-muted">{a.bank_name}</td>}
+                      {table.isColumnVisible("account_number_last4") && <td className="bp-td-muted">{a.account_number_last4 ? `•••• ${a.account_number_last4}` : "—"}</td>}
+                      {table.isColumnVisible("balance") && <td>{inr(a.balance)}</td>}
+                      {table.isColumnVisible("is_active") && <td><StatusBadge status={a.is_active ? "active" : "inactive"} /></td>}
+                      {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{a.created_by_name || "—"}</td>}
+                      {table.isColumnVisible("created_at") && <td className="bp-td-muted">{a.created_at ? new Date(a.created_at).toLocaleString("en-IN") : "—"}</td>}
+                      {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{a.updated_by_name || "—"}</td>}
+                      {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{a.updated_at ? new Date(a.updated_at).toLocaleString("en-IN") : "—"}</td>}
                       <td className="bp-td-actions">
                         <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setTxnAccount(a); }}>Transactions</button>
                         <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditAccount(a); }}>Edit</button>

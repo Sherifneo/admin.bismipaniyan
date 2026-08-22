@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Repeat/bulk buyers only — a walk-in counter sale doesn't need a saved
@@ -58,6 +58,10 @@ export default function CustomersList() {
     { key: "phone", label: "Phone", accessor: (c) => c.phone || "" },
     { key: "address", label: "Address", accessor: (c) => c.address || "" },
     { key: "gstin", label: "GSTIN", accessor: (c) => c.gstin || "" },
+    { key: "created_by_name", label: "Created by", accessor: (c) => c.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (c) => c.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (c) => c.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (c) => c.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: customers, columns, rowKey: (c) => c.customer_id });
 
@@ -75,7 +79,10 @@ export default function CustomersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="customers" totalCount={customers.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="customers" totalCount={customers.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -83,28 +90,36 @@ export default function CustomersList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={11} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No customers found.</td></tr>
+              <tr><td colSpan={11} className="bp-table-empty">No customers found.</td></tr>
             ) : (
               table.filteredRows.map((c) => (
                 <tr key={c.customer_id} onClick={() => setEditCustomer(c)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={c} />
-                  <td className="bp-td-muted">{c.customer_code || "—"}</td>
-                  <td className="bp-td-strong">{c.name}</td>
-                  <td className="bp-td-muted">{c.phone || "—"}</td>
-                  <td className="bp-td-muted">{c.address || "—"}</td>
-                  <td className="bp-td-muted">{c.gstin || "—"}</td>
+                  {table.isColumnVisible("customer_code") && <td className="bp-td-muted">{c.customer_code || "—"}</td>}
+                  {table.isColumnVisible("name") && <td className="bp-td-strong">{c.name}</td>}
+                  {table.isColumnVisible("phone") && <td className="bp-td-muted">{c.phone || "—"}</td>}
+                  {table.isColumnVisible("address") && <td className="bp-td-muted">{c.address || "—"}</td>}
+                  {table.isColumnVisible("gstin") && <td className="bp-td-muted">{c.gstin || "—"}</td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{c.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{c.created_at ? new Date(c.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{c.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{c.updated_at ? new Date(c.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }}>Edit</button>
                     {hasPermission("sales.manage", "full_control") && (

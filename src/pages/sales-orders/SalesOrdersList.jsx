@@ -5,7 +5,7 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
@@ -78,6 +78,10 @@ export default function SalesOrdersList() {
       key: "status", label: "Status", accessor: (so) => so.status, filter: "select",
       options: [{ value: "draft", label: "Draft" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }],
     },
+    { key: "created_by_name", label: "Created by", accessor: (so) => so.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (so) => so.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (so) => so.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (so) => so.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: orders, columns, rowKey: (so) => so.so_id });
 
@@ -107,7 +111,10 @@ export default function SalesOrdersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="sales-orders" totalCount={orders.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="sales-orders" totalCount={orders.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -115,30 +122,38 @@ export default function SalesOrdersList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
-              <ColumnHeader table={table} column={columns[5]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={12} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={8} className="bp-table-empty">No sales orders found.</td></tr>
+              <tr><td colSpan={12} className="bp-table-empty">No sales orders found.</td></tr>
             ) : (
               table.filteredRows.map((so) => (
                 <tr key={so.so_id} onClick={() => setViewSo(so)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={so} />
-                  <td className="bp-td-strong">{so.so_number}</td>
-                  <td>{so.customer_name || so.walkin_name || "Walk-in"}</td>
-                  <td className="bp-td-muted">{so.location_name}</td>
-                  <td className="bp-td-muted">{so.completed_date || so.order_date}</td>
-                  <td className="bp-td-strong">{inr(so.total)}</td>
-                  <td><StatusBadge status={so.status} /></td>
+                  {table.isColumnVisible("so_number") && <td className="bp-td-strong">{so.so_number}</td>}
+                  {table.isColumnVisible("buyer") && <td>{so.customer_name || so.walkin_name || "Walk-in"}</td>}
+                  {table.isColumnVisible("location_name") && <td className="bp-td-muted">{so.location_name}</td>}
+                  {table.isColumnVisible("date") && <td className="bp-td-muted">{so.completed_date || so.order_date}</td>}
+                  {table.isColumnVisible("total") && <td className="bp-td-strong">{inr(so.total)}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={so.status} /></td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{so.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{so.created_at ? new Date(so.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{so.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{so.updated_at ? new Date(so.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setViewSo(so); }}>View</button>
                   </td>
@@ -204,9 +219,19 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
     return () => { cancelled = true; };
   }, [buyerType, locationId]);
 
+  const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
   const [discountEditedField, setDiscountEditedField] = useState(null);
+
+  function toggleDiscountEnabled(checked) {
+    setDiscountEnabled(checked);
+    if (!checked) {
+      setDiscountAmount("");
+      setDiscountPercent("");
+      setDiscountEditedField(null);
+    }
+  }
 
   const [gstEnabled, setGstEnabled] = useState(false);
   const [gstAmount, setGstAmount] = useState("");
@@ -392,27 +417,33 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
         ))}
         <button type="button" className="bp-btn-sm" onClick={addRow} style={{ alignSelf: "flex-start", marginBottom: 10 }}>+ Add line</button>
 
-        <label className="bp-field-label">Discount (optional)</label>
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <input type="number" min="0" step="0.01" placeholder="Discount ₹" className="bp-field-input" value={discountAmount} onChange={(e) => onDiscountAmountChange(e.target.value)} />
+        <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" checked={discountEnabled} onChange={(e) => toggleDiscountEnabled(e.target.checked)} />
+          Apply discount
+        </label>
+        {discountEnabled && (
+          <div className="bp-form-row">
+            <div style={{ flex: 1 }}>
+              <input type="number" min="0" step="0.01" placeholder="Discount ₹" className="bp-field-input" value={discountAmount} onChange={(e) => onDiscountAmountChange(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <input type="number" min="0" max="100" step="0.01" placeholder="Discount %" className="bp-field-input" value={discountPercent} onChange={(e) => onDiscountPercentChange(e.target.value)} />
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <input type="number" min="0" max="100" step="0.01" placeholder="Discount %" className="bp-field-input" value={discountPercent} onChange={(e) => onDiscountPercentChange(e.target.value)} />
-          </div>
-        </div>
+        )}
 
-        <label className="bp-field-label">GST</label>
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <button type="button" className={gstEnabled ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setGstEnabled(true)}>Yes</button>
-          <button
-            type="button"
-            className={!gstEnabled ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"}
-            onClick={() => { setGstEnabled(false); setGstAmount(""); setGstPercent(""); setGstEditedField(null); }}
-          >
-            No
-          </button>
-        </div>
+        <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={gstEnabled}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setGstEnabled(checked);
+              if (!checked) { setGstAmount(""); setGstPercent(""); setGstEditedField(null); }
+            }}
+          />
+          Apply GST
+        </label>
         {gstEnabled && (
           <div className="bp-form-row">
             <div style={{ flex: 1 }}>

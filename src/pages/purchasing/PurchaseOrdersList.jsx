@@ -5,7 +5,7 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
@@ -89,6 +89,10 @@ export default function PurchaseOrdersList() {
       key: "payment_status", label: "Payment", accessor: (po) => (po.status === "received" ? (po.payment_status === "paid" ? "paid" : "unpaid") : ""), filter: "select",
       options: [{ value: "paid", label: "Paid" }, { value: "unpaid", label: "Unpaid" }],
     },
+    { key: "created_by_name", label: "Created by", accessor: (po) => po.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (po) => po.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (po) => po.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (po) => po.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: orders, columns, rowKey: (po) => po.po_id });
 
@@ -130,7 +134,10 @@ export default function PurchaseOrdersList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="purchase-orders" totalCount={orders.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="purchase-orders" totalCount={orders.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -138,40 +145,50 @@ export default function PurchaseOrdersList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
-              <ColumnHeader table={table} column={columns[5]} />
-              <ColumnHeader table={table} column={columns[6]} />
-              <ColumnHeader table={table} column={columns[7]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+              {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+              {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={10} className="bp-table-empty">No purchase orders found.</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">No purchase orders found.</td></tr>
             ) : (
               table.filteredRows.map((po) => (
                 <tr key={po.po_id} onClick={() => setViewPo(po)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={po} />
-                  <td className="bp-td-strong">{po.po_number}</td>
-                  <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>
-                  <td className="bp-td-muted">{po.location_name}</td>
-                  <td className="bp-td-muted">{po.order_date}</td>
-                  <td className="bp-td-muted">{po.expected_date || "—"}</td>
-                  <td className="bp-td-strong">{inr(po.total)}</td>
-                  <td><StatusBadge status={po.status} /></td>
-                  <td>
-                    {po.status === "received" ? (
-                      <StatusBadge status={po.payment_status === "paid" ? "paid" : "requested"} label={po.payment_status === "paid" ? "Paid" : "Unpaid"} />
-                    ) : (
-                      <span className="bp-td-muted">—</span>
-                    )}
-                  </td>
+                  {table.isColumnVisible("po_number") && <td className="bp-td-strong">{po.po_number}</td>}
+                  {table.isColumnVisible("vendor_name") && <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>}
+                  {table.isColumnVisible("location_name") && <td className="bp-td-muted">{po.location_name}</td>}
+                  {table.isColumnVisible("order_date") && <td className="bp-td-muted">{po.order_date}</td>}
+                  {table.isColumnVisible("expected_date") && <td className="bp-td-muted">{po.expected_date || "—"}</td>}
+                  {table.isColumnVisible("total") && <td className="bp-td-strong">{inr(po.total)}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={po.status} /></td>}
+                  {table.isColumnVisible("payment_status") && (
+                    <td>
+                      {po.status === "received" ? (
+                        <StatusBadge status={po.payment_status === "paid" ? "paid" : "requested"} label={po.payment_status === "paid" ? "Paid" : "Unpaid"} />
+                      ) : (
+                        <span className="bp-td-muted">—</span>
+                      )}
+                    </td>
+                  )}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{po.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{po.created_at ? new Date(po.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{po.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{po.updated_at ? new Date(po.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setViewPo(po); }}>View</button>
                   </td>

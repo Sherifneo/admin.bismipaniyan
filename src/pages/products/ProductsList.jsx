@@ -7,7 +7,7 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 const LIMIT = 20;
@@ -90,6 +90,10 @@ export default function ProductsList() {
     { key: "cost_price", label: "Cost price", accessor: (p) => p.cost_price ?? "", filter: "number" },
     { key: "selling_price", label: "Selling price", accessor: (p) => p.selling_price ?? "", filter: "number" },
     { key: "low_stock_alert", label: "Low stock alert", accessor: (p) => p.low_stock_alert, filter: "number" },
+    { key: "created_by_name", label: "Created by", accessor: (p) => p.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (p) => p.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (p) => p.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (p) => p.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: products, columns, rowKey: (p) => p.product_id });
 
@@ -104,6 +108,7 @@ export default function ProductsList() {
             </button>
           )}
           <ExportMenu filename="products" rows={products} columns={CSV_COLUMNS} />
+          <ColumnChooserButton table={table} columns={columns} />
           <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add product</button>
         </div>
       </div>
@@ -127,34 +132,42 @@ export default function ProductsList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
-              <ColumnHeader table={table} column={columns[4]} />
-              <ColumnHeader table={table} column={columns[5]} />
-              <ColumnHeader table={table} column={columns[6]} />
-              <ColumnHeader table={table} column={columns[7]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+              {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+              {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={10} className="bp-table-empty">No products found.</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">No products found.</td></tr>
             ) : (
               table.filteredRows.map((p) => (
                 <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={p} />
-                  <td className="bp-td-muted">{p.product_code || "—"}</td>
-                  <td className="bp-td-muted">{p.sku || "—"}</td>
-                  <td className="bp-td-strong">{p.name}</td>
-                  <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.item_kind.replace("_", " ")}</td>
-                  <td className="bp-td-muted">{p.uom}</td>
-                  <td>{inr(p.cost_price)}</td>
-                  <td>{inr(p.selling_price)}</td>
-                  <td className="bp-td-muted">{p.low_stock_alert}</td>
+                  {table.isColumnVisible("product_code") && <td className="bp-td-muted">{p.product_code || "—"}</td>}
+                  {table.isColumnVisible("sku") && <td className="bp-td-muted">{p.sku || "—"}</td>}
+                  {table.isColumnVisible("name") && <td className="bp-td-strong">{p.name}</td>}
+                  {table.isColumnVisible("item_kind") && <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.item_kind.replace("_", " ")}</td>}
+                  {table.isColumnVisible("uom") && <td className="bp-td-muted">{p.uom}</td>}
+                  {table.isColumnVisible("cost_price") && <td>{inr(p.cost_price)}</td>}
+                  {table.isColumnVisible("selling_price") && <td>{inr(p.selling_price)}</td>}
+                  {table.isColumnVisible("low_stock_alert") && <td className="bp-td-muted">{p.low_stock_alert}</td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{p.updated_at ? new Date(p.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditProduct(p); }}>Edit</button>
                     {hasPermission("products.manage", "full_control") && (

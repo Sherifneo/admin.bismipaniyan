@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
 // Vendors sell raw materials TO Bismi — a purchasing relationship, not
@@ -56,6 +56,10 @@ export default function VendorsList() {
     { key: "name", label: "Name", accessor: (v) => v.name },
     { key: "contact_name", label: "Contact", accessor: (v) => (v.contact_name || "") + (v.contact_phone ? ` · ${v.contact_phone}` : "") },
     { key: "address", label: "Address", accessor: (v) => v.address || "" },
+    { key: "created_by_name", label: "Created by", accessor: (v) => v.created_by_name || "", hiddenByDefault: true },
+    { key: "created_at", label: "Created at", accessor: (v) => v.created_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "updated_by_name", label: "Updated by", accessor: (v) => v.updated_by_name || "", hiddenByDefault: true },
+    { key: "updated_at", label: "Updated at", accessor: (v) => v.updated_at || "", filter: "dateRange", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: vendors, columns, rowKey: (v) => v.vendor_id });
 
@@ -73,7 +77,10 @@ export default function VendorsList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <DataTableToolbar table={table} filename="vendors" totalCount={vendors.length} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DataTableToolbar table={table} filename="vendors" totalCount={vendors.length} />
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
       <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
@@ -81,26 +88,34 @@ export default function VendorsList() {
           <thead>
             <tr>
               <SelectAllHeaderCell table={table} />
-              <ColumnHeader table={table} column={columns[0]} />
-              <ColumnHeader table={table} column={columns[1]} />
-              <ColumnHeader table={table} column={columns[2]} />
-              <ColumnHeader table={table} column={columns[3]} />
+              {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No vendors found.</td></tr>
+              <tr><td colSpan={10} className="bp-table-empty">No vendors found.</td></tr>
             ) : (
               table.filteredRows.map((v) => (
                 <tr key={v.vendor_id} onClick={() => setEditVendor(v)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={v} />
-                  <td className="bp-td-muted">{v.vendor_code || "—"}</td>
-                  <td className="bp-td-strong">{v.name}</td>
-                  <td className="bp-td-muted">{v.contact_name || "—"}{v.contact_phone ? ` · ${v.contact_phone}` : ""}</td>
-                  <td className="bp-td-muted">{v.address || "—"}</td>
+                  {table.isColumnVisible("vendor_code") && <td className="bp-td-muted">{v.vendor_code || "—"}</td>}
+                  {table.isColumnVisible("name") && <td className="bp-td-strong">{v.name}</td>}
+                  {table.isColumnVisible("contact_name") && <td className="bp-td-muted">{v.contact_name || "—"}{v.contact_phone ? ` · ${v.contact_phone}` : ""}</td>}
+                  {table.isColumnVisible("address") && <td className="bp-td-muted">{v.address || "—"}</td>}
+                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{v.created_by_name || "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{v.created_at ? new Date(v.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{v.updated_by_name || "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{v.updated_at ? new Date(v.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditVendor(v); }}>Edit</button>
                     {hasPermission("purchasing.manage", "full_control") && (
