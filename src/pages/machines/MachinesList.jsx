@@ -62,7 +62,7 @@ export default function MachinesList() {
   const table = useDataTable({ rows: machines, columns, rowKey: (m) => m.machine_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("name", urlSearch.q);
+    if (urlSearch.q) table.setFilter("name", { operator: "contains", value: urlSearch.q });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

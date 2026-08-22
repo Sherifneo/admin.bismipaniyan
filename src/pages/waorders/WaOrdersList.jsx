@@ -57,7 +57,7 @@ export default function WaOrdersList() {
   const columns = [
     { key: "created_at", label: "Received", accessor: (o) => o.created_at, filter: "dateRange" },
     { key: "items", label: "Items", accessor: (o) => o.items.length },
-    { key: "subtotal", label: "Subtotal", accessor: (o) => o.subtotal },
+    { key: "subtotal", label: "Subtotal", accessor: (o) => o.subtotal, filter: "number" },
     {
       key: "status", label: "Status", accessor: (o) => o.status, filter: "select",
       options: STATUS_OPTIONS.map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) })),
@@ -66,7 +66,7 @@ export default function WaOrdersList() {
   const table = useDataTable({ rows: orders, columns, rowKey: (o) => o.wa_order_id });
 
   useEffect(() => {
-    if (urlSearch.from || urlSearch.to) table.setFilter("created_at", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    if (urlSearch.from || urlSearch.to) table.setFilter("created_at", { operator: "between", from: urlSearch.from || undefined, to: urlSearch.to || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

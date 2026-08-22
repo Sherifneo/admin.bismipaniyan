@@ -4,10 +4,22 @@ Every table in the admin portal — existing or new — follows this pattern, mo
 
 ## What every table gets
 
-1. **Per-column header dropdown** — click the small chevron in a column's header (built into the header cell itself, not a separate row above the table): a popup shows "Sort A to Z" / "Sort Z to A", then (for filterable columns) a filter input — text contains, a dropdown for enum-like columns, or a from/to date range — with Apply/Clear buttons. Matches Dynamics' column-header filter exactly.
-2. **A "Search by [column]" bar** above the table: a text box + a dropdown to pick which column it searches, live-filtering as you type. Also modeled on Dynamics' list-view search bar. This is a per-page, in-place filter — it does **not** navigate anywhere.
+1. **Per-column header dropdown, operator-driven** — click the small chevron in a column's header (built into the header cell itself, not a separate row above the table): a popup shows "Sort A to Z" / "Sort Z to A", then an **operator dropdown** (its options depend on the column's data type — see below) and a value input that changes shape to match the chosen operator, with Apply/Clear buttons. Matches a modern ERP's (Dynamics-style) column-header filter.
+2. **A "Search by [column]" bar** above the table: a text box + a dropdown to pick which column it searches, live-filtering as "contains" while you type. This is separate from and coarser than the per-column operator filter — it's the fast/broad search; the column header is for precise filtering. Per-page, in-place — it does **not** navigate anywhere.
 3. **Row selection** — a checkbox column, click-to-toggle, a header "select all" checkbox that selects/deselects everything currently passing the filters (not the whole unfiltered table).
 4. **Export** — "Export all" (every row passing the current filters) and "Export selected" (only checked rows), both client-side CSV via the existing `exportCsv` util.
+5. Filters across different columns always combine with AND. Sort and every column's filter persist together — sorting doesn't clear filters, and (since this is all client-side React state) paging a server-paginated list doesn't clear them either.
+
+### Operators by data type
+
+A column's `filter` prop is also its data type — it picks which operator set the header popup offers:
+
+- **`filter: "text"` (or omitted — this is the default)**: Contains, Does not contain, Starts with, Ends with, Equals, Does not equal, Is empty, Is not empty.
+- **`filter: "number"`**: Equals, Does not equal, Greater than, Greater than or equal to, Less than, Less than or equal to, Between (shows Minimum/Maximum inputs), Is empty, Is not empty. Use this for any numeric column — price, quantity, stock, amount, discount, tax, total, commission %, balance.
+- **`filter: "dateRange"`**: Equals, Before, After, On or before, On or after, Between (shows From/To date inputs), Is empty, Is not empty.
+- **`filter: "select"`**: Is, Is not, Is empty, Is not empty — needs an `options` array (`{ value, label }`), and the value input becomes a `<select>` of those options rather than free text. Use for status/type/kind/category and other enum-like or lookup columns.
+- **`filter: "boolean"`**: Is Yes, Is No only (no value input needed — picking the operator IS the filter). Use for true/false columns where a plain "Is Yes"/"Is No" reads more naturally than `select`'s "Is"/"Is not" — existing Yes/No columns built as `select` (e.g. Active/Inactive) are equally valid and don't need converting.
+- **`filter: false`**: sort-only, no filter section in the popup. Use for the actions column, or long free-text columns (notes) with no meaningful filter.
 
 There is **no cross-module/global header search** — an earlier attempt at a header module-picker-that-navigates-elsewhere was explicitly rejected by the owner ("this is not what I asked for") in favor of the in-page Dynamics pattern above. Do not reintroduce a global search bar in `Header.jsx`.
 
@@ -71,7 +83,8 @@ table.filteredRows.map((row) => (
 
 ## Rollout status
 
-Applied (Dynamics-style column headers + SearchByBar): Retail Stores.
-Mid-rollout: every other page listed below still has the OLDER always-visible FilterBar-row implementation from a prior iteration and needs the same column-header/SearchByBar swap StoresList.jsx just got: Customers, Products, Vendors, Machines, Partners (+ its Settlements sub-table), Sales Orders, Purchase Orders, Cash Book, Inventory, WhatsApp Orders, Bank Accounts, Production Runs, Cost Parameters, Team, Reports (all three tabs), Activity Log. `useDataTable`'s API is stable — only each page's `<thead>`/toolbar JSX needs updating (`FilterBar` → `SearchByBar`, each `<th>Label</th>` → `<ColumnHeader table={table} column={columns[N]} />`), not the `columns` array or `useDataTable` call itself.
+Fully applied (Dynamics-style column headers + SearchByBar + operator-driven filters): Retail Stores, Customers, Products, Vendors, Machines, Partners (+ its Settlements sub-table), Sales Orders, Purchase Orders, Cash Book, Inventory, WhatsApp Orders, Bank Accounts, Production Runs, Cost Parameters, Team, Reports (all three tabs), Activity Log.
+
+Numeric columns explicitly typed `filter: "number"` (rather than defaulting to text) as of this pass: Bank Accounts' balance, Cash Book's amount, Inventory's stock/consignment qty, Partners' commission % and its Settlements sub-table's sales/net amount, Cost Parameters' value, Production Runs' quantity, Products' cost/selling price and low-stock alert, Purchase Orders' total, Reports' income/expense/net/qty-delta/count/total-value, Sales Orders' total, WhatsApp Orders' subtotal. If you add a new numeric column anywhere, give it `filter: "number"` from the start rather than leaving it as default text.
 
 Deliberately skipped: Dashboard's "Low stock" widget (top-6 glance preview inside a summary card, capped at `.slice(0, 6)`, no pagination), Cash Book's "Manage categories" modal sub-table (name + type only, no search need), and Security Roles' per-admin permissions matrix (a fixed set of ~9 rows, not a searchable list). None are real searchable list screens — filters/selection/export would be noise.

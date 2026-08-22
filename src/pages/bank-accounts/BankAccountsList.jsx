@@ -61,7 +61,7 @@ export default function BankAccountsList() {
     { key: "account_name", label: "Account name", accessor: (a) => a.account_name },
     { key: "bank_name", label: "Bank", accessor: (a) => a.bank_name },
     { key: "account_number_last4", label: "Account #", accessor: (a) => a.account_number_last4 ? `•••• ${a.account_number_last4}` : "" },
-    { key: "balance", label: "Balance", accessor: (a) => a.balance },
+    { key: "balance", label: "Balance", accessor: (a) => a.balance, filter: "number" },
     {
       key: "is_active", label: "Status", accessor: (a) => (a.is_active ? "active" : "inactive"), filter: "select",
       options: [{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }],
@@ -70,7 +70,7 @@ export default function BankAccountsList() {
   const table = useDataTable({ rows: accounts, columns, rowKey: (a) => a.bank_account_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("account_name", urlSearch.q);
+    if (urlSearch.q) table.setFilter("account_name", { operator: "contains", value: urlSearch.q });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

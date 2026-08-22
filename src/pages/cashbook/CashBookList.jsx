@@ -123,13 +123,13 @@ export default function CashBookList() {
     },
     { key: "category", label: "Category", accessor: (e) => e.category },
     { key: "description", label: "Description", accessor: (e) => e.description || "" },
-    { key: "amount", label: "Amount", accessor: (e) => e.amount },
+    { key: "amount", label: "Amount", accessor: (e) => e.amount, filter: "number" },
   ];
   const table = useDataTable({ rows: entries, columns, rowKey: (e) => e.entry_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("category", urlSearch.q);
-    if (urlSearch.from || urlSearch.to) table.setFilter("entry_date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    if (urlSearch.q) table.setFilter("category", { operator: "contains", value: urlSearch.q });
+    if (urlSearch.from || urlSearch.to) table.setFilter("entry_date", { operator: "between", from: urlSearch.from || undefined, to: urlSearch.to || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

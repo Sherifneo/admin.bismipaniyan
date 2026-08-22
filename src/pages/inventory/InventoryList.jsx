@@ -73,8 +73,8 @@ export default function InventoryList() {
     { key: "name", label: "Product", accessor: (r) => r.name },
     { key: "sku", label: "SKU", accessor: (r) => r.sku || "" },
     { key: "location_name", label: "Location", accessor: (r) => r.location_name },
-    { key: "stock_qty", label: "Bismi stock", accessor: (r) => r.stock_qty },
-    { key: "consignment_stock_qty", label: "Consignment stock", accessor: (r) => r.consignment_stock_qty ?? "" },
+    { key: "stock_qty", label: "Bismi stock", accessor: (r) => r.stock_qty, filter: "number" },
+    { key: "consignment_stock_qty", label: "Consignment stock", accessor: (r) => r.consignment_stock_qty ?? "", filter: "number" },
   ];
   const table = useDataTable({ rows, columns, rowKey: (r) => `${r.product_id}:${r.location_id}` });
 

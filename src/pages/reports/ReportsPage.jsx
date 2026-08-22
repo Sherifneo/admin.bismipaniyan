@@ -80,9 +80,9 @@ function CashbookSummaryTab() {
   const items = data?.items || [];
   const columns = [
     { key: "entry_date", label: "Date", accessor: (r) => r.entry_date, filter: "dateRange" },
-    { key: "total_income", label: "Income", accessor: (r) => r.total_income },
-    { key: "total_expense", label: "Expense", accessor: (r) => r.total_expense },
-    { key: "net", label: "Net", accessor: (r) => r.net },
+    { key: "total_income", label: "Income", accessor: (r) => r.total_income, filter: "number" },
+    { key: "total_expense", label: "Expense", accessor: (r) => r.total_expense, filter: "number" },
+    { key: "net", label: "Net", accessor: (r) => r.net, filter: "number" },
   ];
   const table = useDataTable({ rows: items, columns, rowKey: (r) => r.entry_date });
 
@@ -216,7 +216,7 @@ function StockMovementsTab() {
     { key: "sku", label: "SKU", accessor: (r) => r.sku || "" },
     { key: "location_name", label: "Location", accessor: (r) => r.location_name },
     { key: "movement_type", label: "Type", accessor: (r) => r.movement_type, filter: "select", options: MOVEMENT_TYPE_OPTIONS },
-    { key: "qty_delta", label: "Qty delta", accessor: (r) => r.qty_delta },
+    { key: "qty_delta", label: "Qty delta", accessor: (r) => r.qty_delta, filter: "number" },
     { key: "note", label: "Note", accessor: (r) => r.note || "" },
   ];
   const table = useDataTable({ rows: items, columns, rowKey: (r) => r.movement_id });
@@ -312,8 +312,8 @@ function PurchaseOrdersByStatusTab() {
 
   const columns = [
     { key: "status", label: "Status", accessor: (r) => r.status },
-    { key: "count", label: "Count", accessor: (r) => r.count },
-    { key: "total_value", label: "Total value", accessor: (r) => r.total_value },
+    { key: "count", label: "Count", accessor: (r) => r.count, filter: "number" },
+    { key: "total_value", label: "Total value", accessor: (r) => r.total_value, filter: "number" },
   ];
   const table = useDataTable({ rows: items, columns, rowKey: (r) => r.status });
 

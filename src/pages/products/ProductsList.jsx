@@ -87,9 +87,9 @@ export default function ProductsList() {
       options: [{ value: "finished_good", label: "Finished good" }, { value: "raw_material", label: "Raw material" }],
     },
     { key: "uom", label: "UOM", accessor: (p) => p.uom },
-    { key: "cost_price", label: "Cost price", accessor: (p) => p.cost_price ?? "" },
-    { key: "selling_price", label: "Selling price", accessor: (p) => p.selling_price ?? "" },
-    { key: "low_stock_alert", label: "Low stock alert", accessor: (p) => p.low_stock_alert },
+    { key: "cost_price", label: "Cost price", accessor: (p) => p.cost_price ?? "", filter: "number" },
+    { key: "selling_price", label: "Selling price", accessor: (p) => p.selling_price ?? "", filter: "number" },
+    { key: "low_stock_alert", label: "Low stock alert", accessor: (p) => p.low_stock_alert, filter: "number" },
   ];
   const table = useDataTable({ rows: products, columns, rowKey: (p) => p.product_id });
 

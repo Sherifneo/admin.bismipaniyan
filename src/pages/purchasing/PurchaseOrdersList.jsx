@@ -80,7 +80,7 @@ export default function PurchaseOrdersList() {
     { key: "location_name", label: "Location", accessor: (po) => po.location_name },
     { key: "order_date", label: "Order date", accessor: (po) => po.order_date, filter: "dateRange" },
     { key: "expected_date", label: "Expected", accessor: (po) => po.expected_date || "", filter: "dateRange" },
-    { key: "total", label: "Total", accessor: (po) => po.total },
+    { key: "total", label: "Total", accessor: (po) => po.total, filter: "number" },
     {
       key: "status", label: "Status", accessor: (po) => po.status, filter: "select",
       options: [{ value: "draft", label: "Draft" }, { value: "ordered", label: "Ordered" }, { value: "received", label: "Received" }, { value: "cancelled", label: "Cancelled" }],
@@ -93,8 +93,8 @@ export default function PurchaseOrdersList() {
   const table = useDataTable({ rows: orders, columns, rowKey: (po) => po.po_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("vendor_name", urlSearch.q);
-    if (urlSearch.from || urlSearch.to) table.setFilter("order_date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    if (urlSearch.q) table.setFilter("vendor_name", { operator: "contains", value: urlSearch.q });
+    if (urlSearch.from || urlSearch.to) table.setFilter("order_date", { operator: "between", from: urlSearch.from || undefined, to: urlSearch.to || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

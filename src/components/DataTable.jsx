@@ -10,10 +10,16 @@ import { exportCsv } from "../utils/exportCsv";
 // download. See TABLE-CONVENTIONS.md for how to wire a new or existing
 // table page.
 //
-// columns: [{ key, label, accessor: (row) => value, filter: "text" | "select" | "dateRange" | false }]
+// columns: [{ key, label, accessor: (row) => value, filter: "text" | "number" | "select" | "dateRange" | "boolean" | false, options? }]
+// `filter` doubles as the column's data type — it picks which operator
+// set the header popup offers (see OPERATORS_BY_TYPE below). Existing
+// pages built before operator support was added keep working unchanged:
+// the default (no `filter` key) is "text", "select"/"dateRange" behave
+// exactly as before with a richer operator list layered on top.
 // rowKey: (row) => string
 export function useDataTable({ rows, columns, rowKey }) {
-  const [filters, setFilters] = useState({}); // { [columnKey]: string | string[] | { from, to } }
+  // filters: { [columnKey]: { operator, value } | { operator, min, max } | { operator, from, to } }
+  const [filters, setFilters] = useState({});
   const [sort, setSort] = useState(null); // { key, dir: 'asc' | 'desc' } | null
   const [selected, setSelected] = useState(() => new Set());
 
@@ -23,22 +29,8 @@ export function useDataTable({ rows, columns, rowKey }) {
     const matched = rows.filter((row) =>
       filterableColumns.every((col) => {
         const active = filters[col.key];
-        if (active === undefined || active === null || active === "") return true;
-        const raw = col.accessor(row);
-
-        if (col.filter === "select") {
-          if (!Array.isArray(active) || active.length === 0) return true;
-          return active.includes(String(raw ?? ""));
-        }
-        if (col.filter === "dateRange") {
-          if (!raw) return false;
-          const d = String(raw).slice(0, 10);
-          if (active.from && d < active.from) return false;
-          if (active.to && d > active.to) return false;
-          return true;
-        }
-        // text (default): case-insensitive substring
-        return String(raw ?? "").toLowerCase().includes(String(active).toLowerCase());
+        if (!active || !active.operator) return true;
+        return matchesFilter(colType(col), active, col.accessor(row));
       })
     );
 
@@ -114,48 +106,191 @@ export function useDataTable({ rows, columns, rowKey }) {
   };
 }
 
+// A column's `filter` prop IS its data type for operator purposes.
+// "text"/undefined -> text, "number" -> number, "dateRange" -> date,
+// "select" -> lookup, "boolean" -> boolean.
+function colType(col) {
+  if (col.filter === "number") return "number";
+  if (col.filter === "dateRange") return "date";
+  if (col.filter === "select") return "select";
+  if (col.filter === "boolean") return "boolean";
+  return "text";
+}
+
+const OPERATORS_BY_TYPE = {
+  text: [
+    { value: "contains", label: "Contains" },
+    { value: "notContains", label: "Does not contain" },
+    { value: "startsWith", label: "Starts with" },
+    { value: "endsWith", label: "Ends with" },
+    { value: "equals", label: "Equals" },
+    { value: "notEquals", label: "Does not equal" },
+    { value: "isEmpty", label: "Is empty" },
+    { value: "isNotEmpty", label: "Is not empty" },
+  ],
+  number: [
+    { value: "equals", label: "Equals" },
+    { value: "notEquals", label: "Does not equal" },
+    { value: "gt", label: "Greater than" },
+    { value: "gte", label: "Greater than or equal to" },
+    { value: "lt", label: "Less than" },
+    { value: "lte", label: "Less than or equal to" },
+    { value: "between", label: "Between" },
+    { value: "isEmpty", label: "Is empty" },
+    { value: "isNotEmpty", label: "Is not empty" },
+  ],
+  date: [
+    { value: "equals", label: "Equals" },
+    { value: "before", label: "Before" },
+    { value: "after", label: "After" },
+    { value: "onOrBefore", label: "On or before" },
+    { value: "onOrAfter", label: "On or after" },
+    { value: "between", label: "Between" },
+    { value: "isEmpty", label: "Is empty" },
+    { value: "isNotEmpty", label: "Is not empty" },
+  ],
+  select: [
+    { value: "is", label: "Is" },
+    { value: "isNot", label: "Is not" },
+    { value: "isEmpty", label: "Is empty" },
+    { value: "isNotEmpty", label: "Is not empty" },
+  ],
+  boolean: [
+    { value: "isYes", label: "Is Yes" },
+    { value: "isNo", label: "Is No" },
+  ],
+};
+
+// Default operator when a column's filter popup is first opened.
+const DEFAULT_OPERATOR = {
+  text: "contains",
+  number: "equals",
+  date: "equals",
+  select: "is",
+  boolean: "isYes",
+};
+
+function isBlank(raw) {
+  return raw === null || raw === undefined || raw === "";
+}
+
+function matchesFilter(type, active, raw) {
+  const { operator } = active;
+
+  if (operator === "isEmpty") return isBlank(raw);
+  if (operator === "isNotEmpty") return !isBlank(raw);
+
+  if (type === "boolean") {
+    const truthy = raw === true || raw === "true" || raw === "Yes" || raw === "yes" || raw === 1;
+    return operator === "isYes" ? truthy : !truthy;
+  }
+
+  if (type === "select") {
+    const rawStr = String(raw ?? "");
+    const target = active.value;
+    if (target === undefined || target === "" || (Array.isArray(target) && target.length === 0)) return true;
+    const targets = Array.isArray(target) ? target : [target];
+    const matches = targets.includes(rawStr);
+    return operator === "isNot" ? !matches : matches;
+  }
+
+  if (type === "number") {
+    if (isBlank(raw)) return false;
+    const num = Number(raw);
+    if (operator === "between") {
+      const min = active.min === undefined || active.min === "" ? -Infinity : Number(active.min);
+      const max = active.max === undefined || active.max === "" ? Infinity : Number(active.max);
+      return num >= min && num <= max;
+    }
+    const target = Number(active.value);
+    if (Number.isNaN(target)) return true;
+    if (operator === "equals") return num === target;
+    if (operator === "notEquals") return num !== target;
+    if (operator === "gt") return num > target;
+    if (operator === "gte") return num >= target;
+    if (operator === "lt") return num < target;
+    if (operator === "lte") return num <= target;
+    return true;
+  }
+
+  if (type === "date") {
+    if (isBlank(raw)) return false;
+    const d = String(raw).slice(0, 10);
+    if (operator === "between") {
+      const from = active.from || "0000-00-00";
+      const to = active.to || "9999-99-99";
+      return d >= from && d <= to;
+    }
+    const target = active.value;
+    if (!target) return true;
+    if (operator === "equals") return d === target;
+    if (operator === "before") return d < target;
+    if (operator === "after") return d > target;
+    if (operator === "onOrBefore") return d <= target;
+    if (operator === "onOrAfter") return d >= target;
+    return true;
+  }
+
+  // text
+  const rawStr = String(raw ?? "").toLowerCase();
+  const target = String(active.value ?? "").toLowerCase();
+  if (target === "" && !["isEmpty", "isNotEmpty"].includes(operator)) return true;
+  if (operator === "contains") return rawStr.includes(target);
+  if (operator === "notContains") return !rawStr.includes(target);
+  if (operator === "startsWith") return rawStr.startsWith(target);
+  if (operator === "endsWith") return rawStr.endsWith(target);
+  if (operator === "equals") return rawStr === target;
+  if (operator === "notEquals") return rawStr !== target;
+  return true;
+}
+
 // A <th> replacement: column label + a small chevron that opens a
-// Dynamics-style popup (Sort A-Z / Z-A, then a filter input, Apply/Clear)
-// for that one column. Drop this in wherever a page currently has
-// `<th>Label</th>` for a column defined in `columns`. Columns with
-// `filter: false` still get sort-only (no filter section) unless
-// `sortable: false` is also set, in which case it renders as a plain
-// unclickable header (e.g. an actions column — just use a plain <th> for
-// those instead of this component).
+// Dynamics-style popup (Sort A-Z / Z-A, then an operator-driven filter,
+// Apply/Clear) for that one column. Drop this in wherever a page
+// currently has `<th>Label</th>` for a column defined in `columns`.
+// Columns with `filter: false` are sort-only (no filter section).
 export function ColumnHeader({ table, column }) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(table.filters[column.key]);
+  const active = table.filters[column.key];
+  const [operator, setOperator] = useState(active?.operator || DEFAULT_OPERATOR[colType(column)]);
+  const [draft, setDraft] = useState(active || {});
   const wrapRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
-    setDraft(table.filters[column.key]);
+    const current = table.filters[column.key];
+    setOperator(current?.operator || DEFAULT_OPERATOR[colType(column)]);
+    setDraft(current || {});
     function onOutside(e) {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown", onOutside);
     return () => document.removeEventListener("mousedown", onOutside);
-  }, [open, column.key, table.filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, column.key]);
 
   const isSorted = table.sort?.key === column.key;
-  const isFiltered = table.filters[column.key] !== undefined && table.filters[column.key] !== "" &&
-    !(Array.isArray(table.filters[column.key]) && table.filters[column.key].length === 0);
+  const isFiltered = !!active?.operator;
   const canFilter = column.filter !== false;
+  const type = colType(column);
 
   function applySort(dir) {
     table.setSortKey(column.key, dir);
     setOpen(false);
   }
   function applyFilter() {
-    table.setFilter(column.key, draft);
+    table.setFilter(column.key, { ...draft, operator });
     setOpen(false);
   }
   function clear() {
     table.clearFilter(column.key);
     if (isSorted) table.setSortKey(null);
-    setDraft(undefined);
+    setDraft({});
+    setOperator(DEFAULT_OPERATOR[type]);
     setOpen(false);
   }
+
+  const needsValue = !["isEmpty", "isNotEmpty", "isYes", "isNo"].includes(operator);
 
   return (
     <th className="bp-colheader" ref={wrapRef}>
@@ -172,7 +307,20 @@ export function ColumnHeader({ table, column }) {
           {canFilter && (
             <>
               <div className="bp-colheader-menu-sep" />
-              <ColumnFilterInput column={column} value={draft} onChange={setDraft} />
+              <select
+                className="bp-field-input"
+                value={operator}
+                onChange={(e) => { setOperator(e.target.value); setDraft({}); }}
+              >
+                {OPERATORS_BY_TYPE[type].map((op) => (
+                  <option key={op.value} value={op.value}>{op.label}</option>
+                ))}
+              </select>
+              {needsValue && (
+                <div style={{ marginTop: 6 }}>
+                  <FilterValueInput type={type} operator={operator} column={column} draft={draft} setDraft={setDraft} />
+                </div>
+              )}
               <div className="bp-colheader-menu-actions">
                 <button type="button" className="bp-btn-sm bp-btn-primary" onClick={applyFilter}>Apply</button>
                 <button type="button" className="bp-btn-sm bp-btn-outline" onClick={clear}>Clear</button>
@@ -185,65 +333,124 @@ export function ColumnHeader({ table, column }) {
   );
 }
 
-function ColumnFilterInput({ column, value, onChange }) {
-  if (column.filter === "select") {
+function FilterValueInput({ type, operator, column, draft, setDraft }) {
+  if (type === "select") {
     const options = column.options || [];
-    const current = Array.isArray(value) ? value : [];
     return (
       <select
         className="bp-field-input"
-        value={current[0] || ""}
-        onChange={(e) => onChange(e.target.value ? [e.target.value] : [])}
+        value={draft.value || ""}
+        onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+        autoFocus
       >
-        <option value="">All</option>
+        <option value="">Choose…</option>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
     );
   }
-  if (column.filter === "dateRange") {
-    const current = value || {};
+
+  if (type === "number" && operator === "between") {
+    return (
+      <div style={{ display: "flex", gap: 4 }}>
+        <input
+          type="number"
+          className="bp-field-input"
+          placeholder="Minimum"
+          value={draft.min ?? ""}
+          onChange={(e) => setDraft({ ...draft, min: e.target.value })}
+          autoFocus
+        />
+        <input
+          type="number"
+          className="bp-field-input"
+          placeholder="Maximum"
+          value={draft.max ?? ""}
+          onChange={(e) => setDraft({ ...draft, max: e.target.value })}
+        />
+      </div>
+    );
+  }
+  if (type === "number") {
+    return (
+      <input
+        type="number"
+        className="bp-field-input"
+        placeholder="Value"
+        value={draft.value ?? ""}
+        onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+        autoFocus
+      />
+    );
+  }
+
+  if (type === "date" && operator === "between") {
     return (
       <div style={{ display: "flex", gap: 4 }}>
         <input
           type="date"
           className="bp-field-input"
-          value={current.from || ""}
-          onChange={(e) => onChange({ ...current, from: e.target.value || undefined })}
-          title="From"
+          value={draft.from || ""}
+          onChange={(e) => setDraft({ ...draft, from: e.target.value })}
+          title="From date"
+          autoFocus
         />
         <input
           type="date"
           className="bp-field-input"
-          value={current.to || ""}
-          onChange={(e) => onChange({ ...current, to: e.target.value || undefined })}
-          title="To"
+          value={draft.to || ""}
+          onChange={(e) => setDraft({ ...draft, to: e.target.value })}
+          title="To date"
         />
       </div>
     );
   }
+  if (type === "date") {
+    return (
+      <input
+        type="date"
+        className="bp-field-input"
+        value={draft.value || ""}
+        onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+        autoFocus
+      />
+    );
+  }
+
+  // text
   return (
     <input
       type="text"
       className="bp-field-input"
-      placeholder="Contains…"
-      value={value || ""}
-      onChange={(e) => onChange(e.target.value)}
+      placeholder="Value…"
+      value={draft.value || ""}
+      onChange={(e) => setDraft({ ...draft, value: e.target.value })}
       autoFocus
     />
   );
 }
 
 // "Search by <column>" — a dropdown to pick which column, plus a text
-// box that live-filters it. Sits above/near the table, same page, no
-// navigation (see TABLE-CONVENTIONS.md's Header search section).
+// box that live-filters it (always a case-insensitive "contains" against
+// that column, regardless of the column's own operator-driven filter —
+// this is the broad/fast search; the column header menu is for precise
+// filtering). Sits above/near the table, same page, no navigation.
 export function SearchByBar({ table, columns }) {
-  const searchable = columns.filter((c) => c.filter !== false && c.filter !== "select" && c.filter !== "dateRange");
+  const searchable = columns.filter((c) => c.filter !== false && c.filter !== "select" && c.filter !== "dateRange" && c.filter !== "boolean");
   const [column, setColumn] = useState(searchable[0]?.key || "");
-  const value = table.filters[column] || "";
+  const active = table.filters[column];
+  const value = active?.operator === "contains" ? active.value || "" : "";
 
   if (searchable.length === 0) return null;
+
+  function onChange(v) {
+    if (!v) {
+      table.clearFilter(column);
+    } else {
+      table.setFilter(column, { operator: "contains", value: v });
+    }
+  }
 
   return (
     <div className="bp-searchby">
@@ -253,7 +460,7 @@ export function SearchByBar({ table, columns }) {
         className="bp-field-input bp-searchby-input"
         placeholder="Search…"
         value={value}
-        onChange={(e) => table.setFilter(column, e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
       />
       <span className="bp-td-muted" style={{ whiteSpace: "nowrap" }}>Search by</span>
       <select
@@ -268,6 +475,11 @@ export function SearchByBar({ table, columns }) {
           <option key={c.key} value={c.key}>{c.label}</option>
         ))}
       </select>
+      {Object.keys(table.filters).length > 0 && (
+        <button type="button" className="bp-btn-sm bp-btn-outline" onClick={table.clearAllFilters}>
+          Clear all filters
+        </button>
+      )}
     </div>
   );
 }

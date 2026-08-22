@@ -49,14 +49,14 @@ export default function CostParametersList() {
 
   const columns = [
     { key: "name", label: "Name", accessor: (p) => p.name },
-    { key: "value", label: "Value", accessor: (p) => p.value },
+    { key: "value", label: "Value", accessor: (p) => p.value, filter: "number" },
     { key: "unit", label: "Unit", accessor: (p) => p.unit || "" },
     { key: "notes", label: "Notes", accessor: (p) => p.notes || "" },
   ];
   const table = useDataTable({ rows: params, columns, rowKey: (p) => p.param_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("name", urlSearch.q);
+    if (urlSearch.q) table.setFilter("name", { operator: "contains", value: urlSearch.q });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

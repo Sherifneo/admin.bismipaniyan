@@ -62,7 +62,7 @@ export default function ProductionRunsList() {
     { key: "product_name", label: "Product", accessor: (run) => run.product_name },
     { key: "location_name", label: "Location", accessor: (run) => run.location_name },
     { key: "machine_name", label: "Machine", accessor: (run) => run.machine_name || "" },
-    { key: "quantity_produced", label: "Qty", accessor: (run) => run.quantity_produced },
+    { key: "quantity_produced", label: "Qty", accessor: (run) => run.quantity_produced, filter: "number" },
     { key: "run_date", label: "Run date", accessor: (run) => run.run_date, filter: "dateRange" },
     {
       key: "status", label: "Status", accessor: (run) => run.status, filter: "select",
@@ -72,8 +72,8 @@ export default function ProductionRunsList() {
   const table = useDataTable({ rows: runs, columns, rowKey: (run) => run.run_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("product_name", urlSearch.q);
-    if (urlSearch.from || urlSearch.to) table.setFilter("run_date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    if (urlSearch.q) table.setFilter("product_name", { operator: "contains", value: urlSearch.q });
+    if (urlSearch.from || urlSearch.to) table.setFilter("run_date", { operator: "between", from: urlSearch.from || undefined, to: urlSearch.to || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

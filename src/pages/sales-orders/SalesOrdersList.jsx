@@ -73,7 +73,7 @@ export default function SalesOrdersList() {
     { key: "buyer", label: "Buyer", accessor: (so) => so.customer_name || so.walkin_name || "Walk-in" },
     { key: "location_name", label: "Location", accessor: (so) => so.location_name },
     { key: "date", label: "Date", accessor: (so) => so.completed_date || so.order_date, filter: "dateRange" },
-    { key: "total", label: "Total", accessor: (so) => so.total },
+    { key: "total", label: "Total", accessor: (so) => so.total, filter: "number" },
     {
       key: "status", label: "Status", accessor: (so) => so.status, filter: "select",
       options: [{ value: "draft", label: "Draft" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }],
@@ -84,8 +84,8 @@ export default function SalesOrdersList() {
   // Seed from the header's GlobalSearch, once, on arrival — buyer/SO#
   // free text and the date range column, if either was passed in the URL.
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("buyer", urlSearch.q);
-    if (urlSearch.from || urlSearch.to) table.setFilter("date", { from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    if (urlSearch.q) table.setFilter("buyer", { operator: "contains", value: urlSearch.q });
+    if (urlSearch.from || urlSearch.to) table.setFilter("date", { operator: "between", from: urlSearch.from || undefined, to: urlSearch.to || undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

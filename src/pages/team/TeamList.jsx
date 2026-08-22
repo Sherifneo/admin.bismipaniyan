@@ -64,7 +64,7 @@ export default function TeamList() {
   const table = useDataTable({ rows: admins, columns, rowKey: (a) => a.admin_id });
 
   useEffect(() => {
-    if (urlSearch.q) table.setFilter("full_name", urlSearch.q);
+    if (urlSearch.q) table.setFilter("full_name", { operator: "contains", value: urlSearch.q });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

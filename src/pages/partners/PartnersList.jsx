@@ -79,7 +79,7 @@ export default function PartnersList() {
     },
     { key: "contact", label: "Contact", accessor: (p) => (p.contact_name || "") + (p.contact_phone ? ` · ${p.contact_phone}` : "") },
     { key: "location", label: "Location", accessor: (p) => p.location || "" },
-    { key: "commission_percent", label: "Commission", accessor: (p) => Number(p.commission_percent) },
+    { key: "commission_percent", label: "Commission", accessor: (p) => Number(p.commission_percent), filter: "number" },
     {
       key: "settlement_frequency", label: "Settlement", accessor: (p) => p.settlement_frequency, filter: "select",
       options: [{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }],
@@ -315,9 +315,9 @@ function SettlementsModal({ partner, onClose }) {
   const owedLabel = partner.type === "external_shop" ? "Shop owes Bismi" : "Bismi owes partner";
 
   const columns = [
-    { key: "period", label: "Period", accessor: (s) => s.period_start },
-    { key: "sales_value", label: "Sales", accessor: (s) => s.sales_value },
-    { key: "net_amount", label: owedLabel, accessor: (s) => s.net_amount },
+    { key: "period", label: "Period", accessor: (s) => s.period_start, filter: "dateRange" },
+    { key: "sales_value", label: "Sales", accessor: (s) => s.sales_value, filter: "number" },
+    { key: "net_amount", label: owedLabel, accessor: (s) => s.net_amount, filter: "number" },
     {
       key: "status", label: "Status", accessor: (s) => s.status, filter: "select",
       options: [{ value: "pending", label: "Pending" }, { value: "paid", label: "Paid" }],
