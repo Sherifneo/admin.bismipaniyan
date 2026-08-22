@@ -100,6 +100,7 @@ export default function ProductsList() {
         <table className="bp-table">
           <thead>
             <tr>
+              <th>Code</th>
               <th>SKU</th>
               <th>Name</th>
               <th>Kind</th>
@@ -112,12 +113,13 @@ export default function ProductsList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={8} className="bp-table-empty">No products found.</td></tr>
+              <tr><td colSpan={9} className="bp-table-empty">No products found.</td></tr>
             ) : (
               products.map((p) => (
                 <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer" }}>
+                  <td className="bp-td-muted">{p.product_code || "—"}</td>
                   <td className="bp-td-muted">{p.sku || "—"}</td>
                   <td className="bp-td-strong">{p.name}</td>
                   <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.item_kind.replace("_", " ")}</td>
@@ -155,6 +157,8 @@ function ProductModal({ product, onClose, onDone }) {
   const [costPrice, setCostPrice] = useState(product?.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(product?.selling_price ?? "");
   const [lowStockAlert, setLowStockAlert] = useState(product?.low_stock_alert ?? "0");
+  const [productCode, setProductCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -175,6 +179,7 @@ function ProductModal({ product, onClose, onDone }) {
         cost_price: costPrice === "" ? null : Number(costPrice),
         selling_price: sellingPrice === "" ? null : Number(sellingPrice),
         low_stock_alert: lowStockAlert === "" ? 0 : Number(lowStockAlert),
+        product_code: needsCode ? productCode.trim() || undefined : undefined,
       };
       if (isEdit) {
         await productsApi.update(product.product_id, body);
@@ -183,7 +188,11 @@ function ProductModal({ product, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save this product.");
+      const message = err instanceof ApiError ? err.message : "Could not save this product.";
+      if (/set to Manual/i.test(message)) {
+        setNeedsCode(true);
+      }
+      setError(message);
       setSubmitting(false);
     }
   }
@@ -192,6 +201,13 @@ function ProductModal({ product, onClose, onDone }) {
     <Modal title={isEdit ? `Edit — ${product.name}` : "Add product"} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+
+        {needsCode && !isEdit && (
+          <>
+            <label className="bp-field-label" htmlFor="pCode">Product code</label>
+            <input id="pCode" type="text" className="bp-field-input" value={productCode} onChange={(e) => setProductCode(e.target.value)} autoFocus />
+          </>
+        )}
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>

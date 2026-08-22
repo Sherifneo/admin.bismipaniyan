@@ -53,6 +53,8 @@ export default function NumberSequencesPage() {
               <th>Prefix</th>
               <th>Next number</th>
               <th>Padding</th>
+              <th>Mode</th>
+              <th>Status</th>
               <th>Yearly reset</th>
               <th>Last updated</th>
               <th></th>
@@ -60,16 +62,18 @@ export default function NumberSequencesPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No sequences configured yet.</td></tr>
+              <tr><td colSpan={9} className="bp-table-empty">No sequences configured yet.</td></tr>
             ) : (
               items.map((c) => (
-                <tr key={c.counter_key}>
+                <tr key={c.counter_key} style={c.is_active === false ? { opacity: 0.55 } : undefined}>
                   <td className="bp-td-strong">{c.counter_key}</td>
                   <td>{c.prefix}</td>
-                  <td className="bp-td-strong">{c.next_preview}</td>
+                  <td className="bp-td-strong">{c.mode === "manual" ? "—" : c.next_preview}</td>
                   <td className="bp-td-muted">{c.pad_width}</td>
+                  <td className="bp-td-muted">{c.mode === "manual" ? "Manual" : "Automatic"}</td>
+                  <td className="bp-td-muted">{c.is_active === false ? "Inactive" : "Active"}</td>
                   <td className="bp-td-muted">{c.fiscal_year ? "Yes" : "No"}</td>
                   <td className="bp-td-muted">{c.updated_at ? new Date(c.updated_at).toLocaleString("en-IN") : "—"}</td>
                   <td className="bp-td-actions">
@@ -94,10 +98,26 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
   const [padWidth, setPadWidth] = useState(String(counter.pad_width));
   const [fiscalYearOn, setFiscalYearOn] = useState(!!counter.fiscal_year);
   const [currentValue, setCurrentValue] = useState(String(counter.current_value));
+  const [mode, setMode] = useState(counter.mode || "automatic");
+  const [isActive, setIsActive] = useState(counter.is_active !== false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [collisionResult, setCollisionResult] = useState(null);
   const [checkingCollisions, setCheckingCollisions] = useState(false);
+
+  async function resetSequence() {
+    if (!window.confirm(`Reset "${counter.counter_key}" back to 0? The next number issued will restart from 1.`)) return;
+    setResetting(true);
+    setError("");
+    try {
+      await numberSequencesApi.reset(counter.counter_key);
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not reset this sequence.");
+      setResetting(false);
+    }
+  }
 
   const currentValueChanged = String(currentValue) !== String(counter.current_value);
 
@@ -141,6 +161,8 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
         pad_width: padWidthNum,
         fiscal_year: fiscalYearOn ? new Date().getFullYear().toString() : null,
         current_value: currentValueNum,
+        mode,
+        is_active: isActive,
       });
       onDone();
     } catch (err) {
@@ -170,6 +192,34 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
           Yearly reset
         </label>
 
+        <label className="bp-field-label">Mode</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button type="button" className={mode === "automatic" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setMode("automatic")}>
+            Automatic
+          </button>
+          <button type="button" className={mode === "manual" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setMode("manual")}>
+            Manual
+          </button>
+        </div>
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 12 }}>
+          {mode === "manual"
+            ? "Staff must type the code themselves when creating a new record — nothing is auto-generated."
+            : "The system generates the next code automatically from the current value below."}
+        </p>
+
+        <label className="bp-field-label">Status</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button type="button" className={isActive ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setIsActive(true)}>
+            Active
+          </button>
+          <button type="button" className={!isActive ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setIsActive(false)}>
+            Inactive
+          </button>
+        </div>
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 12 }}>
+          {!isActive && "While Inactive, no new records can be created using this sequence until it's turned back on."}
+        </p>
+
         <label className="bp-field-label" htmlFor="nsCurrent">Current value (last number issued)</label>
         <input
           id="nsCurrent"
@@ -179,10 +229,19 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
           className="bp-field-input"
           value={currentValue}
           onChange={(e) => { setCurrentValue(e.target.value); setCollisionResult(null); }}
+          disabled={mode === "manual"}
         />
-        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6 }}>
-          Editing this manually overrides/re-points the sequence — the next number issued will be <strong>{preview}</strong>.
-        </p>
+        {mode !== "manual" && (
+          <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6 }}>
+            Editing this manually overrides/re-points the sequence — the next number issued will be <strong>{preview}</strong>.
+          </p>
+        )}
+
+        <div style={{ marginBottom: 14 }}>
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={resetSequence} disabled={resetting}>
+            {resetting ? "Resetting…" : "Reset to 0"}
+          </button>
+        </div>
 
         {currentValueChanged && (
           <div style={{ marginBottom: 10 }}>

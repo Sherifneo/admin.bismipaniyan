@@ -66,6 +66,7 @@ export default function CustomersList() {
         <table className="bp-table">
           <thead>
             <tr>
+              <th>Code</th>
               <th>Name</th>
               <th>Phone</th>
               <th>Address</th>
@@ -75,12 +76,13 @@ export default function CustomersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
             ) : customers.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No customers found.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">No customers found.</td></tr>
             ) : (
               customers.map((c) => (
                 <tr key={c.customer_id} onClick={() => setEditCustomer(c)} style={{ cursor: "pointer" }}>
+                  <td className="bp-td-muted">{c.customer_code || "—"}</td>
                   <td className="bp-td-strong">{c.name}</td>
                   <td className="bp-td-muted">{c.phone || "—"}</td>
                   <td className="bp-td-muted">{c.address || "—"}</td>
@@ -110,6 +112,8 @@ function CustomerModal({ customer, onClose, onDone }) {
   const [phone, setPhone] = useState(customer?.phone || "");
   const [address, setAddress] = useState(customer?.address || "");
   const [gstin, setGstin] = useState(customer?.gstin || "");
+  const [customerCode, setCustomerCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -127,6 +131,7 @@ function CustomerModal({ customer, onClose, onDone }) {
         phone: phone || undefined,
         address: address || undefined,
         gstin: gstin || undefined,
+        customer_code: needsCode ? customerCode.trim() || undefined : undefined,
       };
       if (isEdit) {
         await customersApi.update(customer.customer_id, body);
@@ -135,7 +140,11 @@ function CustomerModal({ customer, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save this customer.");
+      const message = err instanceof ApiError ? err.message : "Could not save this customer.";
+      if (/set to Manual/i.test(message)) {
+        setNeedsCode(true);
+      }
+      setError(message);
       setSubmitting(false);
     }
   }
@@ -145,8 +154,15 @@ function CustomerModal({ customer, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
+        {needsCode && !isEdit && (
+          <>
+            <label className="bp-field-label" htmlFor="cCode">Customer code</label>
+            <input id="cCode" type="text" className="bp-field-input" value={customerCode} onChange={(e) => setCustomerCode(e.target.value)} autoFocus />
+          </>
+        )}
+
         <label className="bp-field-label" htmlFor="cName">Name</label>
-        <input id="cName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+        <input id="cName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!needsCode} />
 
         <label className="bp-field-label" htmlFor="cPhone">Phone</label>
         <input id="cPhone" type="tel" className="bp-field-input" value={phone} onChange={(e) => setPhone(e.target.value)} />

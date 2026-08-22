@@ -61,6 +61,7 @@ export default function MachinesList() {
         <table className="bp-table">
           <thead>
             <tr>
+              <th>Code</th>
               <th>Name</th>
               <th>Kind</th>
               <th>Location</th>
@@ -70,12 +71,13 @@ export default function MachinesList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
             ) : machines.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No machines found.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">No machines found.</td></tr>
             ) : (
               machines.map((m) => (
                 <tr key={m.machine_id} onClick={() => setEditMachine(m)} style={{ cursor: "pointer" }}>
+                  <td className="bp-td-muted">{m.machine_code || "—"}</td>
                   <td className="bp-td-strong">{m.name}</td>
                   <td className="bp-td-muted">{m.kind || "—"}</td>
                   <td className="bp-td-muted">{m.location_name || "—"}</td>
@@ -105,6 +107,8 @@ function MachineModal({ machine, locations, onClose, onDone }) {
   const [kind, setKind] = useState(machine?.kind || "");
   const [locationId, setLocationId] = useState(machine?.location_id || "");
   const [isActive, setIsActive] = useState(machine ? !!machine.is_active : true);
+  const [machineCode, setMachineCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -122,6 +126,7 @@ function MachineModal({ machine, locations, onClose, onDone }) {
         kind: kind || undefined,
         location_id: locationId || undefined,
         is_active: isActive,
+        machine_code: needsCode ? machineCode.trim() || undefined : undefined,
       };
       if (isEdit) {
         await machinesApi.update(machine.machine_id, body);
@@ -130,7 +135,11 @@ function MachineModal({ machine, locations, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save this machine.");
+      const message = err instanceof ApiError ? err.message : "Could not save this machine.";
+      if (/set to Manual/i.test(message)) {
+        setNeedsCode(true);
+      }
+      setError(message);
       setSubmitting(false);
     }
   }
@@ -139,6 +148,13 @@ function MachineModal({ machine, locations, onClose, onDone }) {
     <Modal title={isEdit ? `Edit — ${machine.name}` : "Add machine"} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+
+        {needsCode && !isEdit && (
+          <>
+            <label className="bp-field-label" htmlFor="mCode">Machine code</label>
+            <input id="mCode" type="text" className="bp-field-input" value={machineCode} onChange={(e) => setMachineCode(e.target.value)} autoFocus />
+          </>
+        )}
 
         <label className="bp-field-label" htmlFor="mName">Name</label>
         <input id="mName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />

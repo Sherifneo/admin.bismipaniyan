@@ -92,6 +92,7 @@ export default function PartnersList() {
         <table className="bp-table">
           <thead>
             <tr>
+              <th>Code</th>
               <th>Name</th>
               <th>Type</th>
               <th>Contact</th>
@@ -103,12 +104,13 @@ export default function PartnersList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
             ) : partners.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No partners found.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">No partners found.</td></tr>
             ) : (
               partners.map((p) => (
                 <tr key={p.partner_id} onClick={() => setEditPartner(p)} style={{ cursor: "pointer" }}>
+                  <td className="bp-td-muted">{p.partner_code || "—"}</td>
                   <td className="bp-td-strong">{p.name}</td>
                   <td><span className={`bp-partner-type-badge bp-partner-type-${p.type}`}>{TYPE_LABELS[p.type]}</span></td>
                   <td className="bp-td-muted">{p.contact_name || "—"}{p.contact_phone ? ` · ${p.contact_phone}` : ""}</td>
@@ -145,6 +147,8 @@ function PartnerModal({ partner, onClose, onDone }) {
   const [commissionPercent, setCommissionPercent] = useState(partner ? String(partner.commission_percent) : (partner?.type === "supplying_partner" ? "20" : "15"));
   const [settlementFrequency, setSettlementFrequency] = useState(partner?.settlement_frequency || "weekly");
   const [notes, setNotes] = useState(partner?.notes || "");
+  const [partnerCode, setPartnerCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -175,6 +179,7 @@ function PartnerModal({ partner, onClose, onDone }) {
         commission_percent: commissionNum,
         settlement_frequency: settlementFrequency,
         notes: notes || undefined,
+        partner_code: needsCode ? partnerCode.trim() || undefined : undefined,
       };
       if (isEdit) {
         await partnersApi.update(partner.partner_id, body);
@@ -183,7 +188,11 @@ function PartnerModal({ partner, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save this partner.");
+      const message = err instanceof ApiError ? err.message : "Could not save this partner.";
+      if (/set to Manual/i.test(message)) {
+        setNeedsCode(true);
+      }
+      setError(message);
       setSubmitting(false);
     }
   }
@@ -192,6 +201,13 @@ function PartnerModal({ partner, onClose, onDone }) {
     <Modal title={isEdit ? `Edit — ${partner.name}` : "Add partner"} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+
+        {needsCode && !isEdit && (
+          <>
+            <label className="bp-field-label" htmlFor="ptCode">Partner code</label>
+            <input id="ptCode" type="text" className="bp-field-input" value={partnerCode} onChange={(e) => setPartnerCode(e.target.value)} autoFocus />
+          </>
+        )}
 
         {!isEdit && (
           <>

@@ -110,6 +110,8 @@ function VendorModal({ vendor, onClose, onDone }) {
   const [contactPhone, setContactPhone] = useState(vendor?.contact_phone || "");
   const [address, setAddress] = useState(vendor?.address || "");
   const [notes, setNotes] = useState(vendor?.notes || "");
+  const [vendorCode, setVendorCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,6 +130,7 @@ function VendorModal({ vendor, onClose, onDone }) {
         contact_phone: contactPhone || undefined,
         address: address || undefined,
         notes: notes || undefined,
+        vendor_code: needsCode ? vendorCode.trim() || undefined : undefined,
       };
       if (isEdit) {
         await vendorsApi.update(vendor.vendor_id, body);
@@ -136,7 +139,11 @@ function VendorModal({ vendor, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save this vendor.");
+      const message = err instanceof ApiError ? err.message : "Could not save this vendor.";
+      if (/set to Manual/i.test(message)) {
+        setNeedsCode(true);
+      }
+      setError(message);
       setSubmitting(false);
     }
   }
@@ -145,6 +152,13 @@ function VendorModal({ vendor, onClose, onDone }) {
     <Modal title={isEdit ? `Edit — ${vendor.name}` : "Add vendor"} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+
+        {needsCode && !isEdit && (
+          <>
+            <label className="bp-field-label" htmlFor="vCode">Vendor code</label>
+            <input id="vCode" type="text" className="bp-field-input" value={vendorCode} onChange={(e) => setVendorCode(e.target.value)} autoFocus />
+          </>
+        )}
 
         <label className="bp-field-label" htmlFor="vName">Name</label>
         <input id="vName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />

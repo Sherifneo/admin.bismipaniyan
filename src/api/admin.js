@@ -144,6 +144,7 @@ export const numberSequencesApi = {
   list: () => GET("/api/admin/number-sequences"),
   update: (key, body) => PUT(`/api/admin/number-sequences/${key}`, body),
   checkCollisions: (key, body) => POST(`/api/admin/number-sequences/${key}/check-collisions`, body),
+  reset: (key) => POST(`/api/admin/number-sequences/${key}/reset`),
 };
 
 export const securityApi = {
