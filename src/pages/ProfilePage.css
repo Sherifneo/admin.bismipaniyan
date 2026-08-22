@@ -1,0 +1,234 @@
+.bp-profile-page {
+  max-width: 760px;
+}
+
+.bp-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.bp-profile-avatar-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--bp-brand) 0%, var(--bp-brand-dark) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+  flex: none;
+  box-shadow: 0 4px 14px rgba(91, 31, 151, 0.35);
+}
+
+.bp-profile-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bp-text);
+}
+
+.bp-profile-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12.5px;
+}
+
+.bp-profile-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--bp-glass-content-bg-alt);
+  border: 1px solid var(--bp-glass-border-soft);
+  color: var(--bp-brand-text);
+}
+
+.bp-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .bp-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bp-profile-field-group + .bp-profile-field-group {
+  margin-top: 18px;
+}
+
+.bp-profile-field-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--bp-text-muted);
+  margin-bottom: 8px;
+}
+
+/* ---- theme picker (system/light/dark) ---- */
+.bp-profile-option-row {
+  display: flex;
+  gap: 8px;
+}
+
+.bp-profile-theme-opt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: var(--bp-radius-sm);
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-content-bg-alt);
+  color: var(--bp-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+
+.bp-profile-theme-opt:hover {
+  border-color: var(--bp-brand);
+}
+
+.bp-profile-theme-opt.is-active {
+  border-color: var(--bp-amber);
+  background: linear-gradient(160deg, rgba(232, 148, 15, 0.16) 0%, rgba(232, 148, 15, 0.06) 100%);
+  color: var(--bp-brand-text);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(232, 148, 15, 0.2);
+}
+
+/* ---- design mode picker (glass/standard) — each option shows a tiny
+   live-styled preview swatch instead of just a label ---- */
+.bp-profile-mode-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bp-profile-mode-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--bp-radius-md);
+  border: 1px solid var(--bp-glass-border-soft);
+  background: var(--bp-glass-content-bg-alt);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.12s ease;
+}
+
+.bp-profile-mode-opt:hover {
+  border-color: var(--bp-brand);
+}
+
+.bp-profile-mode-opt.is-active {
+  border-color: var(--bp-amber);
+  box-shadow: 0 2px 10px rgba(232, 148, 15, 0.18);
+  transform: translateY(-1px);
+}
+
+.bp-profile-mode-opt-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bp-profile-mode-opt-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bp-text);
+}
+
+.bp-profile-mode-opt-desc {
+  font-size: 11.5px;
+  color: var(--bp-text-muted);
+}
+
+.bp-profile-mode-swatch {
+  flex: none;
+  width: 56px;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.bp-profile-mode-swatch-sidebar {
+  width: 30%;
+  height: 100%;
+}
+
+.bp-profile-mode-swatch-card {
+  flex: 1;
+  margin: 5px;
+  border-radius: 3px;
+}
+
+/* Glass preview: translucent tint over a warm gradient, blurred edge feel
+   approximated with a soft box-shadow since real backdrop-filter needs
+   actual content behind it to read at this tiny size. */
+.bp-profile-mode-swatch-glass {
+  background: linear-gradient(135deg, #f6cf8a 0%, #c99ae0 55%, #8b6fb0 100%);
+}
+
+.bp-profile-mode-swatch-glass .bp-profile-mode-swatch-sidebar {
+  background: rgba(67, 22, 113, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.bp-profile-mode-swatch-glass .bp-profile-mode-swatch-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Standard preview: flat opaque blocks, crisp border, no blur. */
+.bp-profile-mode-swatch-standard {
+  background: #f2eee8;
+}
+
+.bp-profile-mode-swatch-standard .bp-profile-mode-swatch-sidebar {
+  background: #5b1f97;
+}
+
+.bp-profile-mode-swatch-standard .bp-profile-mode-swatch-card {
+  background: #ffffff;
+  border: 1px solid rgba(43, 36, 32, 0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .bp-profile-mode-swatch-standard {
+    background: #17130f;
+  }
+  :root:not([data-theme="light"]) .bp-profile-mode-swatch-standard .bp-profile-mode-swatch-card {
+    background: #221c17;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+:root[data-theme="dark"] .bp-profile-mode-swatch-standard {
+  background: #17130f;
+}
+
+:root[data-theme="dark"] .bp-profile-mode-swatch-standard .bp-profile-mode-swatch-card {
+  background: #221c17;
+  border-color: rgba(255, 255, 255, 0.1);
+}

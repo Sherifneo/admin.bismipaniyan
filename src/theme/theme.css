@@ -208,6 +208,82 @@
   color-scheme: light;
 }
 
+/* ---- Standard mode: a genuinely different design, not "glass with the
+   blur turned off". Clean corporate/SaaS — sharp-ish corners, crisp 1px
+   borders, flat low-elevation shadows, solid opaque surfaces, no orbs,
+   no specular highlights. Every component already reads its surface
+   styling purely from --bp-glass-* / --bp-radius-* / --bp-shadow-*
+   tokens, never a hardcoded blur/shape value, so redefining those same
+   tokens here is the entire mode switch — no component CSS/JSX changes
+   needed. Toggle by setting data-mode="standard" on <html> (see
+   ModeContext) — default (no attribute, or data-mode="glass") is the
+   Liquid Glass system defined above. */
+:root[data-mode="standard"] {
+  --bp-radius-sm: 5px;
+  --bp-radius-md: 7px;
+  --bp-radius-lg: 10px;
+
+  --bp-glass-blur: 0px;
+  --bp-glass-saturate: 1;
+  --bp-glass-tint: var(--bp-surface);
+  --bp-glass-tint-strong: var(--bp-surface);
+  --bp-glass-border: var(--bp-border);
+  --bp-glass-border-soft: var(--bp-border);
+  --bp-glass-highlight: transparent;
+  --bp-glass-shadow: var(--bp-shadow-sm);
+  --bp-glass-shadow-lg: var(--bp-shadow-lg);
+  --bp-glass-inset: none;
+
+  --bp-glass-content-bg: var(--bp-surface);
+  --bp-glass-content-bg-alt: var(--bp-surface-alt);
+  --bp-glass-row-hover: var(--bp-surface-alt);
+
+  --bp-sidebar-tint: var(--bp-brand);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-mode="standard"] .bp-glass-orbs {
+  display: none;
+}
+
+:root[data-mode="standard"] .bp-glass-specular::before {
+  display: none;
+}
+
+/* Safety net: a few small chrome controls (pagination, export menu,
+   header buttons) use a fixed blur(10px) for their own hover/backdrop
+   feel rather than the --bp-glass-blur token, since a lighter blur reads
+   better at that size than the token's full strength. Standard mode must
+   have zero blur anywhere to be a genuine "no glass" option, so kill
+   backdrop-filter globally here rather than hunting down every literal
+   value individually. */
+:root[data-mode="standard"] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ProfilePage's mode-preview swatches are the one deliberate exception —
+   the "Liquid Glass" option must always show a blurred preview so the
+   two choices are visually distinguishable regardless of which mode is
+   currently active. */
+:root[data-mode="standard"] .bp-profile-mode-swatch-glass .bp-profile-mode-swatch-sidebar,
+:root[data-mode="standard"] .bp-profile-mode-swatch-glass .bp-profile-mode-swatch-card {
+  -webkit-backdrop-filter: blur(3px) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-mode="standard"]:not([data-theme="light"]) {
+    --bp-sidebar-tint: #2a221b;
+    --bp-sidebar-hover: rgba(255, 255, 255, 0.06);
+  }
+}
+
+:root[data-mode="standard"][data-theme="dark"] {
+  --bp-sidebar-tint: #2a221b;
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.06);
+}
+
 /* Shared mobile breakpoint — below this width the sidebar becomes a
    slide-in drawer and pages should collapse to a single column. Keep
    every "@media (max-width: 860px)" in this repo in sync with this

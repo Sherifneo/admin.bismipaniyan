@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { NAV_ITEMS } from "./navConfig";
@@ -84,13 +84,15 @@ export default function Header({ onMenuClick, onRefresh }) {
         {isDark ? "☀️" : "🌙"}
       </button>
       <div className="bp-header-user">
-        <span className="bp-header-avatar" aria-hidden="true">
-          {initial}
-        </span>
-        <div className="bp-header-userinfo">
-          <span className="bp-header-name">{admin?.full_name}</span>
-          <span className="bp-header-role">{admin?.role === "owner" ? "Owner" : admin?.role === "super_user" ? "Super User" : "Staff"}</span>
-        </div>
+        <Link to="/profile" className="bp-header-profile-link" title="Your profile">
+          <span className="bp-header-avatar" aria-hidden="true">
+            {initial}
+          </span>
+          <div className="bp-header-userinfo">
+            <span className="bp-header-name">{admin?.full_name}</span>
+            <span className="bp-header-role">{admin?.role === "owner" ? "Owner" : admin?.role === "super_user" ? "Super User" : "Staff"}</span>
+          </div>
+        </Link>
         <button
           type="button"
           className="bp-header-signout"

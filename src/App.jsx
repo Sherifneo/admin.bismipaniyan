@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./theme/ThemeContext";
+import { ModeProvider } from "./theme/ModeContext";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import AppShell from "./layout/AppShell";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import ProfilePage from "./pages/ProfilePage";
 import ComingSoon from "./pages/ComingSoon";
 import CashBookList from "./pages/cashbook/CashBookList";
 import InventoryList from "./pages/inventory/InventoryList";
@@ -72,37 +74,40 @@ function GlassOrbs() {
 export default function App() {
   return (
     <ThemeProvider>
-      <GlassOrbs />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+      <ModeProvider>
+        <GlassOrbs />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppShell />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/" element={<Dashboard />} />
-              {placeholderRoutes.map((item) => {
-                const BuiltPage = BUILT_PAGES[item.key];
-                const page = BuiltPage ? <BuiltPage /> : <ComingSoon title={item.label} />;
-                const needsGate = item.ownerOnly || item.requiredPermission;
-                const element = needsGate ? (
-                  <ProtectedRoute ownerOnly={item.ownerOnly} requiredPermission={item.requiredPermission}>
-                    {page}
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppShell />
                   </ProtectedRoute>
-                ) : (
-                  page
-                );
-                return <Route key={item.key} path={item.path} element={element} />;
-              })}
-            </Route>
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+                }
+              >
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                {placeholderRoutes.map((item) => {
+                  const BuiltPage = BUILT_PAGES[item.key];
+                  const page = BuiltPage ? <BuiltPage /> : <ComingSoon title={item.label} />;
+                  const needsGate = item.ownerOnly || item.requiredPermission;
+                  const element = needsGate ? (
+                    <ProtectedRoute ownerOnly={item.ownerOnly} requiredPermission={item.requiredPermission}>
+                      {page}
+                    </ProtectedRoute>
+                  ) : (
+                    page
+                  );
+                  return <Route key={item.key} path={item.path} element={element} />;
+                })}
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ModeProvider>
     </ThemeProvider>
   );
 }

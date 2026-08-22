@@ -6,14 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bismi Admin</title>
     <script>
-      // Applied before React mounts to avoid a flash of the wrong theme —
-      // reads the same localStorage key ThemeContext writes to.
+      // Applied before React mounts to avoid a flash of the wrong theme/
+      // mode — reads the same localStorage keys ThemeContext/ModeContext
+      // write to.
       (function () {
         try {
           var stored = localStorage.getItem("bp_admin_theme");
           if (stored === "light" || stored === "dark") {
             document.documentElement.setAttribute("data-theme", stored);
           }
+        } catch (e) {}
+        try {
+          var mode = localStorage.getItem("bp_admin_mode");
+          document.documentElement.setAttribute("data-mode", mode === "standard" ? "standard" : "glass");
         } catch (e) {}
       })();
     </script>
