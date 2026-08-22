@@ -226,13 +226,17 @@ function StoreSummaryModal({ store, onClose }) {
       ) : error ? (
         <div className="bp-inline-error">{error}</div>
       ) : (
-        <div className="bp-settlement-calc">
-          <div className="bp-settlement-calc-row"><span>Products in stock</span><span>{summary.stock.product_count}</span></div>
-          <div className="bp-settlement-calc-row"><span>Total units on hand</span><span>{summary.stock.total_units}</span></div>
-          <div className="bp-settlement-calc-row"><span>Sales this month</span><span>{inr(summary.sales_this_month.total)}</span></div>
-          <div className="bp-settlement-calc-row"><span>Orders this month</span><span>{summary.sales_this_month.order_count}</span></div>
-          <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Cash position (this store's entries)</span><span>{inr(summary.cash_balance)}</span></div>
-        </div>
+        <>
+          <div className="bp-settlement-calc">
+            <div className="bp-settlement-calc-row"><span>Products in stock</span><span>{summary.stock.product_count}</span></div>
+            <div className="bp-settlement-calc-row"><span>Total units on hand</span><span>{summary.stock.total_units}</span></div>
+            <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Sales recorded here (this month)</span><span>{inr(summary.sales_this_month.total)}</span></div>
+            <div className="bp-settlement-calc-row"><span>Orders this month</span><span>{summary.sales_this_month.order_count}</span></div>
+          </div>
+          <p className="bp-td-muted" style={{ marginTop: 10, fontSize: 12 }}>
+            Cash and bank balances are company-wide — see Cash Book or Financial Control for Bismi Bakery's overall position.
+          </p>
+        </>
       )}
     </Modal>
   );

@@ -11,6 +11,7 @@ import ProfilePage from "./pages/ProfilePage";
 import ComingSoon from "./pages/ComingSoon";
 import CashBookList from "./pages/cashbook/CashBookList";
 import InventoryList from "./pages/inventory/InventoryList";
+import StockTransfersList from "./pages/inventory/StockTransfersList";
 import WaOrdersList from "./pages/waorders/WaOrdersList";
 import SalesOrdersList from "./pages/sales-orders/SalesOrdersList";
 import CustomersList from "./pages/customers/CustomersList";
@@ -39,6 +40,7 @@ import { NAV_ITEMS } from "./layout/navConfig";
 const BUILT_PAGES = {
   cashbook: CashBookList,
   inventory: InventoryList,
+  stocktransfers: StockTransfersList,
   waorders: WaOrdersList,
   salesorders: SalesOrdersList,
   customers: CustomersList,

@@ -117,6 +117,20 @@ export const financialControlApi = {
   transfer: (body) => POST("/api/admin/financial-control/transfer", body),
 };
 
+export const financialDimensionsApi = {
+  list: (params = {}) => GET(`/api/admin/financial-dimensions?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/financial-dimensions", body),
+  update: (id, body) => PUT(`/api/admin/financial-dimensions/${id}`, body),
+  remove: (id) => DEL(`/api/admin/financial-dimensions/${id}`),
+};
+
+export const stockTransfersApi = {
+  list: (params = {}) => GET(`/api/admin/stock-transfers?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/stock-transfers", body),
+  complete: (id) => PUT(`/api/admin/stock-transfers/${id}/complete`),
+  cancel: (id) => PUT(`/api/admin/stock-transfers/${id}/cancel`),
+};
+
 export const productionApi = {
   listRuns: (params = {}) => GET(`/api/admin/production-runs?${new URLSearchParams(cleanParams(params))}`),
   getRun: (id) => GET(`/api/admin/production-runs/${id}`),
@@ -150,6 +164,7 @@ export const reportsApi = {
   cashbookSummary: (params = {}) => GET(`/api/admin/reports/cashbook-summary?${new URLSearchParams(cleanParams(params))}`),
   stockMovements: (params = {}) => GET(`/api/admin/reports/stock-movements?${new URLSearchParams(cleanParams(params))}`),
   purchaseOrdersByStatus: (params = {}) => GET(`/api/admin/reports/purchase-orders-by-status?${new URLSearchParams(cleanParams(params))}`),
+  financialDimensionSummary: (params = {}) => GET(`/api/admin/reports/financial-dimension-summary?${new URLSearchParams(cleanParams(params))}`),
 };
 
 export const settingsApi = {

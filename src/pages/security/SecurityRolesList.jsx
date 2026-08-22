@@ -17,6 +17,7 @@ const PERMISSION_KEYS = [
   { key: "sales.manage", label: "Sales Orders & Customers" },
   { key: "stores.manage", label: "Retail Stores" },
   { key: "hr.manage", label: "HR / Employees" },
+  { key: "finance.manage", label: "Financial Dimensions" },
 ];
 
 // Owner/super_user-only screen for granting per-key view/edit/delete

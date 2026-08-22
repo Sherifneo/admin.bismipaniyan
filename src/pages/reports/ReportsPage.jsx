@@ -15,6 +15,7 @@ const TABS = [
   { key: "cashbook", label: "Cash Book Summary" },
   { key: "stock", label: "Stock Movements" },
   { key: "po", label: "Purchase Orders by Status" },
+  { key: "dimension", label: "By Financial Dimension" },
 ];
 
 // Deliberately simple — three read-only report views over existing data,
@@ -43,6 +44,7 @@ export default function ReportsPage() {
       {tab === "cashbook" && <CashbookSummaryTab />}
       {tab === "stock" && <StockMovementsTab />}
       {tab === "po" && <PurchaseOrdersByStatusTab />}
+      {tab === "dimension" && <FinancialDimensionSummaryTab />}
     </div>
   );
 }
@@ -354,6 +356,113 @@ function PurchaseOrdersByStatusTab() {
                   <td className="bp-td-strong">{r.status}</td>
                   <td>{r.count}</td>
                   <td>{inr(r.total_value)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const DIMENSION_CSV_COLUMNS = [
+  { label: "Dimension", accessor: (r) => r.dimension_name },
+  { label: "Income", accessor: (r) => r.total_income },
+  { label: "Expense", accessor: (r) => r.total_expense },
+  { label: "Net", accessor: (r) => r.net },
+];
+
+// Company-wide income/expense grouped by financial dimension (Factory/
+// Karaikal/Nagore/TRP Store/Corporate) instead of by day — "Karaikal's
+// share of expense this month," answering the store-profitability
+// requirement without ever filtering by location_id (which no longer
+// means financial ownership — see cashbook_entries.financial_dimension_id).
+function FinancialDimensionSummaryTab() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+    reportsApi
+      .financialDimensionSummary({ from, to })
+      .then(setData)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load this report."))
+      .finally(() => setLoading(false));
+  }, [from, to]);
+
+  const items = data?.items || [];
+  const columns = [
+    { key: "dimension_name", label: "Dimension", accessor: (r) => r.dimension_name },
+    { key: "total_income", label: "Income", accessor: (r) => r.total_income, filter: "number" },
+    { key: "total_expense", label: "Expense", accessor: (r) => r.total_expense, filter: "number" },
+    { key: "net", label: "Net", accessor: (r) => r.net, filter: "number" },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (r) => r.dimension_id });
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+        <input type="date" className="bp-field-input" style={{ width: "auto" }} value={from} onChange={(e) => setFrom(e.target.value)} />
+        <span className="bp-td-muted">to</span>
+        <input type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => setTo(e.target.value)} />
+        {table.selectedRows.length > 0 && (
+          <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("financial-dimension-summary")}>
+            Export selected ({table.selectedRows.length})
+          </button>
+        )}
+        <ExportMenu filename="financial-dimension-summary" rows={items} columns={DIMENSION_CSV_COLUMNS} />
+      </div>
+
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      {data && (
+        <div className="bp-kpi-grid" style={{ marginBottom: 14 }}>
+          <div className="bp-kpi-card bp-kpi-success">
+            <div className="bp-kpi-label">Total income</div>
+            <div className="bp-kpi-value">{inr(data.total_income)}</div>
+          </div>
+          <div className="bp-kpi-card bp-kpi-danger">
+            <div className="bp-kpi-label">Total expense</div>
+            <div className="bp-kpi-value">{inr(data.total_expense)}</div>
+          </div>
+          <div className="bp-kpi-card">
+            <div className="bp-kpi-label">Net</div>
+            <div className="bp-kpi-value">{inr(data.net)}</div>
+          </div>
+        </div>
+      )}
+
+      <SearchByBar table={table} columns={columns} />
+
+      <div className="bp-table-wrap">
+        <table className="bp-table">
+          <thead>
+            <tr>
+              <SelectAllHeaderCell table={table} />
+              <ColumnHeader table={table} column={columns[0]} />
+              <ColumnHeader table={table} column={columns[1]} />
+              <ColumnHeader table={table} column={columns[2]} />
+              <ColumnHeader table={table} column={columns[3]} />
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={5} className="bp-table-empty">No financial dimensions found.</td></tr>
+            ) : (
+              table.filteredRows.map((r) => (
+                <tr key={r.dimension_id}>
+                  <SelectRowCell table={table} row={r} />
+                  <td className="bp-td-strong">{r.dimension_name}</td>
+                  <td>{inr(r.total_income)}</td>
+                  <td>{inr(r.total_expense)}</td>
+                  <td className="bp-td-strong">{inr(r.net)}</td>
                 </tr>
               ))
             )}
