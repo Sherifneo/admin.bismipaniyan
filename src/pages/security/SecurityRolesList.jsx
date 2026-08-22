@@ -15,6 +15,7 @@ const PERMISSION_KEYS = [
   { key: "production.manage", label: "Production" },
   { key: "orders.manage", label: "WhatsApp Orders" },
   { key: "sales.manage", label: "Sales Orders & Customers" },
+  { key: "stores.manage", label: "Retail Stores" },
 ];
 
 // Owner/super_user-only screen for granting per-key view/edit/delete

@@ -13,6 +13,9 @@ export const dashboardApi = {
 
 export const locationsApi = {
   list: () => GET("/api/admin/locations"),
+  summary: (id) => GET(`/api/admin/locations/${id}/summary`),
+  create: (body) => POST("/api/admin/locations", body),
+  update: (id, body) => PUT(`/api/admin/locations/${id}`, body),
 };
 
 export const productsApi = {
@@ -87,6 +90,8 @@ export const customersApi = {
   create: (body) => POST("/api/admin/customers", body),
   update: (id, body) => PUT(`/api/admin/customers/${id}`, body),
   remove: (id) => DEL(`/api/admin/customers/${id}`),
+  walkinFor: (locationId) =>
+    GET(`/api/admin/customers?${new URLSearchParams({ includeWalkins: "true", locationId })}`),
 };
 
 export const bankAccountsApi = {
@@ -146,6 +151,8 @@ export const numberSequencesApi = {
   update: (key, body) => PUT(`/api/admin/number-sequences/${key}`, body),
   checkCollisions: (key, body) => POST(`/api/admin/number-sequences/${key}/check-collisions`, body),
   reset: (key) => POST(`/api/admin/number-sequences/${key}/reset`),
+  lastRecord: (key) => GET(`/api/admin/number-sequences/${key}/last-record`),
+  clearLast: (key, pk) => POST(`/api/admin/number-sequences/${key}/clear-last`, { pk }),
 };
 
 export const securityApi = {

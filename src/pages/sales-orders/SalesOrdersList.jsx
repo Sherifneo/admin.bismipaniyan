@@ -132,12 +132,19 @@ export default function SalesOrdersList() {
   );
 }
 
+// Only real retail stores sell — the factory location is a production
+// site, never a Sales Order's "Sold from".
+function storesOnly(locations) {
+  return locations.filter((l) => l.kind === "store");
+}
+
 function NewSoModal({ customers, locations, onClose, onDone }) {
+  const stores = storesOnly(locations);
+  const [locationId, setLocationId] = useState(stores[0]?.location_id || "");
   const [buyerType, setBuyerType] = useState("walkin"); // 'walkin' | 'customer'
   const [customerId, setCustomerId] = useState("");
-  const [walkinName, setWalkinName] = useState("");
-  const [walkinPhone, setWalkinPhone] = useState("");
-  const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
+  const [walkinCustomer, setWalkinCustomer] = useState(null);
+  const [walkinLoading, setWalkinLoading] = useState(false);
   const [orderDate, setOrderDate] = useState(todayStr());
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState([{ product_id: "", quantity: "", unit_price: "" }]);
@@ -145,6 +152,28 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const codeField = useCodePreview("sales_order", null);
+
+  // Store picked first, buyer second: Walk-in auto-resolves to that
+  // store's own "Walk-in — <Store>" customer record (no more free-typed
+  // name/phone — see 011_retail_stores.sql). Re-fetches whenever the
+  // store changes since each store has its own walk-in customer.
+  useEffect(() => {
+    if (buyerType !== "walkin" || !locationId) {
+      setWalkinCustomer(null);
+      return;
+    }
+    let cancelled = false;
+    setWalkinLoading(true);
+    customersApi
+      .walkinFor(locationId)
+      .then((d) => {
+        if (cancelled) return;
+        setWalkinCustomer((d.items || []).find((c) => c.is_walkin_default) || null);
+      })
+      .catch(() => { if (!cancelled) setWalkinCustomer(null); })
+      .finally(() => { if (!cancelled) setWalkinLoading(false); });
+    return () => { cancelled = true; };
+  }, [buyerType, locationId]);
 
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
@@ -227,15 +256,15 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
   async function submit(e) {
     e.preventDefault();
     if (!locationId) {
-      setError("Select a location.");
+      setError("Select a store.");
       return;
     }
     if (buyerType === "customer" && !customerId) {
       setError("Select a customer.");
       return;
     }
-    if (buyerType === "walkin" && !walkinName.trim()) {
-      setError("Enter the walk-in customer's name (or pick a saved customer instead).");
+    if (buyerType === "walkin" && !walkinCustomer) {
+      setError("This store has no walk-in customer set up yet.");
       return;
     }
     const cleanItems = items.filter((it) => it.product_id && it.quantity && it.unit_price !== "");
@@ -251,9 +280,7 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
     setError("");
     try {
       await salesOrdersApi.create({
-        customer_id: buyerType === "customer" ? customerId : undefined,
-        walkin_name: buyerType === "walkin" ? walkinName.trim() : undefined,
-        walkin_phone: buyerType === "walkin" ? (walkinPhone || undefined) : undefined,
+        customer_id: buyerType === "customer" ? customerId : walkinCustomer.customer_id,
         location_id: locationId,
         order_date: orderDate || undefined,
         notes: notes || undefined,
@@ -279,27 +306,33 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
         <label className="bp-field-label">Sale number</label>
         <input type="text" className="bp-field-input" value={codeField.loading ? "Loading…" : codeField.preview} disabled />
 
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="soLocation">Store</label>
+            <select id="soLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required autoFocus>
+              {stores.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="soDate">Date</label>
+            <input id="soDate" type="date" className="bp-field-input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required />
+          </div>
+        </div>
+
         <label className="bp-field-label">Buyer</label>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button type="button" className={buyerType === "walkin" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setBuyerType("walkin")}>
             Walk-in
           </button>
           <button type="button" className={buyerType === "customer" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setBuyerType("customer")}>
-            Saved customer
+            Customer
           </button>
         </div>
 
         {buyerType === "walkin" ? (
-          <div className="bp-form-row">
-            <div style={{ flex: 1 }}>
-              <label className="bp-field-label" htmlFor="soWalkinName">Name</label>
-              <input id="soWalkinName" type="text" className="bp-field-input" value={walkinName} onChange={(e) => setWalkinName(e.target.value)} required autoFocus />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label className="bp-field-label" htmlFor="soWalkinPhone">Phone (optional)</label>
-              <input id="soWalkinPhone" type="tel" className="bp-field-input" value={walkinPhone} onChange={(e) => setWalkinPhone(e.target.value)} />
-            </div>
-          </div>
+          <p className="bp-td-muted" style={{ marginTop: -6, marginBottom: 12 }}>
+            {walkinLoading ? "Loading…" : walkinCustomer ? <>Sold to <strong className="bp-td-strong">{walkinCustomer.name}</strong></> : "This store has no walk-in customer set up yet."}
+          </p>
         ) : (
           <>
             <label className="bp-field-label" htmlFor="soCustomer">Customer</label>
@@ -309,19 +342,6 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
             </select>
           </>
         )}
-
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="soLocation">Sold from</label>
-            <select id="soLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-              {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="soDate">Date</label>
-            <input id="soDate" type="date" className="bp-field-input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required />
-          </div>
-        </div>
 
         <label className="bp-field-label">Items</label>
         {items.map((it, idx) => (

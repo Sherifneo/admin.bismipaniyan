@@ -105,6 +105,12 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
   const [resetting, setResetting] = useState(false);
   const [collisionResult, setCollisionResult] = useState(null);
   const [checkingCollisions, setCheckingCollisions] = useState(false);
+  const [lastRecord, setLastRecord] = useState(undefined); // undefined = loading, null = none found
+  const [clearing, setClearing] = useState(false);
+
+  useEffect(() => {
+    numberSequencesApi.lastRecord(counter.counter_key).then(setLastRecord).catch(() => setLastRecord(null));
+  }, [counter.counter_key]);
 
   async function resetSequence() {
     if (!window.confirm(`Reset "${counter.counter_key}" back to 0? The next number issued will restart from 1.`)) return;
@@ -116,6 +122,21 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not reset this sequence.");
       setResetting(false);
+    }
+  }
+
+  async function clearLastRecord() {
+    if (!lastRecord) return;
+    if (!window.confirm(`Permanently delete "${lastRecord.code} — ${lastRecord.label}"? This cannot be undone — the code will become free to reuse.`)) return;
+    setClearing(true);
+    setError("");
+    try {
+      await numberSequencesApi.clearLast(counter.counter_key, lastRecord.pk);
+      setLastRecord(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not clear this record.");
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -236,6 +257,25 @@ function ManageSequenceModal({ counter, onClose, onDone }) {
             Editing this manually overrides/re-points the sequence — the next number issued will be <strong>{preview}</strong>.
           </p>
         )}
+
+        <label className="bp-field-label">Last record</label>
+        {lastRecord === undefined ? (
+          <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -4, marginBottom: 10 }}>Loading…</p>
+        ) : lastRecord === null ? (
+          <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -4, marginBottom: 10 }}>No records created under this sequence yet.</p>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+            <span className="bp-td-muted" style={{ fontSize: 13 }}>
+              <strong className="bp-td-strong">{lastRecord.code}</strong> — {lastRecord.label}
+            </span>
+            <button type="button" className="bp-btn-sm bp-btn-outline" onClick={clearLastRecord} disabled={clearing}>
+              {clearing ? "Clearing…" : "Clear"}
+            </button>
+          </div>
+        )}
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 12 }}>
+          If you Reset and a code collides with an existing record (e.g. C-00012 still exists after resetting), clear that record here first to free the code up.
+        </p>
 
         <div style={{ marginBottom: 14 }}>
           <button type="button" className="bp-btn-sm bp-btn-outline" onClick={resetSequence} disabled={resetting}>
