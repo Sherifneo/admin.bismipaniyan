@@ -1,4 +1,4 @@
-import { GET, POST, PUT, DEL } from "./client";
+import { GET, POST, PUT, DEL, downloadFile } from "./client";
 
 export const authApi = {
   login: (email, password) => POST("/api/admin/auth/login", { email, password }, { noAuth: true }),
@@ -69,6 +69,24 @@ export const purchasingApi = {
   get: (id) => GET(`/api/admin/purchase-orders/${id}`),
   create: (body) => POST("/api/admin/purchase-orders", body),
   update: (id, body) => PUT(`/api/admin/purchase-orders/${id}`, body),
+  pay: (id) => POST(`/api/admin/purchase-orders/${id}/pay`),
+};
+
+export const salesOrdersApi = {
+  list: (params = {}) => GET(`/api/admin/sales-orders?${new URLSearchParams(cleanParams(params))}`),
+  get: (id) => GET(`/api/admin/sales-orders/${id}`),
+  create: (body) => POST("/api/admin/sales-orders", body),
+  update: (id, body) => PUT(`/api/admin/sales-orders/${id}`, body),
+  complete: (id) => POST(`/api/admin/sales-orders/${id}/complete`),
+  cancel: (id) => POST(`/api/admin/sales-orders/${id}/cancel`),
+  downloadInvoice: (id) => downloadFile(`/api/admin/sales-orders/${id}/invoice`),
+};
+
+export const customersApi = {
+  list: (params = {}) => GET(`/api/admin/customers?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/customers", body),
+  update: (id, body) => PUT(`/api/admin/customers/${id}`, body),
+  remove: (id) => DEL(`/api/admin/customers/${id}`),
 };
 
 export const bankAccountsApi = {

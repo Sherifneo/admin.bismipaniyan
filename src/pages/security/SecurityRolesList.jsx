@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { teamApi, securityApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 
-// The same 8 permission keys the backend hardcodes in
+// The same permission keys the backend hardcodes in
 // backend/src/routes/security.js, derived from navConfig.js's
 // requiredPermission values.
 const PERMISSION_KEYS = [
@@ -14,6 +14,7 @@ const PERMISSION_KEYS = [
   { key: "purchasing.manage", label: "Purchasing" },
   { key: "production.manage", label: "Production" },
   { key: "orders.manage", label: "WhatsApp Orders" },
+  { key: "sales.manage", label: "Sales Orders & Customers" },
 ];
 
 // Owner/super_user-only screen for granting per-key view/edit/delete

@@ -5,14 +5,17 @@
 // AuthContext's hasPermission). Items with neither flag are visible to
 // any signed-in employee.
 //
-// Full e-commerce modules (orders, carts, payments, returns, customers)
-// are intentionally omitted — the Bismi website has no online ordering or
-// payment. "WhatsApp Orders" is the one exception: a worklist of order
-// attempts sent from the site's cart-to-WhatsApp flow, not a real
-// order-processing pipeline (see backend wa_orders table).
+// "WhatsApp Orders" is a worklist of order attempts sent from the site's
+// cart-to-WhatsApp flow, not a real order-processing pipeline (see
+// backend wa_orders table) — separate from "Sales Orders" below, which
+// IS the real order/invoice/stock-out pipeline for every sale (walk-in
+// or bulk), replacing Cash Book's old manual "Store sales" entry as the
+// source of truth for revenue.
 export const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "🏠", path: "/" },
   { key: "waorders", label: "WhatsApp Orders", icon: "💚", path: "/wa-orders", requiredPermission: "orders.manage" },
+  { key: "salesorders", label: "Sales Orders", icon: "🧾", path: "/sales-orders", requiredPermission: "sales.manage" },
+  { key: "customers", label: "Customers", icon: "🧑‍🤝‍🧑", path: "/customers", requiredPermission: "sales.manage" },
   { key: "cashbook", label: "Cash Book", icon: "💰", path: "/cashbook", requiredPermission: "cashbook.manage" },
   { key: "bankaccounts", label: "Bank Accounts", icon: "🏦", path: "/bank-accounts", requiredPermission: "bank.manage" },
   { key: "products", label: "Products", icon: "🛍️", path: "/products", requiredPermission: "products.manage" },

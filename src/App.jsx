@@ -9,6 +9,8 @@ import ComingSoon from "./pages/ComingSoon";
 import CashBookList from "./pages/cashbook/CashBookList";
 import InventoryList from "./pages/inventory/InventoryList";
 import WaOrdersList from "./pages/waorders/WaOrdersList";
+import SalesOrdersList from "./pages/sales-orders/SalesOrdersList";
+import CustomersList from "./pages/customers/CustomersList";
 import PartnersList from "./pages/partners/PartnersList";
 import ProductsList from "./pages/products/ProductsList";
 import VendorsList from "./pages/vendors/VendorsList";
@@ -33,6 +35,8 @@ const BUILT_PAGES = {
   cashbook: CashBookList,
   inventory: InventoryList,
   waorders: WaOrdersList,
+  salesorders: SalesOrdersList,
+  customers: CustomersList,
   partners: PartnersList,
   products: ProductsList,
   vendors: VendorsList,

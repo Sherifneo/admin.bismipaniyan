@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { purchasingApi, vendorsApi, locationsApi, productsApi } from "../../api/admin";
+import { salesOrdersApi, customersApi, locationsApi, productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
@@ -15,25 +15,28 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Raw-material buying: a PO is created in draft, marked 'ordered' once
-// sent to the vendor, then 'received' once goods arrive — which is the
-// one status change that writes stock into inventory_movements (see
-// backend/src/routes/purchase-orders.js).
-export default function PurchaseOrdersList() {
-  const [vendors, setVendors] = useState([]);
+// Every sale — walk-in or bulk — is a Sales Order. Deliberately just two
+// real statuses (draft -> completed): a counter sale needs to be fast,
+// not a multi-step approval chain like Purchase Orders. Completing an
+// order does everything at once: writes stock out, records the Cash Book
+// income, and makes the GST invoice available (see backend/src/routes/
+// sales-orders.js). This is now the source of truth for revenue — Cash
+// Book's old manual "Store sales" entry isn't the way to record a sale
+// anymore, this is.
+export default function SalesOrdersList() {
+  const [customers, setCustomers] = useState([]);
   const [locations, setLocations] = useState([]);
   const [orders, setOrders] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
-  const [payableOnly, setPayableOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
-  const [viewPo, setViewPo] = useState(null);
+  const [viewSo, setViewSo] = useState(null);
 
   useEffect(() => {
-    vendorsApi.list({}).then((d) => setVendors(d.items || [])).catch(() => {});
+    customersApi.list({}).then((d) => setCustomers(d.items || [])).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
   }, []);
 
@@ -41,20 +44,11 @@ export default function PurchaseOrdersList() {
     setLoading(true);
     setError("");
     try {
-      const params = { page, limit: LIMIT };
-      if (payableOnly) {
-        // Accounts Payable: money Bismi currently owes — received but
-        // not yet paid. Overrides the status filter while active.
-        params.status = "received";
-        params.paymentStatus = "unpaid";
-      } else if (status) {
-        params.status = status;
-      }
-      const data = await purchasingApi.list(params);
+      const data = await salesOrdersApi.list({ page, limit: LIMIT, status });
       setOrders(data.items || []);
       setTotal(data.total);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load purchase orders.");
+      setError(err instanceof ApiError ? err.message : "Could not load sales orders.");
     } finally {
       setLoading(false);
     }
@@ -63,7 +57,7 @@ export default function PurchaseOrdersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, status, payableOnly]);
+  }, [page, status]);
 
   async function onSaved() {
     setShowAdd(false);
@@ -73,31 +67,17 @@ export default function PurchaseOrdersList() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-        <h1 className="bp-page-title">Purchase Orders</h1>
-        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New purchase order</button>
+        <h1 className="bp-page-title">Sales Orders</h1>
+        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New sale</button>
       </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-        <select
-          className="bp-field-input"
-          style={{ width: "auto" }}
-          value={status}
-          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-          disabled={payableOnly}
-        >
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+        <select className="bp-field-input" style={{ width: "auto" }} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
-          <option value="ordered">Ordered</option>
-          <option value="received">Received</option>
+          <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <button
-          type="button"
-          className={payableOnly ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"}
-          onClick={() => { setPayableOnly((v) => !v); setPage(1); }}
-        >
-          Accounts Payable (unpaid)
-        </button>
       </div>
 
       {error && <div className="bp-inline-error">{error}</div>}
@@ -106,41 +86,31 @@ export default function PurchaseOrdersList() {
         <table className="bp-table">
           <thead>
             <tr>
-              <th>PO #</th>
-              <th>Vendor</th>
+              <th>SO #</th>
+              <th>Buyer</th>
               <th>Location</th>
-              <th>Order date</th>
-              <th>Expected</th>
+              <th>Date</th>
               <th>Total</th>
               <th>Status</th>
-              <th>Payment</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
             ) : orders.length === 0 ? (
-              <tr><td colSpan={9} className="bp-table-empty">No purchase orders found.</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">No sales orders found.</td></tr>
             ) : (
-              orders.map((po) => (
-                <tr key={po.po_id} onClick={() => setViewPo(po)} style={{ cursor: "pointer" }}>
-                  <td className="bp-td-strong">{po.po_number}</td>
-                  <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>
-                  <td className="bp-td-muted">{po.location_name}</td>
-                  <td className="bp-td-muted">{po.order_date}</td>
-                  <td className="bp-td-muted">{po.expected_date || "—"}</td>
-                  <td className="bp-td-strong">{inr(po.total)}</td>
-                  <td><StatusBadge status={po.status} /></td>
-                  <td>
-                    {po.status === "received" ? (
-                      <StatusBadge status={po.payment_status === "paid" ? "paid" : "requested"} label={po.payment_status === "paid" ? "Paid" : "Unpaid"} />
-                    ) : (
-                      <span className="bp-td-muted">—</span>
-                    )}
-                  </td>
+              orders.map((so) => (
+                <tr key={so.so_id} onClick={() => setViewSo(so)} style={{ cursor: "pointer" }}>
+                  <td className="bp-td-strong">{so.so_number}</td>
+                  <td>{so.customer_name || so.walkin_name || "Walk-in"}</td>
+                  <td className="bp-td-muted">{so.location_name}</td>
+                  <td className="bp-td-muted">{so.completed_date || so.order_date}</td>
+                  <td className="bp-td-strong">{inr(so.total)}</td>
+                  <td><StatusBadge status={so.status} /></td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setViewPo(po); }}>View</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setViewSo(so); }}>View</button>
                   </td>
                 </tr>
               ))
@@ -152,59 +122,67 @@ export default function PurchaseOrdersList() {
       <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
 
       {showAdd && (
-        <NewPoModal vendors={vendors} locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />
+        <NewSoModal customers={customers} locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />
       )}
-      {viewPo && (
-        <PoDetailModal poId={viewPo.po_id} onClose={() => setViewPo(null)} onChanged={load} />
+      {viewSo && (
+        <SoDetailModal soId={viewSo.so_id} onClose={() => setViewSo(null)} onChanged={load} />
       )}
     </div>
   );
 }
 
-function NewPoModal({ vendors, locations, onClose, onDone }) {
-  const [vendorId, setVendorId] = useState(vendors[0]?.vendor_id || "");
+function NewSoModal({ customers, locations, onClose, onDone }) {
+  const [buyerType, setBuyerType] = useState("walkin"); // 'walkin' | 'customer'
+  const [customerId, setCustomerId] = useState("");
+  const [walkinName, setWalkinName] = useState("");
+  const [walkinPhone, setWalkinPhone] = useState("");
   const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
   const [orderDate, setOrderDate] = useState(todayStr());
-  const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
-  const [items, setItems] = useState([{ product_id: "", quantity: "", unit_cost: "" }]);
+  const [items, setItems] = useState([{ product_id: "", quantity: "", unit_price: "" }]);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Discount: amount and percent side by side, entering one live-computes
-  // the other for display — but only the field the user actually last
-  // typed into is sent to the backend, so the server (source of truth for
-  // the computation) never receives ambiguous "both" input.
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
-  const [discountEditedField, setDiscountEditedField] = useState(null); // 'amount' | 'percent' | null
+  const [discountEditedField, setDiscountEditedField] = useState(null);
 
   const [gstEnabled, setGstEnabled] = useState(false);
   const [gstAmount, setGstAmount] = useState("");
   const [gstPercent, setGstPercent] = useState("");
-  const [gstEditedField, setGstEditedField] = useState(null); // 'amount' | 'percent' | null
+  const [gstEditedField, setGstEditedField] = useState(null);
 
   useEffect(() => {
-    productsApi.list({ limit: 500, itemKind: "raw_material" }).then((d) => setProducts(d.items || [])).catch(() => {});
+    productsApi.list({ limit: 500, itemKind: "finished_good" }).then((d) => setProducts(d.items || [])).catch(() => {});
   }, []);
 
   function updateItem(idx, field, value) {
-    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+    setItems((prev) => {
+      const next = prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it));
+      // Auto-fill unit price from the product's selling_price when a
+      // product is first picked, so a counter sale usually needs no
+      // typing beyond quantity — still editable per-line if needed.
+      if (field === "product_id") {
+        const product = products.find((p) => p.product_id === value);
+        if (product && product.selling_price != null && !next[idx].unit_price) {
+          next[idx].unit_price = String(product.selling_price);
+        }
+      }
+      return next;
+    });
   }
 
   function addRow() {
-    setItems((prev) => [...prev, { product_id: "", quantity: "", unit_cost: "" }]);
+    setItems((prev) => [...prev, { product_id: "", quantity: "", unit_price: "" }]);
   }
 
   function removeRow(idx) {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const subtotal = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_cost) || 0), 0);
+  const subtotal = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
 
-  // Live-computed discount, mirroring the backend's either/or logic so the
-  // breakdown box updates as the user types, without waiting on a round trip.
   let liveDiscountAmount = 0;
   if (discountEditedField === "amount") {
     liveDiscountAmount = Number(discountAmount) || 0;
@@ -246,11 +224,19 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
 
   async function submit(e) {
     e.preventDefault();
-    if (!vendorId || !locationId) {
-      setError("Select a vendor and a location.");
+    if (!locationId) {
+      setError("Select a location.");
       return;
     }
-    const cleanItems = items.filter((it) => it.product_id && it.quantity && it.unit_cost);
+    if (buyerType === "customer" && !customerId) {
+      setError("Select a customer.");
+      return;
+    }
+    if (buyerType === "walkin" && !walkinName.trim()) {
+      setError("Enter the walk-in customer's name (or pick a saved customer instead).");
+      return;
+    }
+    const cleanItems = items.filter((it) => it.product_id && it.quantity && it.unit_price !== "");
     if (cleanItems.length === 0) {
       setError("Add at least one complete line item.");
       return;
@@ -262,13 +248,14 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
     setSubmitting(true);
     setError("");
     try {
-      await purchasingApi.create({
-        vendor_id: vendorId,
+      await salesOrdersApi.create({
+        customer_id: buyerType === "customer" ? customerId : undefined,
+        walkin_name: buyerType === "walkin" ? walkinName.trim() : undefined,
+        walkin_phone: buyerType === "walkin" ? (walkinPhone || undefined) : undefined,
         location_id: locationId,
         order_date: orderDate || undefined,
-        expected_date: expectedDate || undefined,
         notes: notes || undefined,
-        items: cleanItems.map((it) => ({ product_id: it.product_id, quantity: Number(it.quantity), unit_cost: Number(it.unit_cost) })),
+        items: cleanItems.map((it) => ({ product_id: it.product_id, quantity: Number(it.quantity), unit_price: Number(it.unit_price) })),
         gst_enabled: gstEnabled,
         gst_percent: gstEnabled && gstEditedField === "percent" ? Number(gstPercent) : undefined,
         gst_amount: gstEnabled && gstEditedField === "amount" ? Number(gstAmount) : undefined,
@@ -277,46 +264,61 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
       });
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not create this purchase order.");
+      setError(err instanceof ApiError ? err.message : "Could not create this sale.");
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New purchase order" onClose={onClose}>
+    <Modal title="New sale" onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
+        <label className="bp-field-label">Buyer</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button type="button" className={buyerType === "walkin" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setBuyerType("walkin")}>
+            Walk-in
+          </button>
+          <button type="button" className={buyerType === "customer" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setBuyerType("customer")}>
+            Saved customer
+          </button>
+        </div>
+
+        {buyerType === "walkin" ? (
+          <div className="bp-form-row">
+            <div style={{ flex: 1 }}>
+              <label className="bp-field-label" htmlFor="soWalkinName">Name</label>
+              <input id="soWalkinName" type="text" className="bp-field-input" value={walkinName} onChange={(e) => setWalkinName(e.target.value)} required autoFocus />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="bp-field-label" htmlFor="soWalkinPhone">Phone (optional)</label>
+              <input id="soWalkinPhone" type="tel" className="bp-field-input" value={walkinPhone} onChange={(e) => setWalkinPhone(e.target.value)} />
+            </div>
+          </div>
+        ) : (
+          <>
+            <label className="bp-field-label" htmlFor="soCustomer">Customer</label>
+            <select id="soCustomer" className="bp-field-input" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required>
+              <option value="">Select a customer…</option>
+              {customers.map((c) => <option key={c.customer_id} value={c.customer_id}>{c.name}{c.phone ? ` (${c.phone})` : ""}</option>)}
+            </select>
+          </>
+        )}
+
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="poVendor">Vendor</label>
-            <select id="poVendor" className="bp-field-input" value={vendorId} onChange={(e) => setVendorId(e.target.value)} required>
-              {vendors.length === 0 && <option value="">No vendors yet — add one first</option>}
-              {vendors.map((v) => (
-                <option key={v.vendor_id} value={v.vendor_id}>{v.vendor_code ? `${v.vendor_code} — ${v.name}` : v.name}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="poLocation">Deliver to</label>
-            <select id="poLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
+            <label className="bp-field-label" htmlFor="soLocation">Sold from</label>
+            <select id="soLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
               {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
             </select>
           </div>
-        </div>
-
-        <div className="bp-form-row">
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="poOrderDate">Order date</label>
-            <input id="poOrderDate" type="date" className="bp-field-input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="poExpected">Expected date (optional)</label>
-            <input id="poExpected" type="date" className="bp-field-input" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} />
+            <label className="bp-field-label" htmlFor="soDate">Date</label>
+            <input id="soDate" type="date" className="bp-field-input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required />
           </div>
         </div>
 
-        <label className="bp-field-label">Line items</label>
+        <label className="bp-field-label">Items</label>
         {items.map((it, idx) => (
           <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
             <div style={{ flex: 2 }}>
@@ -329,7 +331,7 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
               <input type="number" min="0" step="0.01" placeholder="Qty" className="bp-field-input" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
             </div>
             <div style={{ flex: 1 }}>
-              <input type="number" min="0" step="0.01" placeholder="Unit cost ₹" className="bp-field-input" value={it.unit_cost} onChange={(e) => updateItem(idx, "unit_cost", e.target.value)} />
+              <input type="number" min="0" step="0.01" placeholder="Unit price ₹" className="bp-field-input" value={it.unit_price} onChange={(e) => updateItem(idx, "unit_price", e.target.value)} />
             </div>
             <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
           </div>
@@ -379,20 +381,20 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
           <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(liveTotal)}</span></div>
         </div>
 
-        <label className="bp-field-label" htmlFor="poNotes">Notes (optional)</label>
-        <textarea id="poNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <label className="bp-field-label" htmlFor="soNotes">Notes (optional)</label>
+        <textarea id="soNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
         <div className="bp-form-actions">
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button type="submit" className="bp-btn-primary" disabled={submitting || vendors.length === 0}>{submitting ? "Saving…" : "Create purchase order"}</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Save as draft"}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function PoDetailModal({ poId, onClose, onChanged }) {
-  const [po, setPo] = useState(null);
+function SoDetailModal({ soId, onClose, onChanged }) {
+  const [so, setSo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -401,10 +403,10 @@ function PoDetailModal({ poId, onClose, onChanged }) {
     setLoading(true);
     setError("");
     try {
-      const data = await purchasingApi.get(poId);
-      setPo(data);
+      const data = await salesOrdersApi.get(soId);
+      setSo(data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load this purchase order.");
+      setError(err instanceof ApiError ? err.message : "Could not load this sales order.");
     } finally {
       setLoading(false);
     }
@@ -413,102 +415,99 @@ function PoDetailModal({ poId, onClose, onChanged }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poId]);
+  }, [soId]);
 
-  async function setStatus(status) {
+  async function complete() {
     setBusy(true);
     try {
-      await purchasingApi.update(poId, { status });
+      await salesOrdersApi.complete(soId);
       await load();
       await onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not update status.");
+      setError(err instanceof ApiError ? err.message : "Could not complete this sale.");
     } finally {
       setBusy(false);
     }
   }
 
-  async function markPaid() {
+  async function cancel() {
     setBusy(true);
     try {
-      await purchasingApi.pay(poId);
+      await salesOrdersApi.cancel(soId);
       await load();
       await onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not mark this as paid.");
+      setError(err instanceof ApiError ? err.message : "Could not cancel this sale.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function downloadInvoice() {
+    try {
+      await salesOrdersApi.downloadInvoice(soId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not generate the invoice.");
     }
   }
 
   return (
-    <Modal title={po ? `${po.po_number} — ${po.vendor_code ? `${po.vendor_code} — ` : ""}${po.vendor_name}` : "Purchase order"} onClose={onClose}>
+    <Modal title={so ? `${so.so_number} — ${so.customer_name || so.walkin_name || "Walk-in"}` : "Sales order"} onClose={onClose}>
       {loading ? (
         <div className="bp-td-muted">Loading…</div>
-      ) : error ? (
+      ) : error && !so ? (
         <div className="bp-inline-error">{error}</div>
       ) : (
         <>
+          {error && <div className="bp-inline-error">{error}</div>}
+
           <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <div><span className="bp-td-muted">Status: </span><StatusBadge status={po.status} /></div>
-            <div><span className="bp-td-muted">Location:</span> {po.location_name}</div>
-            <div><span className="bp-td-muted">Order date:</span> {po.order_date}</div>
-            {po.received_date && <div><span className="bp-td-muted">Received:</span> {po.received_date}</div>}
-            {po.status === "received" && (
-              <div>
-                <span className="bp-td-muted">Payment: </span>
-                <StatusBadge status={po.payment_status === "paid" ? "paid" : "requested"} label={po.payment_status === "paid" ? "Paid" : "Unpaid"} />
-                {po.paid_date && <span className="bp-td-muted"> ({po.paid_date})</span>}
-              </div>
-            )}
+            <div><span className="bp-td-muted">Status: </span><StatusBadge status={so.status} /></div>
+            <div><span className="bp-td-muted">Location:</span> {so.location_name}</div>
+            <div><span className="bp-td-muted">Date:</span> {so.completed_date || so.order_date}</div>
           </div>
 
           <table className="bp-table">
             <thead>
-              <tr><th>Product</th><th>Qty</th><th>Unit cost</th><th>Line total</th></tr>
+              <tr><th>Product</th><th>Qty</th><th>Unit price</th><th>Line total</th></tr>
             </thead>
             <tbody>
-              {po.items.map((it) => (
-                <tr key={it.po_item_id}>
+              {so.items.map((it) => (
+                <tr key={it.so_item_id}>
                   <td>{it.product_name}</td>
                   <td className="bp-td-muted">{it.quantity} {it.uom}</td>
-                  <td>{inr(it.unit_cost)}</td>
-                  <td className="bp-td-strong">{inr(it.quantity * it.unit_cost)}</td>
+                  <td>{inr(it.unit_price)}</td>
+                  <td className="bp-td-strong">{inr(it.quantity * it.unit_price)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="bp-settlement-calc">
-            <div className="bp-settlement-calc-row"><span>Subtotal</span><span>{inr(po.subtotal)}</span></div>
-            {Number(po.discount_amount) > 0 && (
+            <div className="bp-settlement-calc-row"><span>Subtotal</span><span>{inr(so.subtotal)}</span></div>
+            {Number(so.discount_amount) > 0 && (
               <div className="bp-settlement-calc-row">
-                <span>Discount{po.discount_percent != null ? ` (${po.discount_percent}%)` : ""}</span>
-                <span>−{inr(po.discount_amount)}</span>
+                <span>Discount{so.discount_percent != null ? ` (${so.discount_percent}%)` : ""}</span>
+                <span>−{inr(so.discount_amount)}</span>
               </div>
             )}
-            {po.gst_enabled && Number(po.gst_amount) > 0 && (
+            {so.gst_enabled && Number(so.gst_amount) > 0 && (
               <div className="bp-settlement-calc-row">
-                <span>GST{po.gst_percent != null ? ` (${po.gst_percent}%)` : ""}</span>
-                <span>+{inr(po.gst_amount)}</span>
+                <span>GST{so.gst_percent != null ? ` (${so.gst_percent}%)` : ""}</span>
+                <span>+{inr(so.gst_amount)}</span>
               </div>
             )}
-            <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(po.total)}</span></div>
+            <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(so.total)}</span></div>
           </div>
 
-          {po.notes && <p className="bp-td-muted" style={{ marginTop: 10 }}>{po.notes}</p>}
+          {so.notes && <p className="bp-td-muted" style={{ marginTop: 10 }}>{so.notes}</p>}
 
           <div className="bp-form-actions">
-            {po.status === "draft" && (
-              <button type="button" className="bp-btn-outline" onClick={() => setStatus("ordered")} disabled={busy}>Mark as ordered</button>
+            <button type="button" className="bp-btn-outline" onClick={downloadInvoice}>Download invoice</button>
+            {so.status === "draft" && (
+              <button type="button" className="bp-btn-outline" onClick={cancel} disabled={busy}>Cancel order</button>
             )}
-            {(po.status === "draft" || po.status === "ordered") && (
-              <button type="button" className="bp-btn-primary" onClick={() => setStatus("received")} disabled={busy}>Mark received (adds to stock)</button>
-            )}
-            {po.status !== "received" && po.status !== "cancelled" && (
-              <button type="button" className="bp-btn-outline" onClick={() => setStatus("cancelled")} disabled={busy}>Cancel</button>
-            )}
-            {po.status === "received" && po.payment_status !== "paid" && (
-              <button type="button" className="bp-btn-primary" onClick={markPaid} disabled={busy}>Mark as paid</button>
+            {so.status === "draft" && (
+              <button type="button" className="bp-btn-primary" onClick={complete} disabled={busy}>Complete sale</button>
             )}
           </div>
         </>
