@@ -63,6 +63,7 @@ export default function VendorsList() {
         <table className="bp-table">
           <thead>
             <tr>
+              <th>Vendor ID</th>
               <th>Name</th>
               <th>Contact</th>
               <th>Address</th>
@@ -71,12 +72,13 @@ export default function VendorsList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
             ) : vendors.length === 0 ? (
-              <tr><td colSpan={4} className="bp-table-empty">No vendors found.</td></tr>
+              <tr><td colSpan={5} className="bp-table-empty">No vendors found.</td></tr>
             ) : (
               vendors.map((v) => (
                 <tr key={v.vendor_id}>
+                  <td className="bp-td-muted">{v.vendor_code || "—"}</td>
                   <td className="bp-td-strong">{v.name}</td>
                   <td className="bp-td-muted">{v.contact_name || "—"}{v.contact_phone ? ` · ${v.contact_phone}` : ""}</td>
                   <td className="bp-td-muted">{v.address || "—"}</td>

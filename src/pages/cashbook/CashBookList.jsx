@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { cashbookApi, locationsApi } from "../../api/admin";
+import { cashbookApi, cashbookCategoriesApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
@@ -108,6 +108,7 @@ export default function CashBookList() {
           <option value="">Income &amp; expense</option>
           <option value="income">Income only</option>
           <option value="expense">Expense only</option>
+          <option value="transfer">Transfers only</option>
         </select>
       </div>
 
@@ -137,9 +138,15 @@ export default function CashBookList() {
                   <td className="bp-td-muted">{e.entry_date}</td>
                   <td className="bp-td-strong">{e.location_name}</td>
                   <td>
-                    <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
-                      {e.entry_type === "income" ? "Income" : "Expense"}
-                    </span>
+                    {e.entry_type === "transfer" ? (
+                      <span className="bp-badge bp-badge-neutral">
+                        {e.direction === "subtract" ? "→ Bank" : "← Bank"}
+                      </span>
+                    ) : (
+                      <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
+                        {e.entry_type === "income" ? "Income" : "Expense"}
+                      </span>
+                    )}
                   </td>
                   <td>{e.category}</td>
                   <td className="bp-td-muted">{e.description || "—"}</td>
@@ -170,30 +177,47 @@ export default function CashBookList() {
   );
 }
 
-const INCOME_CATEGORIES = ["Store sales", "Bulk order", "Partner settlement received", "Other income"];
-const EXPENSE_CATEGORIES = ["Raw materials", "Salaries", "Rent", "Utilities", "Transport", "Partner/shop payout", "Other expense"];
-
 function AddEntryModal({ locations, onClose, onDone }) {
   const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
   const [entryType, setEntryType] = useState("income");
-  const [category, setCategory] = useState(INCOME_CATEGORIES[0]);
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
 
-  const categories = entryType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  async function loadCategories(type) {
+    try {
+      const data = await cashbookCategoriesApi.list({ entryType: type });
+      const items = data.items || [];
+      setCategories(items);
+      setCategory((prev) => (items.find((c) => c.name === prev) ? prev : items[0]?.name || ""));
+    } catch {
+      // Category list failing to load shouldn't block the rest of the form.
+    }
+  }
+
+  useEffect(() => {
+    loadCategories(entryType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function changeType(type) {
     setEntryType(type);
-    setCategory(type === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+    loadCategories(type);
   }
 
   async function submit(e) {
     e.preventDefault();
     if (!locationId) {
       setError("Select a location.");
+      return;
+    }
+    if (!category) {
+      setError("Select a category.");
       return;
     }
     const amountNum = Number(amount);
@@ -235,10 +259,18 @@ function AddEntryModal({ locations, onClose, onDone }) {
           <option value="expense">Expense</option>
         </select>
 
-        <label className="bp-field-label" htmlFor="cbCategory">Category</label>
-        <select id="cbCategory" className="bp-field-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="cbCategory">Category</label>
+            <select id="cbCategory" className="bp-field-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categories.length === 0 && <option value="">No categories yet</option>}
+              {categories.map((c) => <option key={c.category_id} value={c.name}>{c.name}</option>)}
+            </select>
+          </div>
+          <button type="button" className="bp-btn-sm" onClick={() => setShowCategories(true)} style={{ marginBottom: 2 }}>
+            Manage categories
+          </button>
+        </div>
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
@@ -258,6 +290,165 @@ function AddEntryModal({ locations, onClose, onDone }) {
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
           <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Save entry"}</button>
         </div>
+      </form>
+
+      {showCategories && (
+        <CategoriesModal
+          onClose={() => setShowCategories(false)}
+          onChanged={() => loadCategories(entryType)}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Lightweight nested modal: list with inline edit/delete, plus a small
+// add-category form. Renders on top of AddEntryModal so the category
+// picker there refreshes the moment something changes here.
+function CategoriesModal({ onClose, onChanged }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("income");
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await cashbookCategoriesApi.list({});
+      setItems(data.items || []);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load categories.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function addCategory(e) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await cashbookCategoriesApi.create({ name: newName.trim(), entry_type: newType });
+      setNewName("");
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add this category.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(c) {
+    setEditingId(c.category_id);
+    setEditingName(c.name);
+  }
+
+  async function saveEdit(id) {
+    if (!editingName.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await cashbookCategoriesApi.update(id, { name: editingName.trim() });
+      setEditingId(null);
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not rename this category.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(c) {
+    if (!window.confirm(`Remove category "${c.name}"?`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await cashbookCategoriesApi.remove(c.category_id);
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not remove this category.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title="Manage categories" onClose={onClose}>
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
+        <table className="bp-table">
+          <thead>
+            <tr><th>Name</th><th>Type</th><th></th></tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={3} className="bp-table-empty">Loading…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={3} className="bp-table-empty">No categories yet.</td></tr>
+            ) : (
+              items.map((c) => (
+                <tr key={c.category_id}>
+                  <td>
+                    {editingId === c.category_id ? (
+                      <input
+                        type="text"
+                        className="bp-field-input"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        autoFocus
+                      />
+                    ) : (
+                      c.name
+                    )}
+                  </td>
+                  <td className="bp-td-muted">{c.entry_type === "income" ? "Income" : "Expense"}</td>
+                  <td className="bp-td-actions">
+                    {editingId === c.category_id ? (
+                      <>
+                        <button type="button" className="bp-btn-sm" onClick={() => saveEdit(c.category_id)} disabled={busy}>Save</button>
+                        <button type="button" className="bp-btn-sm" onClick={() => setEditingId(null)} disabled={busy}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className="bp-btn-sm" onClick={() => startEdit(c)} disabled={busy}>Rename</button>
+                        <button type="button" className="bp-btn-sm" onClick={() => remove(c)} disabled={busy}>Delete</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <form onSubmit={addCategory} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+        <div style={{ flex: 2 }}>
+          <label className="bp-field-label" htmlFor="catName">New category</label>
+          <input id="catName" type="text" className="bp-field-input" value={newName} onChange={(e) => setNewName(e.target.value)} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label className="bp-field-label" htmlFor="catType">Type</label>
+          <select id="catType" className="bp-field-input" value={newType} onChange={(e) => setNewType(e.target.value)}>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+        <button type="submit" className="bp-btn-primary" disabled={busy || !newName.trim()}>+ Add</button>
       </form>
     </Modal>
   );

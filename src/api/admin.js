@@ -28,6 +28,13 @@ export const cashbookApi = {
   remove: (id, reason) => DEL(`/api/admin/cashbook/${id}`, { reason }),
 };
 
+export const cashbookCategoriesApi = {
+  list: (params = {}) => GET(`/api/admin/cashbook-categories?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/cashbook-categories", body),
+  update: (id, body) => PUT(`/api/admin/cashbook-categories/${id}`, body),
+  remove: (id) => DEL(`/api/admin/cashbook-categories/${id}`),
+};
+
 export const inventoryApi = {
   list: (params = {}) => GET(`/api/admin/inventory?${new URLSearchParams(cleanParams(params))}`),
   movements: (params = {}) => GET(`/api/admin/inventory/movements?${new URLSearchParams(cleanParams(params))}`),
@@ -112,7 +119,12 @@ export const reportsApi = {
 export const settingsApi = {
   get: () => GET("/api/admin/settings"),
   update: (body) => PUT("/api/admin/settings", body),
-  listNumberSequences: () => GET("/api/admin/number-sequences"),
+};
+
+export const numberSequencesApi = {
+  list: () => GET("/api/admin/number-sequences"),
+  update: (key, body) => PUT(`/api/admin/number-sequences/${key}`, body),
+  checkCollisions: (key, body) => POST(`/api/admin/number-sequences/${key}/check-collisions`, body),
 };
 
 export const securityApi = {

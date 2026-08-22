@@ -11,6 +11,10 @@ function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
 }
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // Raw-material buying: a PO is created in draft, marked 'ordered' once
 // sent to the vendor, then 'received' once goods arrive — which is the
 // one status change that writes stock into inventory_movements (see
@@ -84,23 +88,25 @@ export default function PurchaseOrdersList() {
               <th>Location</th>
               <th>Order date</th>
               <th>Expected</th>
+              <th>Total</th>
               <th>Status</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
             ) : orders.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No purchase orders found.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">No purchase orders found.</td></tr>
             ) : (
               orders.map((po) => (
                 <tr key={po.po_id}>
                   <td className="bp-td-strong">{po.po_number}</td>
-                  <td>{po.vendor_name}</td>
+                  <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>
                   <td className="bp-td-muted">{po.location_name}</td>
                   <td className="bp-td-muted">{po.order_date}</td>
                   <td className="bp-td-muted">{po.expected_date || "—"}</td>
+                  <td className="bp-td-strong">{inr(po.total)}</td>
                   <td><StatusBadge status={po.status} /></td>
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={() => setViewPo(po)}>View</button>
@@ -127,12 +133,26 @@ export default function PurchaseOrdersList() {
 function NewPoModal({ vendors, locations, onClose, onDone }) {
   const [vendorId, setVendorId] = useState(vendors[0]?.vendor_id || "");
   const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
+  const [orderDate, setOrderDate] = useState(todayStr());
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState([{ product_id: "", quantity: "", unit_cost: "" }]);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Discount: amount and percent side by side, entering one live-computes
+  // the other for display — but only the field the user actually last
+  // typed into is sent to the backend, so the server (source of truth for
+  // the computation) never receives ambiguous "both" input.
+  const [discountAmount, setDiscountAmount] = useState("");
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [discountEditedField, setDiscountEditedField] = useState(null); // 'amount' | 'percent' | null
+
+  const [gstEnabled, setGstEnabled] = useState(false);
+  const [gstAmount, setGstAmount] = useState("");
+  const [gstPercent, setGstPercent] = useState("");
+  const [gstEditedField, setGstEditedField] = useState(null); // 'amount' | 'percent' | null
 
   useEffect(() => {
     productsApi.list({ limit: 500, itemKind: "raw_material" }).then((d) => setProducts(d.items || [])).catch(() => {});
@@ -150,7 +170,48 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const totalValue = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_cost) || 0), 0);
+  const subtotal = items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_cost) || 0), 0);
+
+  // Live-computed discount, mirroring the backend's either/or logic so the
+  // breakdown box updates as the user types, without waiting on a round trip.
+  let liveDiscountAmount = 0;
+  if (discountEditedField === "amount") {
+    liveDiscountAmount = Number(discountAmount) || 0;
+  } else if (discountEditedField === "percent") {
+    liveDiscountAmount = subtotal * ((Number(discountPercent) || 0) / 100);
+  }
+  const subtotalAfterDiscount = subtotal - liveDiscountAmount;
+
+  let liveGstAmount = 0;
+  if (gstEnabled) {
+    if (gstEditedField === "amount") {
+      liveGstAmount = Number(gstAmount) || 0;
+    } else if (gstEditedField === "percent") {
+      liveGstAmount = subtotalAfterDiscount * ((Number(gstPercent) || 0) / 100);
+    }
+  }
+  const liveTotal = subtotalAfterDiscount + liveGstAmount;
+
+  function onDiscountAmountChange(v) {
+    setDiscountAmount(v);
+    setDiscountEditedField(v === "" ? null : "amount");
+    if (v !== "") setDiscountPercent(subtotal > 0 ? String(Math.round((Number(v) / subtotal) * 100 * 100) / 100) : "0");
+  }
+  function onDiscountPercentChange(v) {
+    setDiscountPercent(v);
+    setDiscountEditedField(v === "" ? null : "percent");
+    if (v !== "") setDiscountAmount(String(Math.round(subtotal * (Number(v) / 100) * 100) / 100));
+  }
+  function onGstAmountChange(v) {
+    setGstAmount(v);
+    setGstEditedField(v === "" ? null : "amount");
+    if (v !== "") setGstPercent(subtotalAfterDiscount > 0 ? String(Math.round((Number(v) / subtotalAfterDiscount) * 100 * 100) / 100) : "0");
+  }
+  function onGstPercentChange(v) {
+    setGstPercent(v);
+    setGstEditedField(v === "" ? null : "percent");
+    if (v !== "") setGstAmount(String(Math.round(subtotalAfterDiscount * (Number(v) / 100) * 100) / 100));
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -163,15 +224,25 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
       setError("Add at least one complete line item.");
       return;
     }
+    if (gstEnabled && !gstEditedField) {
+      setError("Enter a GST percent or a GST amount.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       await purchasingApi.create({
         vendor_id: vendorId,
         location_id: locationId,
+        order_date: orderDate || undefined,
         expected_date: expectedDate || undefined,
         notes: notes || undefined,
         items: cleanItems.map((it) => ({ product_id: it.product_id, quantity: Number(it.quantity), unit_cost: Number(it.unit_cost) })),
+        gst_enabled: gstEnabled,
+        gst_percent: gstEnabled && gstEditedField === "percent" ? Number(gstPercent) : undefined,
+        gst_amount: gstEnabled && gstEditedField === "amount" ? Number(gstAmount) : undefined,
+        discount_percent: discountEditedField === "percent" ? Number(discountPercent) : undefined,
+        discount_amount: discountEditedField === "amount" ? Number(discountAmount) : undefined,
       });
       onDone();
     } catch (err) {
@@ -190,7 +261,9 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
             <label className="bp-field-label" htmlFor="poVendor">Vendor</label>
             <select id="poVendor" className="bp-field-input" value={vendorId} onChange={(e) => setVendorId(e.target.value)} required>
               {vendors.length === 0 && <option value="">No vendors yet — add one first</option>}
-              {vendors.map((v) => <option key={v.vendor_id} value={v.vendor_id}>{v.name}</option>)}
+              {vendors.map((v) => (
+                <option key={v.vendor_id} value={v.vendor_id}>{v.vendor_code ? `${v.vendor_code} — ${v.name}` : v.name}</option>
+              ))}
             </select>
           </div>
           <div style={{ flex: 1 }}>
@@ -201,8 +274,16 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
           </div>
         </div>
 
-        <label className="bp-field-label" htmlFor="poExpected">Expected date (optional)</label>
-        <input id="poExpected" type="date" className="bp-field-input" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} />
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="poOrderDate">Order date</label>
+            <input id="poOrderDate" type="date" className="bp-field-input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="poExpected">Expected date (optional)</label>
+            <input id="poExpected" type="date" className="bp-field-input" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} />
+          </div>
+        </div>
 
         <label className="bp-field-label">Line items</label>
         {items.map((it, idx) => (
@@ -224,8 +305,47 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
         ))}
         <button type="button" className="bp-btn-sm" onClick={addRow} style={{ alignSelf: "flex-start", marginBottom: 10 }}>+ Add line</button>
 
+        <label className="bp-field-label">Discount (optional)</label>
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <input type="number" min="0" step="0.01" placeholder="Discount ₹" className="bp-field-input" value={discountAmount} onChange={(e) => onDiscountAmountChange(e.target.value)} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <input type="number" min="0" max="100" step="0.01" placeholder="Discount %" className="bp-field-input" value={discountPercent} onChange={(e) => onDiscountPercentChange(e.target.value)} />
+          </div>
+        </div>
+
+        <label className="bp-field-label">GST</label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button type="button" className={gstEnabled ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setGstEnabled(true)}>Yes</button>
+          <button
+            type="button"
+            className={!gstEnabled ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"}
+            onClick={() => { setGstEnabled(false); setGstAmount(""); setGstPercent(""); setGstEditedField(null); }}
+          >
+            No
+          </button>
+        </div>
+        {gstEnabled && (
+          <div className="bp-form-row">
+            <div style={{ flex: 1 }}>
+              <input type="number" min="0" step="0.01" placeholder="GST ₹" className="bp-field-input" value={gstAmount} onChange={(e) => onGstAmountChange(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <input type="number" min="0" max="100" step="0.01" placeholder="GST %" className="bp-field-input" value={gstPercent} onChange={(e) => onGstPercentChange(e.target.value)} />
+            </div>
+          </div>
+        )}
+
         <div className="bp-settlement-calc">
-          <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Order total</span><span>{inr(totalValue)}</span></div>
+          <div className="bp-settlement-calc-row"><span>Subtotal</span><span>{inr(subtotal)}</span></div>
+          {liveDiscountAmount > 0 && (
+            <div className="bp-settlement-calc-row"><span>Discount</span><span>−{inr(liveDiscountAmount)}</span></div>
+          )}
+          {gstEnabled && liveGstAmount > 0 && (
+            <div className="bp-settlement-calc-row"><span>GST</span><span>+{inr(liveGstAmount)}</span></div>
+          )}
+          <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(liveTotal)}</span></div>
         </div>
 
         <label className="bp-field-label" htmlFor="poNotes">Notes (optional)</label>
@@ -277,10 +397,8 @@ function PoDetailModal({ poId, onClose, onChanged }) {
     }
   }
 
-  const total = (po?.items || []).reduce((sum, it) => sum + Number(it.quantity) * Number(it.unit_cost), 0);
-
   return (
-    <Modal title={po ? `${po.po_number} — ${po.vendor_name}` : "Purchase order"} onClose={onClose}>
+    <Modal title={po ? `${po.po_number} — ${po.vendor_code ? `${po.vendor_code} — ` : ""}${po.vendor_name}` : "Purchase order"} onClose={onClose}>
       {loading ? (
         <div className="bp-td-muted">Loading…</div>
       ) : error ? (
@@ -310,7 +428,20 @@ function PoDetailModal({ poId, onClose, onChanged }) {
             </tbody>
           </table>
           <div className="bp-settlement-calc">
-            <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(total)}</span></div>
+            <div className="bp-settlement-calc-row"><span>Subtotal</span><span>{inr(po.subtotal)}</span></div>
+            {Number(po.discount_amount) > 0 && (
+              <div className="bp-settlement-calc-row">
+                <span>Discount{po.discount_percent != null ? ` (${po.discount_percent}%)` : ""}</span>
+                <span>−{inr(po.discount_amount)}</span>
+              </div>
+            )}
+            {po.gst_enabled && Number(po.gst_amount) > 0 && (
+              <div className="bp-settlement-calc-row">
+                <span>GST{po.gst_percent != null ? ` (${po.gst_percent}%)` : ""}</span>
+                <span>+{inr(po.gst_amount)}</span>
+              </div>
+            )}
+            <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(po.total)}</span></div>
           </div>
 
           {po.notes && <p className="bp-td-muted" style={{ marginTop: 10 }}>{po.notes}</p>}

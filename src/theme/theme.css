@@ -274,14 +274,30 @@ body {
   background: radial-gradient(circle at 60% 40%, var(--bp-brand) 0%, transparent 70%);
 }
 
+/* Was a flat maroon circle at 0.75 opacity (inherited from .bp-glass-orb)
+   — read as a hard, isolated red disc rather than atmosphere. Redesigned
+   as ambient warmth instead of a shape: a soft multi-stop gradient that
+   fades maroon through the amber already used by orb-1 before going
+   transparent (so it blends with its neighbors instead of sitting as an
+   isolated hue), sized larger and pushed further off-canvas so more of
+   it is cropped by the viewport, and given a much lower opacity of its
+   own — "barely there" rather than a tuned-down version of the same
+   circle. Bare opacity tweaks alone were tried and rejected; this changes
+   the shape/gradient/position together. */
 .bp-glass-orb-3 {
-  width: 34vw;
-  height: 34vw;
-  max-width: 480px;
-  max-height: 480px;
-  bottom: -12vw;
-  left: 22vw;
-  background: radial-gradient(circle at 50% 50%, var(--bp-maroon) 0%, transparent 70%);
+  width: 52vw;
+  height: 52vw;
+  max-width: 760px;
+  max-height: 760px;
+  bottom: -30vw;
+  left: 8vw;
+  opacity: 0.4;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--bp-maroon) 0%,
+    color-mix(in srgb, var(--bp-maroon) 55%, var(--bp-amber) 45%) 35%,
+    transparent 72%
+  );
 }
 
 @media (max-width: 860px) {
