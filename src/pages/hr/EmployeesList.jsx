@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { employeesApi, locationsApi, positionsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
-import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
@@ -139,14 +138,10 @@ function EmployeeModal({ employee, locations, onClose, onDone }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [positions, setPositions] = useState([]);
-  const [showPositions, setShowPositions] = useState(false);
   const codeField = useCodePreview("employee", isEdit ? employee.employee_code : null);
 
-  function loadPositions() {
-    positionsApi.list({}).then((data) => setPositions(data.items || [])).catch(() => {});
-  }
   useEffect(() => {
-    loadPositions();
+    positionsApi.list({}).then((data) => setPositions(data.items || [])).catch(() => {});
   }, []);
 
   async function submit(e) {
@@ -227,7 +222,7 @@ function EmployeeModal({ employee, locations, onClose, onDone }) {
                   <option value={roleDesignation}>{roleDesignation}</option>
                 )}
               </select>
-              <button type="button" className="bp-btn-sm" onClick={() => setShowPositions(true)}>Manage</button>
+              <a href="/positions" target="_blank" rel="noopener noreferrer" className="bp-btn-sm" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Manage</a>
             </div>
           </div>
           <div style={{ flex: 1 }}>
@@ -265,176 +260,7 @@ function EmployeeModal({ employee, locations, onClose, onDone }) {
           <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add employee"}</button>
         </div>
       </form>
-
-      {showPositions && (
-        <PositionsModal
-          onClose={() => setShowPositions(false)}
-          onChanged={loadPositions}
-        />
-      )}
     </Modal>
   );
 }
 
-// Lightweight nested modal, same pattern as Cash Book's CategoriesModal:
-// list with inline rename/deactivate/delete, plus a small add-position
-// form. Renders on top of EmployeeModal so the position picker there
-// refreshes the moment something changes here.
-function PositionsModal({ onClose, onChanged }) {
-  const { hasPermission } = useAuth();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [newName, setNewName] = useState("");
-  const [editingId, setEditingId] = useState(null);
-  const [editingName, setEditingName] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await positionsApi.list({ includeInactive: true });
-      setItems(data.items || []);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load positions.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function addPosition(e) {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    setBusy(true);
-    setError("");
-    try {
-      await positionsApi.create({ name: newName.trim() });
-      setNewName("");
-      await load();
-      onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add this position.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function startEdit(p) {
-    setEditingId(p.position_id);
-    setEditingName(p.name);
-  }
-
-  async function saveEdit(id) {
-    if (!editingName.trim()) return;
-    setBusy(true);
-    setError("");
-    try {
-      await positionsApi.update(id, { name: editingName.trim() });
-      setEditingId(null);
-      await load();
-      onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not rename this position.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function toggleActive(p) {
-    setBusy(true);
-    setError("");
-    try {
-      await positionsApi.update(p.position_id, { is_active: !p.is_active });
-      await load();
-      onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not update this position.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(p) {
-    if (!window.confirm(`Remove position "${p.name}"?`)) return;
-    setBusy(true);
-    setError("");
-    try {
-      await positionsApi.remove(p.position_id);
-      await load();
-      onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not remove this position.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal title="Manage positions" onClose={onClose}>
-      {error && <div className="bp-inline-error">{error}</div>}
-
-      <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
-        <table className="bp-table">
-          <thead>
-            <tr><th>Name</th><th>Active</th><th></th></tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={3} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={3} className="bp-table-empty">No positions yet.</td></tr>
-            ) : (
-              items.map((p) => (
-                <tr key={p.position_id}>
-                  <td>
-                    {editingId === p.position_id ? (
-                      <input
-                        type="text"
-                        className="bp-field-input"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        autoFocus
-                      />
-                    ) : (
-                      p.name
-                    )}
-                  </td>
-                  <td className="bp-td-muted">{p.is_active ? "Yes" : "No"}</td>
-                  <td className="bp-td-actions">
-                    {editingId === p.position_id ? (
-                      <>
-                        <button type="button" className="bp-btn-sm" onClick={() => saveEdit(p.position_id)} disabled={busy}>Save</button>
-                        <button type="button" className="bp-btn-sm" onClick={() => setEditingId(null)} disabled={busy}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button type="button" className="bp-btn-sm" onClick={() => startEdit(p)} disabled={busy}>Rename</button>
-                        <button type="button" className="bp-btn-sm" onClick={() => toggleActive(p)} disabled={busy}>{p.is_active ? "Deactivate" : "Activate"}</button>
-                        {hasPermission("hr.manage", "full_control") && (
-                          <button type="button" className="bp-btn-sm" onClick={() => remove(p)} disabled={busy}>Delete</button>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <form onSubmit={addPosition} className="bp-form-row" style={{ alignItems: "flex-end" }}>
-        <div style={{ flex: 2 }}>
-          <label className="bp-field-label" htmlFor="posName">New position</label>
-          <input id="posName" type="text" className="bp-field-input" value={newName} onChange={(e) => setNewName(e.target.value)} />
-        </div>
-        <button type="submit" className="bp-btn-primary" disabled={busy || !newName.trim()}>+ Add</button>
-      </form>
-    </Modal>
-  );
-}

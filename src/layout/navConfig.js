@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   { key: "salesorders", label: "Sales Orders", icon: "🧾", path: "/sales-orders", requiredPermission: "sales.manage" },
   { key: "stores", label: "Retail Stores", icon: "🏬", path: "/stores", requiredPermission: "stores.manage" },
   { key: "employees", label: "Employees", icon: "🧑‍🍳", path: "/employees", requiredPermission: "hr.manage" },
+  { key: "positions", label: "Positions", icon: "🏷️", path: "/positions", requiredPermission: "hr.manage" },
   { key: "salarypayments", label: "Salary Payments", icon: "💵", path: "/salary-payments", requiredPermission: "hr.manage" },
   { key: "customers", label: "Customers", icon: "🧑‍🤝‍🧑", path: "/customers", requiredPermission: "sales.manage" },
   { key: "cashbook", label: "Cash Book", icon: "💰", path: "/cashbook", requiredPermission: "cashbook.manage" },

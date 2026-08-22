@@ -16,6 +16,7 @@ import SalesOrdersList from "./pages/sales-orders/SalesOrdersList";
 import CustomersList from "./pages/customers/CustomersList";
 import StoresList from "./pages/stores/StoresList";
 import EmployeesList from "./pages/hr/EmployeesList";
+import PositionsList from "./pages/hr/PositionsList";
 import SalaryPaymentsList from "./pages/hr/SalaryPaymentsList";
 import PartnersList from "./pages/partners/PartnersList";
 import ProductsList from "./pages/products/ProductsList";
@@ -45,6 +46,7 @@ const BUILT_PAGES = {
   customers: CustomersList,
   stores: StoresList,
   employees: EmployeesList,
+  positions: PositionsList,
   salarypayments: SalaryPaymentsList,
   partners: PartnersList,
   products: ProductsList,
