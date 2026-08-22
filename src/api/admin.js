@@ -124,6 +124,16 @@ export const financialDimensionsApi = {
   remove: (id) => DEL(`/api/admin/financial-dimensions/${id}`),
 };
 
+export const financialReconciliationApi = {
+  listTransactions: (params = {}) => GET(`/api/admin/financial-reconciliation/transactions?${new URLSearchParams(cleanParams(params))}`),
+  calculate: (body) => POST("/api/admin/financial-reconciliation/calculate", body),
+  create: (body) => POST("/api/admin/financial-reconciliation", body),
+  reconcile: (id) => PUT(`/api/admin/financial-reconciliation/${id}/reconcile`),
+  approve: (id) => PUT(`/api/admin/financial-reconciliation/${id}/approve`),
+  list: (params = {}) => GET(`/api/admin/financial-reconciliation?${new URLSearchParams(cleanParams(params))}`),
+  get: (id) => GET(`/api/admin/financial-reconciliation/${id}`),
+};
+
 export const stockTransfersApi = {
   list: (params = {}) => GET(`/api/admin/stock-transfers?${new URLSearchParams(cleanParams(params))}`),
   create: (body) => POST("/api/admin/stock-transfers", body),

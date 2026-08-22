@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { financialControlApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import FinancialDimensionsTab from "./FinancialDimensionsTab";
+import ReconciliationTab from "./ReconciliationTab";
+import TransactionHistoryTab from "./TransactionHistoryTab";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -11,6 +13,8 @@ function inr(n) {
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "dimensions", label: "Financial Dimensions" },
+  { key: "reconciliation", label: "Reconciliation" },
+  { key: "history", label: "Transaction History" },
 ];
 
 // Company-level financial home: the cash+bank overview (Overview tab —
@@ -88,8 +92,12 @@ export default function FinancialControlPage() {
             </Link>
           </div>
         </>
-      ) : (
+      ) : tab === "dimensions" ? (
         <FinancialDimensionsTab />
+      ) : tab === "reconciliation" ? (
+        <ReconciliationTab />
+      ) : (
+        <TransactionHistoryTab />
       )}
     </div>
   );
