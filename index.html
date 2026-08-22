@@ -12,9 +12,10 @@
       (function () {
         try {
           var stored = localStorage.getItem("bp_admin_theme");
-          if (stored === "light" || stored === "dark") {
-            document.documentElement.setAttribute("data-theme", stored);
-          }
+          document.documentElement.setAttribute(
+            "data-theme",
+            stored === "light" || stored === "dark" ? stored : "system"
+          );
         } catch (e) {}
         try {
           var mode = localStorage.getItem("bp_admin_mode");

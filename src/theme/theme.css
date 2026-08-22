@@ -209,8 +209,8 @@
 }
 
 /* ---- Standard mode: a genuinely different design, not "glass with the
-   blur turned off". Plain, muted, business-tool-flat — sharp-ish
-   corners, crisp 1px borders, minimal shadows, solid opaque surfaces, no
+   blur turned off". Plain, flat, business-tool surfaces — sharp-ish
+   corners, crisp 1px borders, minimal shadows, solid opaque fills, no
    orbs, no specular highlights, no glow. Every component already reads
    its surface styling purely from --bp-glass-* / --bp-radius-* /
    --bp-shadow-* tokens, never a hardcoded blur/shape value, so
@@ -219,27 +219,26 @@
    (no attribute, or data-mode="glass") is the Liquid Glass system
    defined above, untouched by anything in this section.
 
-   Chrome (sidebar + header) follows the light/dark THEME the same as
-   every other surface — light theme = light chrome + light content,
-   dark theme = dark chrome + dark content, one coherent look each way.
-   (An earlier version inverted chrome against content instead — picking
-   "Dark" produced a light sidebar — which read as broken, not
-   intentional; the user pointed to a real dashboard reference,
-   hpanel.hostinger.com, showing chrome and content sharing one light
-   palette, and asked for that instead.) */
+   Standard mode has THREE distinct, fixed looks — one per Theme choice
+   (System/Light/Dark), not a light/dark resolution of one design. This
+   was an explicit user decision after two earlier attempts (chrome
+   inverted against content, then chrome coherent-but-generic) didn't
+   match what they actually wanted:
+     - System -> the NammaHearth reference look: solid purple sidebar,
+       white header/content, amber active-nav pill.
+     - Light  -> unchanged from the previous pass: white/bordered chrome,
+       neutral off-white content (the Hostinger-inspired look).
+     - Dark   -> a warm near-black look inspired by a dark mobile-app
+       mockup reference: chrome blends into the dark content (no
+       separate-colored sidebar block) with a warm amber accent.
+   ThemeContext now always stamps a concrete data-theme value ("system"
+   included, previously it stamped nothing) specifically so this section
+   can target System as a real fixed palette rather than a media-query
+   deferral. */
 :root[data-mode="standard"] {
   --bp-radius-sm: 4px;
   --bp-radius-md: 6px;
   --bp-radius-lg: 8px;
-
-  --bp-text: #202225;
-  --bp-text-muted: #5f6368;
-  --bp-border: #dfe1e5;
-
-  --bp-bg: #f5f6f8;
-  --bp-bg-image: none;
-  --bp-surface: #ffffff;
-  --bp-surface-alt: #f1f2f4;
 
   --bp-glass-blur: 0px;
   --bp-glass-saturate: 1;
@@ -254,11 +253,53 @@
 
   --bp-glass-content-bg: var(--bp-surface);
   --bp-glass-content-bg-alt: var(--bp-surface-alt);
+}
+
+/* ---- Standard + System: the NammaHearth reference look. Solid brand
+   purple sidebar (not glass-tinted, a flat fill), white header/content,
+   amber active-nav pill — this reuses the existing brand tokens
+   (--bp-brand-dark, --bp-amber) rather than inventing a new palette,
+   since the goal is literally "look like NammaHearth's chrome", which
+   already shares this brand identity. ---- */
+:root[data-mode="standard"][data-theme="system"] {
+  --bp-text: #211a16;
+  --bp-text-muted: #6a625c;
+  --bp-border: #e7e0d8;
+
+  --bp-bg: #faf8f6;
+  --bp-bg-image: none;
+  --bp-surface: #ffffff;
+  --bp-surface-alt: #f7f3ee;
+  --bp-glass-row-hover: #f7f3ee;
+
+  --bp-sidebar-tint: #431671;
+  --bp-sidebar-text: rgba(255, 255, 255, 0.82);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: rgba(255, 255, 255, 0.1);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.1);
+  --bp-standard-chrome-btn-bg: var(--bp-surface-alt);
+  --bp-standard-chrome-btn-border: var(--bp-border);
+  --bp-standard-chrome-text: var(--bp-text);
+  --bp-standard-chrome-text-muted: var(--bp-text-muted);
+
+  --bp-standard-accent: var(--bp-amber);
+  --bp-standard-accent-dark: var(--bp-amber-dark);
+  --bp-standard-accent-text: var(--bp-brand-dark);
+}
+
+/* ---- Standard + Light: unchanged from the previous pass — white,
+   bordered chrome matching a neutral off-white content area. ---- */
+:root[data-mode="standard"][data-theme="light"] {
+  --bp-text: #202225;
+  --bp-text-muted: #5f6368;
+  --bp-border: #dfe1e5;
+
+  --bp-bg: #f5f6f8;
+  --bp-bg-image: none;
+  --bp-surface: #ffffff;
+  --bp-surface-alt: #f1f2f4;
   --bp-glass-row-hover: #eef0f2;
 
-  /* Light theme chrome: light, matching the content area — white
-     sidebar/header with a hairline border, like the Hostinger
-     reference. Not a color-block sidebar. */
   --bp-sidebar-tint: #ffffff;
   --bp-sidebar-text: #3c4043;
   --bp-sidebar-text-strong: #17181b;
@@ -269,16 +310,44 @@
   --bp-standard-chrome-text: var(--bp-text);
   --bp-standard-chrome-text-muted: var(--bp-text-muted);
 
-  /* Muted slate accent for "selected/active" — no blue, no glow, a
-     restrained neutral-leaning color that reads as a business tool
-     rather than a consumer app. Amber/purple stay for data semantics
-     (warning badges, brand text) elsewhere. */
   --bp-standard-accent: #46505c;
   --bp-standard-accent-dark: #333b45;
+  --bp-standard-accent-text: #ffffff;
+}
+
+/* ---- Standard + Dark: warm near-black, inspired by a dark mobile-app
+   mockup reference — chrome blends into the content (same near-black
+   fill, distinguished only by a hairline border) rather than being its
+   own separate-colored block, with a warm amber accent instead of a
+   cool one. ---- */
+:root[data-mode="standard"][data-theme="dark"] {
+  --bp-text: #f2ede6;
+  --bp-text-muted: #9a938c;
+  --bp-border: #2c2925;
+
+  --bp-bg: #141210;
+  --bp-bg-image: none;
+  --bp-surface: #1c1916;
+  --bp-surface-alt: #24211d;
+  --bp-glass-row-hover: #2a2622;
+
+  --bp-sidebar-tint: #141210;
+  --bp-sidebar-text: rgba(242, 237, 230, 0.68);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: #2c2925;
+  --bp-sidebar-hover: #24211d;
+  --bp-standard-chrome-btn-bg: #24211d;
+  --bp-standard-chrome-btn-border: #2c2925;
+  --bp-standard-chrome-text: #f2ede6;
+  --bp-standard-chrome-text-muted: #9a938c;
+
+  --bp-standard-accent: #e8940f;
+  --bp-standard-accent-dark: #c97e0b;
+  --bp-standard-accent-text: #1c1613;
 }
 
 /* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
-   mode's brand-tinted glass) — Standard mode needs that gone in either
+   mode's brand-tinted glass) — Standard mode needs that gone in every
    theme, it's a flat solid fill here. */
 :root[data-mode="standard"] .bp-sidebar {
   background: var(--bp-sidebar-tint) !important;
@@ -335,68 +404,9 @@
   border-color: var(--bp-standard-chrome-btn-border) !important;
 }
 
-/* ---- Standard + Dark theme: chrome goes dark too, matching the dark
-   content area — same coherent-palette principle as light, not an
-   inversion. ---- */
-@media (prefers-color-scheme: dark) {
-  :root[data-mode="standard"]:not([data-theme="light"]) {
-    --bp-text: #e8e9ec;
-    --bp-text-muted: #9096a0;
-    --bp-border: #33363d;
-
-    --bp-bg: #16171b;
-    --bp-surface: #1e2025;
-    --bp-surface-alt: #26282e;
-
-    --bp-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --bp-glass-shadow-lg: 0 3px 14px rgba(0, 0, 0, 0.4);
-    --bp-glass-row-hover: #23262d;
-
-    --bp-sidebar-tint: #1c1d21;
-    --bp-sidebar-text: rgba(255, 255, 255, 0.68);
-    --bp-sidebar-text-strong: #ffffff;
-    --bp-sidebar-border: rgba(255, 255, 255, 0.08);
-    --bp-sidebar-hover: rgba(255, 255, 255, 0.07);
-    --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.07);
-    --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.12);
-    --bp-standard-chrome-text: #ffffff;
-    --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.55);
-
-    --bp-standard-accent: #5c6672;
-    --bp-standard-accent-dark: #78828e;
-  }
-}
-
-:root[data-mode="standard"][data-theme="dark"] {
-  --bp-text: #e8e9ec;
-  --bp-text-muted: #9096a0;
-  --bp-border: #33363d;
-
-  --bp-bg: #16171b;
-  --bp-surface: #1e2025;
-  --bp-surface-alt: #26282e;
-
-  --bp-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --bp-glass-shadow-lg: 0 3px 14px rgba(0, 0, 0, 0.4);
-  --bp-glass-row-hover: #23262d;
-
-  --bp-sidebar-tint: #1c1d21;
-  --bp-sidebar-text: rgba(255, 255, 255, 0.68);
-  --bp-sidebar-text-strong: #ffffff;
-  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
-  --bp-sidebar-hover: rgba(255, 255, 255, 0.07);
-  --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.07);
-  --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.12);
-  --bp-standard-chrome-text: #ffffff;
-  --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.55);
-
-  --bp-standard-accent: #5c6672;
-  --bp-standard-accent-dark: #78828e;
-}
-
 :root[data-mode="standard"] .bp-sidebar-link.is-active {
   background: var(--bp-standard-accent) !important;
-  color: #ffffff !important;
+  color: var(--bp-standard-accent-text) !important;
   box-shadow: none !important;
 }
 
@@ -404,7 +414,7 @@
 :root[data-mode="standard"] .bp-login-submit {
   background: var(--bp-standard-accent) !important;
   border-color: var(--bp-standard-accent-dark) !important;
-  color: #ffffff !important;
+  color: var(--bp-standard-accent-text) !important;
   box-shadow: none !important;
 }
 
