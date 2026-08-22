@@ -76,6 +76,7 @@ export default function StockTransfersList() {
 
   const columns = [
     { key: "transfer_number", label: "Transfer #", accessor: (t) => t.transfer_number || "" },
+    { key: "product_code", label: "Item ID", accessor: (t) => t.product_code || "" },
     { key: "product_name", label: "Product", accessor: (t) => t.product_name },
     { key: "from_location_name", label: "From", accessor: (t) => t.from_location_name },
     { key: "to_location_name", label: "To", accessor: (t) => t.to_location_name },
@@ -93,7 +94,7 @@ export default function StockTransfersList() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-        <h1 className="bp-page-title">Stock Transfers</h1>
+        <h2 className="bp-card-title">Transfers</h2>
         <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New transfer</button>
       </div>
       <p className="bp-td-muted" style={{ margin: "-6px 0 14px" }}>
@@ -122,19 +123,21 @@ export default function StockTransfersList() {
               {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
               {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+              {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={11} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={10} className="bp-table-empty">No stock transfers found.</td></tr>
+              <tr><td colSpan={11} className="bp-table-empty">No stock transfers found.</td></tr>
             ) : (
               table.filteredRows.map((t) => (
                 <tr key={t.transfer_id}>
                   <SelectRowCell table={table} row={t} />
                   {table.isColumnVisible("transfer_number") && <td className="bp-td-muted">{t.transfer_number || "—"}</td>}
+                  {table.isColumnVisible("product_code") && <td className="bp-td-muted">{t.product_code || "—"}</td>}
                   {table.isColumnVisible("product_name") && <td className="bp-td-strong">{t.product_name}</td>}
                   {table.isColumnVisible("from_location_name") && <td className="bp-td-muted">{t.from_location_name}</td>}
                   {table.isColumnVisible("to_location_name") && <td className="bp-td-muted">{t.to_location_name}</td>}
@@ -170,7 +173,7 @@ function TransferModal({ locations, products, onClose, onDone }) {
   const [fromLocationId, setFromLocationId] = useState("");
   const [toLocationId, setToLocationId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [transferDate, setTransferDate] = useState("");
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -216,7 +219,7 @@ function TransferModal({ locations, products, onClose, onDone }) {
         <label className="bp-field-label" htmlFor="stProduct">Product</label>
         <select id="stProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required autoFocus>
           <option value="">Select a product…</option>
-          {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+          {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
         </select>
 
         <div className="bp-form-row">

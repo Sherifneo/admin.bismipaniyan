@@ -334,7 +334,7 @@ function AddTransactionModal({ accountId, onClose, onDone }) {
   const [txnType, setTxnType] = useState("deposit");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [txnDate, setTxnDate] = useState("");
+  const [txnDate, setTxnDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 

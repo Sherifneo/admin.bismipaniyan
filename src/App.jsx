@@ -10,8 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import ProfilePage from "./pages/ProfilePage";
 import ComingSoon from "./pages/ComingSoon";
 import CashBookList from "./pages/cashbook/CashBookList";
-import InventoryList from "./pages/inventory/InventoryList";
-import StockTransfersList from "./pages/inventory/StockTransfersList";
+import InventoryPage from "./pages/inventory/InventoryPage";
 import WaOrdersList from "./pages/waorders/WaOrdersList";
 import SalesOrdersList from "./pages/sales-orders/SalesOrdersList";
 import CustomersList from "./pages/customers/CustomersList";
@@ -39,8 +38,7 @@ import { NAV_ITEMS } from "./layout/navConfig";
 // module's list page gets built.
 const BUILT_PAGES = {
   cashbook: CashBookList,
-  inventory: InventoryList,
-  stocktransfers: StockTransfersList,
+  inventory: InventoryPage,
   waorders: WaOrdersList,
   salesorders: SalesOrdersList,
   customers: CustomersList,

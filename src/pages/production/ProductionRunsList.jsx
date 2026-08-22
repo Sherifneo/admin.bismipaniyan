@@ -69,6 +69,7 @@ export default function ProductionRunsList() {
   }
 
   const columns = [
+    { key: "product_code", label: "Item ID", accessor: (run) => run.product_code || "" },
     { key: "product_name", label: "Product", accessor: (run) => run.product_name },
     { key: "location_name", label: "Location", accessor: (run) => run.location_name },
     { key: "machine_name", label: "Machine", accessor: (run) => run.machine_name || "" },
@@ -131,18 +132,20 @@ export default function ProductionRunsList() {
               {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+              {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={12} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={13} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={12} className="bp-table-empty">No production runs found.</td></tr>
+              <tr><td colSpan={13} className="bp-table-empty">No production runs found.</td></tr>
             ) : (
               table.filteredRows.map((run) => (
                 <tr key={run.run_id}>
                   <SelectRowCell table={table} row={run} />
+                  {table.isColumnVisible("product_code") && <td className="bp-td-muted">{run.product_code || "—"}</td>}
                   {table.isColumnVisible("product_name") && <td className="bp-td-strong">{run.product_name}</td>}
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{run.location_name}</td>}
                   {table.isColumnVisible("machine_name") && <td className="bp-td-muted">{run.machine_name || "—"}</td>}
@@ -181,7 +184,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   const [locationId, setLocationId] = useState(factoryLocations[0]?.location_id || "");
   const [machineId, setMachineId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [runDate, setRunDate] = useState("");
+  const [runDate, setRunDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [defaultEmployeeId, setDefaultEmployeeId] = useState("");
   // Which stages have been individually overridden — those stop
@@ -251,7 +254,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
             <label className="bp-field-label" htmlFor="runProduct">Product</label>
             <select id="runProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required>
               <option value="">Select product…</option>
-              {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+              {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
             </select>
           </div>
           <div style={{ flex: 1 }}>

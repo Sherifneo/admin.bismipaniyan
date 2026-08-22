@@ -211,9 +211,19 @@ export default function PurchaseOrdersList() {
   );
 }
 
+// Purchase orders are factory-only — raw materials and everything else
+// Bismi buys in are received at the factory; a store only ever gets stock
+// via a Sales Order or a Stock Transfer, never a direct vendor purchase.
+// Matches sales-orders.js's server-side rule (stores-only) mirrored the
+// other way; enforced server-side too, this is just the matching UI.
+function factoryOnly(locations) {
+  return locations.filter((l) => l.kind === "factory");
+}
+
 function NewPoModal({ vendors, locations, onClose, onDone }) {
+  const factories = factoryOnly(locations);
   const [vendorId, setVendorId] = useState(vendors[0]?.vendor_id || "");
-  const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
+  const [locationId, setLocationId] = useState(factories[0]?.location_id || "");
   const [orderDate, setOrderDate] = useState(todayStr());
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -354,7 +364,8 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="poLocation">Deliver to</label>
             <select id="poLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-              {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+              {factories.length === 0 && <option value="">No factory location found</option>}
+              {factories.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
             </select>
           </div>
         </div>

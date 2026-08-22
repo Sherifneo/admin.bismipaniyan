@@ -12,11 +12,17 @@ import "./Inventory.css";
 
 const LIMIT = 20;
 
+function inr(n) {
+  return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
 const CSV_COLUMNS = [
+  { label: "Code", accessor: (r) => r.product_code },
   { label: "Product", accessor: (r) => r.name },
   { label: "SKU", accessor: (r) => r.sku },
   { label: "Location", accessor: (r) => r.location_name },
-  { label: "Bismi stock", accessor: (r) => r.stock_qty },
+  { label: "On hand", accessor: (r) => r.stock_qty },
+  { label: "Value", accessor: (r) => r.stock_value },
   { label: "Consignment stock", accessor: (r) => r.consignment_stock_qty },
 ];
 
@@ -29,6 +35,7 @@ export default function InventoryList() {
   const [locations, setLocations] = useState([]);
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
+  const [totalValue, setTotalValue] = useState(0);
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
   const [q, setQ] = useState(urlSearch.q);
@@ -47,6 +54,7 @@ export default function InventoryList() {
       const data = await inventoryApi.list({ page, limit: LIMIT, locationId, q });
       setRows(data.items || []);
       setTotal(data.total);
+      setTotalValue(data.total_value || 0);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load inventory.");
     } finally {
@@ -70,10 +78,12 @@ export default function InventoryList() {
   }
 
   const columns = [
+    { key: "product_code", label: "Code", accessor: (r) => r.product_code || "" },
     { key: "name", label: "Product", accessor: (r) => r.name },
     { key: "sku", label: "SKU", accessor: (r) => r.sku || "" },
     { key: "location_name", label: "Location", accessor: (r) => r.location_name },
-    { key: "stock_qty", label: "Bismi stock", accessor: (r) => r.stock_qty, filter: "number" },
+    { key: "stock_qty", label: "On hand", accessor: (r) => r.stock_qty, filter: "number" },
+    { key: "stock_value", label: "Value", accessor: (r) => r.stock_value, filter: "number" },
     { key: "consignment_stock_qty", label: "Consignment stock", accessor: (r) => r.consignment_stock_qty ?? "", filter: "number" },
   ];
   const table = useDataTable({ rows, columns, rowKey: (r) => `${r.product_id}:${r.location_id}` });
@@ -81,7 +91,7 @@ export default function InventoryList() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-        <h1 className="bp-page-title">Inventory</h1>
+        <h2 className="bp-card-title">Stock</h2>
         <div style={{ display: "flex", gap: 8 }}>
           {table.selectedRows.length > 0 && (
             <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("inventory")}>
@@ -90,6 +100,13 @@ export default function InventoryList() {
           )}
           <ExportMenu filename="inventory" rows={rows} columns={CSV_COLUMNS} />
           <button type="button" className="bp-btn-primary" onClick={() => setShowMovement(true)}>+ Record movement</button>
+        </div>
+      </div>
+
+      <div className="bp-kpi-grid" style={{ marginBottom: 14 }}>
+        <div className="bp-kpi-card">
+          <div className="bp-kpi-label">Total inventory value (filtered)</div>
+          <div className="bp-kpi-value">{inr(totalValue)}</div>
         </div>
       </div>
 
@@ -119,23 +136,27 @@ export default function InventoryList() {
               {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
               {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
               {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No stock movements recorded yet.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">No stock movements recorded yet.</td></tr>
             ) : (
               table.filteredRows.map((r) => {
                 const isLow = r.low_stock_alert && Number(r.stock_qty) <= Number(r.low_stock_alert);
                 return (
                   <tr key={`${r.product_id}:${r.location_id}`}>
                     <SelectRowCell table={table} row={r} />
+                    {table.isColumnVisible("product_code") && <td className="bp-td-muted">{r.product_code || "—"}</td>}
                     {table.isColumnVisible("name") && <td className="bp-td-strong">{r.name}</td>}
                     {table.isColumnVisible("sku") && <td className="bp-td-muted">{r.sku || "—"}</td>}
                     {table.isColumnVisible("location_name") && <td>{r.location_name}</td>}
                     {table.isColumnVisible("stock_qty") && <td className={isLow ? "bp-stock-low" : ""}>{formatQty(r.stock_qty, r.uom)}</td>}
+                    {table.isColumnVisible("stock_value") && <td>{inr(r.stock_value)}</td>}
                     {table.isColumnVisible("consignment_stock_qty") && (
                       <td className="bp-td-muted">
                         {Number(r.consignment_stock_qty || 0) > 0 ? formatQty(r.consignment_stock_qty, r.uom) : "—"}
@@ -158,11 +179,14 @@ export default function InventoryList() {
   );
 }
 
+// transfer_in/transfer_out are deliberately not offered here — moving
+// stock between two of Bismi's own locations now always goes through the
+// Transfers tab (StockTransfersList.jsx), which pairs the two movements
+// under one order with a status instead of letting them be created
+// separately and unpaired via this manual form.
 const MOVEMENT_TYPES = [
   { value: "production_in", label: "Production received (factory)" },
   { value: "purchase_in", label: "Raw material received (factory)" },
-  { value: "transfer_in", label: "Stock received from factory (store)" },
-  { value: "transfer_out", label: "Stock dispatched to store (factory)" },
   { value: "sale", label: "Sold (manual next-day entry)" },
   { value: "wastage", label: "Wastage / damaged / expired" },
   { value: "adjustment", label: "Manual adjustment (+/-)" },
@@ -244,7 +268,7 @@ function RecordMovementModal({ locations, onClose, onDone }) {
                 style={{ padding: "6px 10px", fontSize: 13, cursor: "pointer" }}
                 onClick={() => { setProductId(p.product_id); setProductQuery(p.name); setProductOptions([]); }}
               >
-                {p.name} {p.sku ? `(${p.sku})` : ""}
+                {p.product_code ? `${p.product_code} — ` : ""}{p.name} {p.sku ? `(${p.sku})` : ""}
               </div>
             ))}
           </div>

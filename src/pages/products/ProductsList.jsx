@@ -46,7 +46,7 @@ export default function ProductsList() {
     setLoading(true);
     setError("");
     try {
-      const data = await productsApi.list({ page, limit: LIMIT, itemKind, q });
+      const data = await productsApi.list({ page, limit: LIMIT, itemKind, q, includeInactive: true });
       setProducts(data.items || []);
       setTotal(data.total);
     } catch (err) {
@@ -73,8 +73,13 @@ export default function ProductsList() {
   }
 
   async function remove(product) {
-    if (!window.confirm(`Remove ${product.name} from the product list?`)) return;
+    if (!window.confirm(`Deactivate ${product.name}? It will be hidden from pickers elsewhere but can be reactivated here.`)) return;
     await productsApi.remove(product.product_id);
+    await load();
+  }
+
+  async function reactivate(product) {
+    await productsApi.update(product.product_id, { is_active: true });
     await load();
   }
 
@@ -87,6 +92,10 @@ export default function ProductsList() {
       options: [{ value: "finished_good", label: "Finished good" }, { value: "raw_material", label: "Raw material" }],
     },
     { key: "uom", label: "UOM", accessor: (p) => p.uom },
+    {
+      key: "is_active", label: "Active", accessor: (p) => (p.is_active ? "yes" : "no"), filter: "select",
+      options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }],
+    },
     { key: "cost_price", label: "Cost price", accessor: (p) => p.cost_price ?? "", filter: "number" },
     { key: "selling_price", label: "Selling price", accessor: (p) => p.selling_price ?? "", filter: "number" },
     { key: "low_stock_alert", label: "Low stock alert", accessor: (p) => p.low_stock_alert, filter: "number" },
@@ -144,23 +153,25 @@ export default function ProductsList() {
               {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
               {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
+              {table.isColumnVisible(columns[12].key) && <ColumnHeader table={table} column={columns[12]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={14} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={15} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={14} className="bp-table-empty">No products found.</td></tr>
+              <tr><td colSpan={15} className="bp-table-empty">No products found.</td></tr>
             ) : (
               table.filteredRows.map((p) => (
-                <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer" }}>
+                <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer", opacity: p.is_active ? 1 : 0.55 }}>
                   <SelectRowCell table={table} row={p} />
                   {table.isColumnVisible("product_code") && <td className="bp-td-muted">{p.product_code || "—"}</td>}
                   {table.isColumnVisible("sku") && <td className="bp-td-muted">{p.sku || "—"}</td>}
                   {table.isColumnVisible("name") && <td className="bp-td-strong">{p.name}</td>}
                   {table.isColumnVisible("item_kind") && <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.item_kind.replace("_", " ")}</td>}
                   {table.isColumnVisible("uom") && <td className="bp-td-muted">{p.uom}</td>}
+                  {table.isColumnVisible("is_active") && <td className="bp-td-muted">{p.is_active ? "Yes" : "No"}</td>}
                   {table.isColumnVisible("cost_price") && <td>{inr(p.cost_price)}</td>}
                   {table.isColumnVisible("selling_price") && <td>{inr(p.selling_price)}</td>}
                   {table.isColumnVisible("low_stock_alert") && <td className="bp-td-muted">{p.low_stock_alert}</td>}
@@ -171,7 +182,11 @@ export default function ProductsList() {
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditProduct(p); }}>Edit</button>
                     {hasPermission("products.manage", "full_control") && (
-                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Remove</button>
+                      p.is_active ? (
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Deactivate</button>
+                      ) : (
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); reactivate(p); }}>Reactivate</button>
+                      )
                     )}
                   </td>
                 </tr>
@@ -198,6 +213,7 @@ function ProductModal({ product, onClose, onDone }) {
   const [costPrice, setCostPrice] = useState(product?.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(product?.selling_price ?? "");
   const [lowStockAlert, setLowStockAlert] = useState(product?.low_stock_alert ?? "0");
+  const [isActive, setIsActive] = useState(product ? !!product.is_active : true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const codeField = useCodePreview("product", isEdit ? product.product_code : null);
@@ -224,6 +240,7 @@ function ProductModal({ product, onClose, onDone }) {
         selling_price: sellingPrice === "" ? null : Number(sellingPrice),
         low_stock_alert: lowStockAlert === "" ? 0 : Number(lowStockAlert),
         product_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
+        is_active: isEdit ? isActive : undefined,
       };
       if (isEdit) {
         await productsApi.update(product.product_id, body);
@@ -285,6 +302,13 @@ function ProductModal({ product, onClose, onDone }) {
 
         <label className="bp-field-label" htmlFor="pLowStock">Low stock alert threshold</label>
         <input id="pLowStock" type="number" min="0" step="0.01" className="bp-field-input" value={lowStockAlert} onChange={(e) => setLowStockAlert(e.target.value)} />
+
+        {isEdit && (
+          <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            Active
+          </label>
+        )}
 
         <div className="bp-form-actions">
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
