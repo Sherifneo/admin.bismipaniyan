@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
+import CodeField, { useCodePreview } from "../../components/CodeField";
 
 const LIMIT = 20;
 
@@ -143,6 +144,7 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("sales_order", null);
 
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
@@ -273,6 +275,9 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
     <Modal title="New sale" onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+
+        <label className="bp-field-label">Sale number</label>
+        <input type="text" className="bp-field-input" value={codeField.loading ? "Loading…" : codeField.preview} disabled />
 
         <label className="bp-field-label">Buyer</label>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>

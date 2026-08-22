@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
+import CodeField, { useCodePreview } from "../../components/CodeField";
 
 // Vendors sell raw materials TO Bismi — a purchasing relationship, not
 // a consignment/commission one (that's Partners & Shops). Feeds the
@@ -110,15 +111,18 @@ function VendorModal({ vendor, onClose, onDone }) {
   const [contactPhone, setContactPhone] = useState(vendor?.contact_phone || "");
   const [address, setAddress] = useState(vendor?.address || "");
   const [notes, setNotes] = useState(vendor?.notes || "");
-  const [vendorCode, setVendorCode] = useState("");
-  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("vendor", isEdit ? vendor.vendor_code : null);
 
   async function submit(e) {
     e.preventDefault();
     if (!name.trim()) {
       setError("Name is required.");
+      return;
+    }
+    if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
+      setError("Enter a vendor code.");
       return;
     }
     setSubmitting(true);
@@ -130,7 +134,7 @@ function VendorModal({ vendor, onClose, onDone }) {
         contact_phone: contactPhone || undefined,
         address: address || undefined,
         notes: notes || undefined,
-        vendor_code: needsCode ? vendorCode.trim() || undefined : undefined,
+        vendor_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
       };
       if (isEdit) {
         await vendorsApi.update(vendor.vendor_id, body);
@@ -139,11 +143,7 @@ function VendorModal({ vendor, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not save this vendor.";
-      if (/set to Manual/i.test(message)) {
-        setNeedsCode(true);
-      }
-      setError(message);
+      setError(err instanceof ApiError ? err.message : "Could not save this vendor.");
       setSubmitting(false);
     }
   }
@@ -153,12 +153,7 @@ function VendorModal({ vendor, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        {needsCode && !isEdit && (
-          <>
-            <label className="bp-field-label" htmlFor="vCode">Vendor code</label>
-            <input id="vCode" type="text" className="bp-field-input" value={vendorCode} onChange={(e) => setVendorCode(e.target.value)} autoFocus />
-          </>
-        )}
+        <CodeField label="Vendor code" field={codeField} isEdit={isEdit} />
 
         <label className="bp-field-label" htmlFor="vName">Name</label>
         <input id="vName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />

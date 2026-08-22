@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
+import CodeField, { useCodePreview } from "../../components/CodeField";
 
 // Repeat/bulk buyers only — a walk-in counter sale doesn't need a saved
 // record here at all (Sales Orders can be created with just a typed
@@ -112,15 +113,18 @@ function CustomerModal({ customer, onClose, onDone }) {
   const [phone, setPhone] = useState(customer?.phone || "");
   const [address, setAddress] = useState(customer?.address || "");
   const [gstin, setGstin] = useState(customer?.gstin || "");
-  const [customerCode, setCustomerCode] = useState("");
-  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("customer", isEdit ? customer.customer_code : null);
 
   async function submit(e) {
     e.preventDefault();
     if (!name.trim()) {
       setError("Name is required.");
+      return;
+    }
+    if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
+      setError("Enter a customer code.");
       return;
     }
     setSubmitting(true);
@@ -131,7 +135,7 @@ function CustomerModal({ customer, onClose, onDone }) {
         phone: phone || undefined,
         address: address || undefined,
         gstin: gstin || undefined,
-        customer_code: needsCode ? customerCode.trim() || undefined : undefined,
+        customer_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
       };
       if (isEdit) {
         await customersApi.update(customer.customer_id, body);
@@ -140,11 +144,7 @@ function CustomerModal({ customer, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not save this customer.";
-      if (/set to Manual/i.test(message)) {
-        setNeedsCode(true);
-      }
-      setError(message);
+      setError(err instanceof ApiError ? err.message : "Could not save this customer.");
       setSubmitting(false);
     }
   }
@@ -154,15 +154,10 @@ function CustomerModal({ customer, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        {needsCode && !isEdit && (
-          <>
-            <label className="bp-field-label" htmlFor="cCode">Customer code</label>
-            <input id="cCode" type="text" className="bp-field-input" value={customerCode} onChange={(e) => setCustomerCode(e.target.value)} autoFocus />
-          </>
-        )}
+        <CodeField label="Customer code" field={codeField} isEdit={isEdit} />
 
         <label className="bp-field-label" htmlFor="cName">Name</label>
-        <input id="cName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus={!needsCode} />
+        <input id="cName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required />
 
         <label className="bp-field-label" htmlFor="cPhone">Phone</label>
         <input id="cPhone" type="tel" className="bp-field-input" value={phone} onChange={(e) => setPhone(e.target.value)} />

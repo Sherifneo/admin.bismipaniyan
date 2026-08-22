@@ -3,6 +3,7 @@ import { machinesApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
+import CodeField, { useCodePreview } from "../../components/CodeField";
 
 // Production equipment (ovens, mixers, etc.) — attached to a production
 // run so output can be traced to the machine that made it.
@@ -107,15 +108,18 @@ function MachineModal({ machine, locations, onClose, onDone }) {
   const [kind, setKind] = useState(machine?.kind || "");
   const [locationId, setLocationId] = useState(machine?.location_id || "");
   const [isActive, setIsActive] = useState(machine ? !!machine.is_active : true);
-  const [machineCode, setMachineCode] = useState("");
-  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("machine", isEdit ? machine.machine_code : null);
 
   async function submit(e) {
     e.preventDefault();
     if (!name.trim()) {
       setError("Name is required.");
+      return;
+    }
+    if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
+      setError("Enter a machine code.");
       return;
     }
     setSubmitting(true);
@@ -126,7 +130,7 @@ function MachineModal({ machine, locations, onClose, onDone }) {
         kind: kind || undefined,
         location_id: locationId || undefined,
         is_active: isActive,
-        machine_code: needsCode ? machineCode.trim() || undefined : undefined,
+        machine_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
       };
       if (isEdit) {
         await machinesApi.update(machine.machine_id, body);
@@ -135,11 +139,7 @@ function MachineModal({ machine, locations, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not save this machine.";
-      if (/set to Manual/i.test(message)) {
-        setNeedsCode(true);
-      }
-      setError(message);
+      setError(err instanceof ApiError ? err.message : "Could not save this machine.");
       setSubmitting(false);
     }
   }
@@ -149,12 +149,7 @@ function MachineModal({ machine, locations, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        {needsCode && !isEdit && (
-          <>
-            <label className="bp-field-label" htmlFor="mCode">Machine code</label>
-            <input id="mCode" type="text" className="bp-field-input" value={machineCode} onChange={(e) => setMachineCode(e.target.value)} autoFocus />
-          </>
-        )}
+        <CodeField label="Machine code" field={codeField} isEdit={isEdit} />
 
         <label className="bp-field-label" htmlFor="mName">Name</label>
         <input id="mName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />

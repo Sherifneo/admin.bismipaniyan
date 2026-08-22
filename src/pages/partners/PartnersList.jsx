@@ -5,6 +5,7 @@ import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import StatusBadge from "../../components/StatusBadge";
+import CodeField, { useCodePreview } from "../../components/CodeField";
 import "./Partners.css";
 
 const LIMIT = 20;
@@ -147,10 +148,9 @@ function PartnerModal({ partner, onClose, onDone }) {
   const [commissionPercent, setCommissionPercent] = useState(partner ? String(partner.commission_percent) : (partner?.type === "supplying_partner" ? "20" : "15"));
   const [settlementFrequency, setSettlementFrequency] = useState(partner?.settlement_frequency || "weekly");
   const [notes, setNotes] = useState(partner?.notes || "");
-  const [partnerCode, setPartnerCode] = useState("");
-  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("partner", isEdit ? partner.partner_code : null);
 
   function changeType(newType) {
     setType(newType);
@@ -168,6 +168,10 @@ function PartnerModal({ partner, onClose, onDone }) {
       setError("Enter a valid commission percent (0-100).");
       return;
     }
+    if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
+      setError("Enter a partner code.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -179,7 +183,7 @@ function PartnerModal({ partner, onClose, onDone }) {
         commission_percent: commissionNum,
         settlement_frequency: settlementFrequency,
         notes: notes || undefined,
-        partner_code: needsCode ? partnerCode.trim() || undefined : undefined,
+        partner_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
       };
       if (isEdit) {
         await partnersApi.update(partner.partner_id, body);
@@ -188,11 +192,7 @@ function PartnerModal({ partner, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not save this partner.";
-      if (/set to Manual/i.test(message)) {
-        setNeedsCode(true);
-      }
-      setError(message);
+      setError(err instanceof ApiError ? err.message : "Could not save this partner.");
       setSubmitting(false);
     }
   }
@@ -202,12 +202,7 @@ function PartnerModal({ partner, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        {needsCode && !isEdit && (
-          <>
-            <label className="bp-field-label" htmlFor="ptCode">Partner code</label>
-            <input id="ptCode" type="text" className="bp-field-input" value={partnerCode} onChange={(e) => setPartnerCode(e.target.value)} autoFocus />
-          </>
-        )}
+        <CodeField label="Partner code" field={codeField} isEdit={isEdit} />
 
         {!isEdit && (
           <>

@@ -6,6 +6,7 @@ import ExportMenu from "../../components/ExportMenu";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
+import CodeField, { useCodePreview } from "../../components/CodeField";
 
 const LIMIT = 20;
 
@@ -157,15 +158,18 @@ function ProductModal({ product, onClose, onDone }) {
   const [costPrice, setCostPrice] = useState(product?.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(product?.selling_price ?? "");
   const [lowStockAlert, setLowStockAlert] = useState(product?.low_stock_alert ?? "0");
-  const [productCode, setProductCode] = useState("");
-  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("product", isEdit ? product.product_code : null);
 
   async function submit(e) {
     e.preventDefault();
     if (!name.trim()) {
       setError("Name is required.");
+      return;
+    }
+    if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
+      setError("Enter a product code.");
       return;
     }
     setSubmitting(true);
@@ -179,7 +183,7 @@ function ProductModal({ product, onClose, onDone }) {
         cost_price: costPrice === "" ? null : Number(costPrice),
         selling_price: sellingPrice === "" ? null : Number(sellingPrice),
         low_stock_alert: lowStockAlert === "" ? 0 : Number(lowStockAlert),
-        product_code: needsCode ? productCode.trim() || undefined : undefined,
+        product_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
       };
       if (isEdit) {
         await productsApi.update(product.product_id, body);
@@ -188,11 +192,7 @@ function ProductModal({ product, onClose, onDone }) {
       }
       onDone();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not save this product.";
-      if (/set to Manual/i.test(message)) {
-        setNeedsCode(true);
-      }
-      setError(message);
+      setError(err instanceof ApiError ? err.message : "Could not save this product.");
       setSubmitting(false);
     }
   }
@@ -202,12 +202,7 @@ function ProductModal({ product, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        {needsCode && !isEdit && (
-          <>
-            <label className="bp-field-label" htmlFor="pCode">Product code</label>
-            <input id="pCode" type="text" className="bp-field-input" value={productCode} onChange={(e) => setProductCode(e.target.value)} autoFocus />
-          </>
-        )}
+        <CodeField label="Product code" field={codeField} isEdit={isEdit} />
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>

@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
+import { useCodePreview } from "../../components/CodeField";
 
 const LIMIT = 20;
 
@@ -171,6 +172,7 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("purchase_order", null);
 
   // Discount: amount and percent side by side, entering one live-computes
   // the other for display — but only the field the user actually last
@@ -286,6 +288,9 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
     <Modal title="New purchase order" onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+
+        <label className="bp-field-label">PO number</label>
+        <input type="text" className="bp-field-input" value={codeField.loading ? "Loading…" : codeField.preview} disabled />
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>

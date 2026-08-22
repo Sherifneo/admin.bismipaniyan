@@ -142,6 +142,7 @@ export const settingsApi = {
 
 export const numberSequencesApi = {
   list: () => GET("/api/admin/number-sequences"),
+  preview: (key) => GET(`/api/admin/number-sequences/${key}/preview`),
   update: (key, body) => PUT(`/api/admin/number-sequences/${key}`, body),
   checkCollisions: (key, body) => POST(`/api/admin/number-sequences/${key}/check-collisions`, body),
   reset: (key) => POST(`/api/admin/number-sequences/${key}/reset`),
