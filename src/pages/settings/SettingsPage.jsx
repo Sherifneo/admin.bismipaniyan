@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthContext";
 import { NAV_ITEMS } from "../../layout/navConfig";
+import CompanyDetailsTab from "./CompanyDetailsTab";
 import {
   getStoredOrder,
   setStoredOrder,
@@ -10,17 +11,38 @@ import {
   sortNavItems,
 } from "../../layout/sidebarPrefs";
 
-// Settings holds sidebar customization (drag-reorder + favorites) — an
-// app-behavior preference. Change-password and theme/design personalization
-// moved to the Profile page (reached via the header avatar), since those
-// are personal-identity actions, not app-wide settings. Everything else
-// under this nav item (business settings, number sequences) isn't built
-// yet — see admin-portal/CLAUDE.md's "What's built vs. not."
+// Settings holds sidebar customization (drag-reorder + favorites) plus
+// (owner-only) Company Details — Bismi's legal/statutory identity used
+// on invoices. Change-password and theme/design personalization moved
+// to the Profile page (reached via the header avatar), since those are
+// personal-identity actions, not app-wide settings.
+const TABS = [
+  { key: "sidebar", label: "Sidebar" },
+  { key: "company", label: "Company Details" },
+];
+
 export default function SettingsPage() {
+  const { admin } = useAuth();
+  const [tab, setTab] = useState("sidebar");
+  const visibleTabs = TABS.filter((t) => t.key !== "company" || admin?.role === "owner");
+
   return (
     <div>
       <h1 className="bp-page-title">Settings</h1>
-      <SidebarCustomizer />
+      <div className="bp-tabs" style={{ marginBottom: 16 }}>
+        {visibleTabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`bp-tab${tab === t.key ? " is-active" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === "sidebar" && <SidebarCustomizer />}
+      {tab === "company" && admin?.role === "owner" && <CompanyDetailsTab />}
     </div>
   );
 }

@@ -193,6 +193,11 @@ export const numberSequencesApi = {
   sync: (key) => POST(`/api/admin/number-sequences/${key}/sync`),
 };
 
+export const companySettingsApi = {
+  get: () => GET("/api/admin/company-settings"),
+  update: (body) => PUT("/api/admin/company-settings", body),
+};
+
 export const securityApi = {
   getRoles: (adminId) => GET(`/api/admin/security/roles/${adminId}`),
   updateRoles: (adminId, body) => PUT(`/api/admin/security/roles/${adminId}`, body),
