@@ -4,6 +4,7 @@ import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useMode } from "../theme/ModeContext";
+import { useTextSize } from "../theme/TextSizeContext";
 import "./ProfilePage.css";
 
 const ROLE_LABELS = { owner: "Owner", super_user: "Super User", staff: "Staff" };
@@ -44,6 +45,7 @@ export default function ProfilePage() {
 function PersonalizationCard() {
   const { preference, setTheme } = useTheme();
   const { mode, setMode } = useMode();
+  const { size, setSize } = useTextSize();
 
   return (
     <div className="bp-card">
@@ -80,7 +82,34 @@ function PersonalizationCard() {
           />
         </div>
       </div>
+
+      <div className="bp-profile-field-group">
+        <div className="bp-profile-field-label">Text size</div>
+        <p className="bp-td-muted" style={{ marginTop: 0, marginBottom: 8 }}>
+          Scales the whole admin portal, not just text — useful on a small screen or if the default feels cramped.
+        </p>
+        <div className="bp-profile-option-row">
+          <TextSizeOption current={size} value="small" label="Small" glyphSize={13} onClick={setSize} />
+          <TextSizeOption current={size} value="normal" label="Normal" glyphSize={16} onClick={setSize} />
+          <TextSizeOption current={size} value="large" label="Large" glyphSize={20} onClick={setSize} />
+        </div>
+      </div>
     </div>
+  );
+}
+
+function TextSizeOption({ current, value, label, glyphSize, onClick }) {
+  const isActive = current === value;
+  return (
+    <button
+      type="button"
+      className={"bp-profile-theme-opt" + (isActive ? " is-active" : "")}
+      onClick={() => onClick(value)}
+      aria-pressed={isActive}
+    >
+      <span aria-hidden="true" style={{ fontSize: glyphSize, fontWeight: 700, lineHeight: 1 }}>A</span>
+      <span>{label}</span>
+    </button>
   );
 }
 

@@ -275,10 +275,16 @@
   --bp-sidebar-text-strong: #ffffff;
   --bp-sidebar-border: rgba(255, 255, 255, 0.1);
   --bp-sidebar-hover: rgba(255, 255, 255, 0.1);
-  --bp-standard-chrome-btn-bg: var(--bp-surface-alt);
-  --bp-standard-chrome-btn-border: var(--bp-border);
-  --bp-standard-chrome-text: var(--bp-text);
-  --bp-standard-chrome-text-muted: var(--bp-text-muted);
+  /* Chrome (header) is plum, NOT white like the content area in this
+     theme specifically — unlike Light/Dark where chrome and content
+     share one shade, System's header needs its own light text/button
+     colors here rather than inheriting --bp-text (dark), which read as
+     near-invisible dark-on-plum breadcrumb text — the bug the user
+     flagged with a screenshot. */
+  --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.12);
+  --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.18);
+  --bp-standard-chrome-text: #ffffff;
+  --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.7);
 
   --bp-standard-accent: #ffa51f;
   --bp-standard-accent-dark: #e8940f;
@@ -313,38 +319,35 @@
   --bp-standard-accent-text: #ffffff;
 }
 
-/* ---- Standard + Dark: Microsoft 365 Copilot's dark theme, per the
-   user's reference screenshot. Near-black, almost monochrome — sidebar,
-   header, and content share the SAME near-black fill (no visible
-   boundary between chrome and content beyond a hairline border,
-   distinct from the earlier "warm near-black" pass this replaces).
-   Selected/hover states are a subtle lighter-gray fill, not a color —
-   Copilot's own UI has essentially no accent color in this view, and
-   the user confirmed going fully neutral here rather than keeping a
-   hint of amber. */
+/* ---- Standard + Dark: Copilot-inspired, with exact colors specified by
+   the user — main content area at #242424, sidebar/header at #2e2a38 (a
+   muted purple-gray, distinct from the content again, unlike the
+   previous "sidebar and content share the exact same fill" pass this
+   replaces). Selected/hover states stay a subtle neutral fill, no
+   accent color. */
 :root[data-mode="standard"][data-theme="dark"] {
   --bp-text: #ececec;
   --bp-text-muted: #8b8b8b;
-  --bp-border: #2a2a2a;
+  --bp-border: #38343f;
 
-  --bp-bg: #0f0f0f;
+  --bp-bg: #242424;
   --bp-bg-image: none;
-  --bp-surface: #0f0f0f;
-  --bp-surface-alt: #1a1a1a;
-  --bp-glass-row-hover: #1e1e1e;
+  --bp-surface: #242424;
+  --bp-surface-alt: #2c2c2c;
+  --bp-glass-row-hover: #303030;
 
-  --bp-sidebar-tint: #0f0f0f;
+  --bp-sidebar-tint: #2e2a38;
   --bp-sidebar-text: rgba(236, 236, 236, 0.72);
   --bp-sidebar-text-strong: #ffffff;
-  --bp-sidebar-border: #2a2a2a;
-  --bp-sidebar-hover: #1e1e1e;
-  --bp-standard-chrome-btn-bg: #1a1a1a;
-  --bp-standard-chrome-btn-border: #2a2a2a;
+  --bp-sidebar-border: #3d3947;
+  --bp-sidebar-hover: #3a3644;
+  --bp-standard-chrome-btn-bg: #3a3644;
+  --bp-standard-chrome-btn-border: #3d3947;
   --bp-standard-chrome-text: #ececec;
   --bp-standard-chrome-text-muted: #8b8b8b;
 
-  --bp-standard-accent: #2e2e2e;
-  --bp-standard-accent-dark: #3a3a3a;
+  --bp-standard-accent: #4a4556;
+  --bp-standard-accent-dark: #565064;
   --bp-standard-accent-text: #ffffff;
 }
 
@@ -451,6 +454,37 @@
   color: var(--bp-standard-accent);
 }
 
+/* Bolder, clearer text throughout Standard mode per explicit user
+   request — page titles, table headers, and sidebar labels get a
+   stronger weight so the UI reads as clean and legible at a glance
+   rather than needing a squint. Glass mode is untouched (not asked
+   for), this is scoped to Standard specifically. */
+:root[data-mode="standard"] .bp-page-title,
+:root[data-mode="standard"] .bp-card-title {
+  font-weight: 700;
+}
+
+:root[data-mode="standard"] .bp-table th {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+:root[data-mode="standard"] .bp-td-strong {
+  font-weight: 700;
+}
+
+:root[data-mode="standard"] .bp-sidebar-link {
+  font-weight: 600;
+}
+
+:root[data-mode="standard"] .bp-sidebar-link.is-active {
+  font-weight: 700;
+}
+
+:root[data-mode="standard"] .bp-header-name {
+  font-weight: 700;
+}
+
 :root[data-mode="standard"] .bp-glass-orbs {
   display: none;
 }
@@ -494,6 +528,19 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+/* Text size personalization (see TextSizeContext) — zoom scales text
+   AND spacing/layout together, since this app's CSS uses fixed px sizes
+   throughout rather than rem. Applies to the whole document; "normal"
+   is unset (no zoom property at all) rather than explicitly 100%, so it
+   never overrides a user's own browser-level zoom. */
+html[data-text-size="small"] {
+  zoom: 0.9;
+}
+
+html[data-text-size="large"] {
+  zoom: 1.15;
 }
 
 body {

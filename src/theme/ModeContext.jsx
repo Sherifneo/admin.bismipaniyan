@@ -4,17 +4,17 @@ const ModeContext = createContext(null);
 const STORAGE_KEY = "bp_admin_mode";
 
 // Design mode is independent of light/dark theme (see ThemeContext) —
-// "glass" (default) is the Liquid Glass system, "standard" is a flat
-// corporate/SaaS look with no blur/translucency. Same
+// "standard" (default, per explicit user direction) is the flat
+// business-tool look, "glass" is the Liquid Glass system, opt-in. Same
 // try/catch-localStorage pattern as ThemeContext.
 function getStoredMode() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "standard") return "standard";
+    if (stored === "glass") return "glass";
   } catch {
     // localStorage unavailable — fall back to the default.
   }
-  return "glass";
+  return "standard";
 }
 
 function applyMode(mode) {
@@ -31,7 +31,7 @@ export function ModeProvider({ children }) {
   const setMode = useCallback((next) => {
     setModeState(next);
     try {
-      if (next === "glass") localStorage.removeItem(STORAGE_KEY);
+      if (next === "standard") localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // Best-effort persistence only — the in-memory state still updates.

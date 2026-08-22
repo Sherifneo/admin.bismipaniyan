@@ -19,7 +19,13 @@
         } catch (e) {}
         try {
           var mode = localStorage.getItem("bp_admin_mode");
-          document.documentElement.setAttribute("data-mode", mode === "standard" ? "standard" : "glass");
+          document.documentElement.setAttribute("data-mode", mode === "glass" ? "glass" : "standard");
+        } catch (e) {}
+        try {
+          var textSize = localStorage.getItem("bp_admin_text_size");
+          if (textSize === "large" || textSize === "small") {
+            document.documentElement.setAttribute("data-text-size", textSize);
+          }
         } catch (e) {}
       })();
     </script>
