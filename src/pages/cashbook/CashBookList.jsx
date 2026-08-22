@@ -33,6 +33,7 @@ const TABS = [
   { key: "income", label: "Income" },
   { key: "expense", label: "Expense" },
   { key: "transfer", label: "Transfer" },
+  { key: "reversals", label: "Reversals" },
   { key: "deleted", label: "Recently Deleted" },
 ];
 
@@ -54,7 +55,10 @@ export default function CashBookList() {
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [reverseTarget, setReverseTarget] = useState(null);
   const [restoring, setRestoring] = useState(null);
+  const [approving, setApproving] = useState(null);
+  const [reversals, setReversals] = useState([]);
 
   useEffect(() => {
     locationsApi.list().then(setLocations).catch(() => {});
@@ -64,16 +68,22 @@ export default function CashBookList() {
     setLoading(true);
     setError("");
     try {
-      const params = { page, limit: LIMIT, locationId };
-      if (tab === "deleted") {
-        params.includeDeleted = true;
-      } else if (tab !== "all") {
-        params.entryType = tab;
+      if (tab === "reversals") {
+        const data = await cashbookApi.listReversals({ page, limit: LIMIT });
+        setReversals(data.items || []);
+        setTotal(data.total);
+      } else {
+        const params = { page, limit: LIMIT, locationId };
+        if (tab === "deleted") {
+          params.includeDeleted = true;
+        } else if (tab !== "all") {
+          params.entryType = tab;
+        }
+        const data = await cashbookApi.list(params);
+        setEntries(data.items || []);
+        setTotal(data.total);
+        setTotals({ total_income: data.total_income, total_expense: data.total_expense, net: data.net });
       }
-      const data = await cashbookApi.list(params);
-      setEntries(data.items || []);
-      setTotal(data.total);
-      setTotals({ total_income: data.total_income, total_expense: data.total_expense, net: data.net });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load cash book entries.");
     } finally {
@@ -114,6 +124,24 @@ export default function CashBookList() {
     }
   }
 
+  async function approve(entry) {
+    setApproving(entry.entry_id);
+    try {
+      await cashbookApi.approve(entry.entry_id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not approve this entry.");
+    } finally {
+      setApproving(null);
+    }
+  }
+
+  async function onReverseConfirmed(description) {
+    await cashbookApi.reverse(reverseTarget.entry_id, { description });
+    setReverseTarget(null);
+    await load();
+  }
+
   const columns = [
     { key: "entry_date", label: "Date", accessor: (e) => e.entry_date, filter: "dateRange" },
     { key: "location_name", label: "Location", accessor: (e) => e.location_name },
@@ -124,6 +152,10 @@ export default function CashBookList() {
     { key: "category", label: "Category", accessor: (e) => e.category },
     { key: "description", label: "Description", accessor: (e) => e.description || "" },
     { key: "amount", label: "Amount", accessor: (e) => e.amount, filter: "number" },
+    {
+      key: "status", label: "Status", accessor: (e) => e.status, filter: "select",
+      options: [{ value: "draft", label: "Draft" }, { value: "approved", label: "Approved" }],
+    },
     { key: "created_by_name", label: "Created by", accessor: (e) => e.created_by_name || "", hiddenByDefault: true },
     { key: "created_at", label: "Created at", accessor: (e) => e.created_at || "", filter: "dateRange", hiddenByDefault: true },
     { key: "updated_by_name", label: "Updated by", accessor: (e) => e.updated_by_name || "", hiddenByDefault: true },
@@ -152,7 +184,7 @@ export default function CashBookList() {
         </div>
       </div>
 
-      {tab !== "deleted" && (
+      {tab !== "deleted" && tab !== "reversals" && (
         <div className="bp-cashbook-totals">
           <div className="bp-kpi-card bp-kpi-success">
             <div className="bp-kpi-label">Income (filtered)</div>
@@ -182,122 +214,199 @@ export default function CashBookList() {
         ))}
       </div>
 
-      <div className="bp-cashbook-filters">
-        <select className="bp-field-input" value={locationId} onChange={(e) => { setLocationId(e.target.value); setPage(1); }}>
-          <option value="">All locations</option>
-          {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
-        </select>
-      </div>
+      {tab !== "reversals" && (
+        <div className="bp-cashbook-filters">
+          <select className="bp-field-input" value={locationId} onChange={(e) => { setLocationId(e.target.value); setPage(1); }}>
+            <option value="">All locations</option>
+            {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+          </select>
+        </div>
+      )}
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <ColumnChooserButton table={table} columns={columns} />
-      </div>
-      <SearchByBar table={table} columns={columns} />
-
-      <div className="bp-table-wrap">
-        <table className="bp-table">
-          <thead>
-            {tab === "deleted" ? (
+      {tab === "reversals" ? (
+        <div className="bp-table-wrap">
+          <table className="bp-table">
+            <thead>
               <tr>
-                <SelectAllHeaderCell table={table} />
-                {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
-                {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
-                {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
-                {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
-                {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
-                {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
-                {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
-                {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
-                {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
-                {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
-                <th>Delete reason</th>
-                <th></th>
+                <th>Reversed on</th>
+                <th>Reversed by</th>
+                <th>Location</th>
+                <th>Original type</th>
+                <th>Original category</th>
+                <th>Original date</th>
+                <th>Amount</th>
+                <th>Note</th>
               </tr>
-            ) : (
-              <tr>
-                <SelectAllHeaderCell table={table} />
-                {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
-                {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
-                {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
-                {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
-                {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
-                {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
-                {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
-                {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
-                {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
-                {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
-                <th></th>
-              </tr>
-            )}
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={tab === "deleted" ? 13 : 12} className="bp-table-empty">Loading…</td></tr>
-            ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={tab === "deleted" ? 13 : 12} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
-            ) : (
-              table.filteredRows.map((e) => (
-                <tr key={e.entry_id}>
-                  <SelectRowCell table={table} row={e} />
-                  {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{e.entry_date}</td>}
-                  {table.isColumnVisible("location_name") && <td className="bp-td-strong">{e.location_name}</td>}
-                  {table.isColumnVisible("entry_type") && (
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
+              ) : reversals.length === 0 ? (
+                <tr><td colSpan={8} className="bp-table-empty">No reversals yet.</td></tr>
+              ) : (
+                reversals.map((r) => (
+                  <tr key={r.reversal_entry_id}>
+                    <td className="bp-td-muted">{r.reversed_at ? new Date(r.reversed_at).toLocaleString("en-IN") : "—"}</td>
+                    <td className="bp-td-muted">{r.reversed_by_name || "—"}</td>
+                    <td className="bp-td-strong">{r.location_name}</td>
                     <td>
-                      {e.entry_type === "transfer" ? (
-                        <span className="bp-badge bp-badge-neutral">
-                          {e.direction === "subtract" ? "→ Bank" : "← Bank"}
-                        </span>
-                      ) : (
-                        <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
-                          {e.entry_type === "income" ? "Income" : "Expense"}
-                        </span>
-                      )}
+                      <span className={`bp-badge ${r.entry_type === "income" ? "bp-badge-success" : r.entry_type === "expense" ? "bp-badge-danger" : "bp-badge-neutral"}`}>
+                        {r.entry_type === "income" ? "Income" : r.entry_type === "expense" ? "Expense" : "Transfer"}
+                      </span>
                     </td>
-                  )}
-                  {table.isColumnVisible("category") && <td>{e.category}</td>}
-                  {table.isColumnVisible("description") && <td className="bp-td-muted">{e.description || "—"}</td>}
-                  {table.isColumnVisible("amount") && <td className="bp-td-strong">{inr(e.amount)}</td>}
-                  {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{e.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{e.created_at ? new Date(e.created_at).toLocaleString("en-IN") : "—"}</td>}
-                  {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{e.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{e.updated_at ? new Date(e.updated_at).toLocaleString("en-IN") : "—"}</td>}
-                  {tab === "deleted" ? (
-                    <>
-                      <td className="bp-td-muted">{e.delete_reason || "—"}</td>
-                      <td className="bp-td-actions">
-                        {hasPermission("cashbook.manage", "full_control") && (
-                          <button type="button" className="bp-btn-sm" onClick={() => restore(e)} disabled={restoring === e.entry_id}>
-                            {restoring === e.entry_id ? "Restoring…" : "Restore"}
-                          </button>
-                        )}
-                      </td>
-                    </>
-                  ) : (
-                    <td className="bp-td-actions">
-                      {hasPermission("cashbook.manage", "full_control") && (
-                        <button type="button" className="bp-btn-sm" onClick={() => setDeleteTarget(e)}>Delete</button>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <td>{r.category}</td>
+                    <td className="bp-td-muted">{r.original_entry_date}</td>
+                    <td className="bp-td-strong">{inr(r.amount)}</td>
+                    <td className="bp-td-muted">{r.reversal_description || "—"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <ColumnChooserButton table={table} columns={columns} />
+          </div>
+          <SearchByBar table={table} columns={columns} />
 
-      <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
+          <div className="bp-table-wrap">
+            <table className="bp-table">
+              <thead>
+                {tab === "deleted" ? (
+                  <tr>
+                    <SelectAllHeaderCell table={table} />
+                    {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+                    {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+                    {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+                    {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+                    {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+                    {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+                    {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+                    {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+                    {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+                    {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+                    {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+                    <th>Delete reason</th>
+                    <th></th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <SelectAllHeaderCell table={table} />
+                    {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
+                    {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
+                    {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
+                    {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+                    {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
+                    {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+                    {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
+                    {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
+                    {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+                    {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+                    {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+                    <th></th>
+                  </tr>
+                )}
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={tab === "deleted" ? 14 : 13} className="bp-table-empty">Loading…</td></tr>
+                ) : table.filteredRows.length === 0 ? (
+                  <tr><td colSpan={tab === "deleted" ? 14 : 13} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
+                ) : (
+                  table.filteredRows.map((e) => (
+                    <tr key={e.entry_id}>
+                      <SelectRowCell table={table} row={e} />
+                      {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{e.entry_date}</td>}
+                      {table.isColumnVisible("location_name") && <td className="bp-td-strong">{e.location_name}</td>}
+                      {table.isColumnVisible("entry_type") && (
+                        <td>
+                          {e.entry_type === "transfer" ? (
+                            <span className="bp-badge bp-badge-neutral">
+                              {e.direction === "subtract" ? "→ Bank" : "← Bank"}
+                            </span>
+                          ) : (
+                            <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
+                              {e.entry_type === "income" ? "Income" : "Expense"}
+                            </span>
+                          )}
+                          {e.reversal_of_entry_id && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversal</span>}
+                        </td>
+                      )}
+                      {table.isColumnVisible("category") && <td>{e.category}</td>}
+                      {table.isColumnVisible("description") && <td className="bp-td-muted">{e.description || "—"}</td>}
+                      {table.isColumnVisible("amount") && <td className="bp-td-strong">{inr(e.amount)}</td>}
+                      {table.isColumnVisible("status") && (
+                        <td>
+                          <span className={`bp-badge ${e.status === "approved" ? "bp-badge-success" : "bp-badge-warning"}`}>
+                            {e.status === "approved" ? "Approved" : "Draft"}
+                          </span>
+                          {e.reversed && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversed</span>}
+                        </td>
+                      )}
+                      {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{e.created_by_name || "—"}</td>}
+                      {table.isColumnVisible("created_at") && <td className="bp-td-muted">{e.created_at ? new Date(e.created_at).toLocaleString("en-IN") : "—"}</td>}
+                      {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{e.updated_by_name || "—"}</td>}
+                      {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{e.updated_at ? new Date(e.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                      {tab === "deleted" ? (
+                        <>
+                          <td className="bp-td-muted">{e.delete_reason || "—"}</td>
+                          <td className="bp-td-actions">
+                            {hasPermission("cashbook.manage", "full_control") && (
+                              <button type="button" className="bp-btn-sm" onClick={() => restore(e)} disabled={restoring === e.entry_id}>
+                                {restoring === e.entry_id ? "Restoring…" : "Restore"}
+                              </button>
+                            )}
+                          </td>
+                        </>
+                      ) : (
+                        <td className="bp-td-actions">
+                          {e.status === "draft" && hasPermission("cashbook.manage", "edit") && (
+                            <button type="button" className="bp-btn-sm" onClick={() => approve(e)} disabled={approving === e.entry_id} title="Approve">
+                              {approving === e.entry_id ? "…" : "Approve"}
+                            </button>
+                          )}
+                          {e.status === "approved" && !e.reversed && hasPermission("cashbook.manage", "full_control") && (
+                            <button type="button" className="bp-btn-sm" onClick={() => setReverseTarget(e)} title="Reverse">↺</button>
+                          )}
+                          {hasPermission("cashbook.manage", "full_control") && (
+                            <button type="button" className="bp-btn-sm" onClick={() => setDeleteTarget(e)} title="Delete" aria-label="Delete">🗑</button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {tab !== "reversals" && <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />}
 
       {showAdd && <AddEntryModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />}
       {deleteTarget && (
         <ReasonConfirmModal
           title="Delete cash book entry"
-          message={`This permanently removes the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${deleteTarget.entry_date}.`}
+          message={`This moves the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${deleteTarget.entry_date} to Recently Deleted. If it was already approved, prefer Reverse instead so the money movement stays on record.`}
           confirmLabel="Delete"
           onClose={() => setDeleteTarget(null)}
           onConfirm={onDeleteConfirmed}
+        />
+      )}
+      {reverseTarget && (
+        <ReasonConfirmModal
+          title="Reverse cash book entry"
+          message={`This posts a new offsetting entry for the ${reverseTarget.entry_type} of ${inr(reverseTarget.amount)} for ${reverseTarget.location_name} on ${reverseTarget.entry_date}. The original stays on record, flagged as reversed — nothing is deleted or changed.`}
+          confirmLabel="Reverse"
+          reasonLabel="Reason for reversal"
+          danger={false}
+          onClose={() => setReverseTarget(null)}
+          onConfirm={onReverseConfirmed}
         />
       )}
     </div>

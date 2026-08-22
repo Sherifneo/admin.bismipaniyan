@@ -30,6 +30,9 @@ export const cashbookApi = {
   create: (body) => POST("/api/admin/cashbook", body),
   remove: (id, reason) => DEL(`/api/admin/cashbook/${id}`, { reason }),
   restore: (id) => POST(`/api/admin/cashbook/${id}/restore`),
+  approve: (id) => PUT(`/api/admin/cashbook/${id}/approve`),
+  reverse: (id, body) => POST(`/api/admin/cashbook/${id}/reverse`, body),
+  listReversals: (params = {}) => GET(`/api/admin/cashbook/reversals?${new URLSearchParams(cleanParams(params))}`),
 };
 
 export const cashbookCategoriesApi = {
@@ -37,6 +40,13 @@ export const cashbookCategoriesApi = {
   create: (body) => POST("/api/admin/cashbook-categories", body),
   update: (id, body) => PUT(`/api/admin/cashbook-categories/${id}`, body),
   remove: (id) => DEL(`/api/admin/cashbook-categories/${id}`),
+};
+
+export const positionsApi = {
+  list: (params = {}) => GET(`/api/admin/positions?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/positions", body),
+  update: (id, body) => PUT(`/api/admin/positions/${id}`, body),
+  remove: (id) => DEL(`/api/admin/positions/${id}`),
 };
 
 export const inventoryApi = {

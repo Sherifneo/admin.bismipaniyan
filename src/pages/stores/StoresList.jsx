@@ -135,7 +135,7 @@ function StoreModal({ store, onClose, onDone }) {
   const [isActive, setIsActive] = useState(store ? !!store.is_active : true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const codeField = useCodePreview("location", isEdit ? store.location_code : null);
+  const codeField = useCodePreview(kind === "factory" ? "location_factory" : "location", isEdit ? store.location_code : null);
 
   async function submit(e) {
     e.preventDefault();

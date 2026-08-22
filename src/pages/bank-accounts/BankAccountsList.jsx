@@ -478,9 +478,12 @@ function TransferTab({ accounts, onTransferred }) {
       });
       setAmount("");
       setDescription("");
-      setSuccess("Transfer recorded.");
-      await loadSummary();
-      await onTransferred();
+      // Both balance sources (company cash summary + each bank account's
+      // own derived balance) must be refetched before showing success —
+      // awaiting both closes the window where a user could switch to the
+      // Accounts tab and still see the pre-transfer number.
+      await Promise.all([loadSummary(), onTransferred()]);
+      setSuccess("Transfer recorded — balances updated.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not record this transfer.");
     } finally {
