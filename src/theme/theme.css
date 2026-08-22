@@ -219,11 +219,15 @@
    ModeContext) — default (no attribute, or data-mode="glass") is the
    Liquid Glass system defined above. */
 /* Standard mode's own palette — not a flattened version of Glass's warm
-   purple/amber wash. Cool neutral off-white background, near-black/navy
-   chrome (sidebar + header), a calmer blue accent standing in for
-   --bp-amber's role as the "selected/active" color. Loosely inspired by
-   dense enterprise dashboards (dark top chrome, clean white cards, flat
-   colorful icons) without copying any one product's exact palette. */
+   purple/amber wash. Cool neutral off-white background, a calmer blue
+   accent standing in for --bp-amber's role as the "selected/active"
+   color. Chrome (sidebar/header) follows the light/dark THEME like every
+   other surface — light theme gets light chrome, dark theme gets dark
+   chrome. (Earlier version hardcoded chrome dark regardless of theme,
+   which produced a jarring dark-navbar-over-light-content mismatch in
+   Standard + Light — fixed here by scoping the dark-chrome rules to
+   Standard + Dark specifically, with Standard + Light chrome defined
+   separately, light and matching the content area.) */
 :root[data-mode="standard"] {
   --bp-radius-sm: 4px;
   --bp-radius-md: 6px;
@@ -253,15 +257,13 @@
   --bp-glass-content-bg-alt: var(--bp-surface-alt);
   --bp-glass-row-hover: #eef1f7;
 
-  /* Chrome: dark navy/near-black, not the brand purple — the one
-     deliberate palette break from Glass mode, matching a dense
-     enterprise-dashboard convention (dark top-level chrome framing a
-     light, airy content area). */
-  --bp-sidebar-tint: #12141c;
-  --bp-sidebar-text: rgba(255, 255, 255, 0.72);
-  --bp-sidebar-text-strong: #ffffff;
-  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
-  --bp-sidebar-hover: rgba(255, 255, 255, 0.08);
+  /* Standard + Light chrome: light, matching the content area — a
+     bordered white/off-white sidebar and header, not a color inversion. */
+  --bp-sidebar-tint: #ffffff;
+  --bp-sidebar-text: #3c4043;
+  --bp-sidebar-text-strong: #202225;
+  --bp-sidebar-border: var(--bp-border);
+  --bp-sidebar-hover: #eef1f7;
 
   /* Calm blue accent standing in for amber's "active/selected" role in
      this mode — amber/purple stay for data semantics (warning badges,
@@ -271,64 +273,144 @@
 }
 
 /* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
-   mode's brand-tinted glass) — Standard mode's navy chrome needs that
-   gone, not tinted purple underneath. Header gets the same dark
-   treatment as the sidebar (rather than staying white), matching the
-   "dark top-level chrome framing a light content area" convention this
-   mode is going for — a plain white header next to a navy sidebar would
-   read as unfinished, not intentional. */
+   mode's brand-tinted glass) — Standard mode needs that gone, not tinted
+   purple underneath, in either theme. */
 :root[data-mode="standard"] .bp-sidebar {
   background: var(--bp-sidebar-tint) !important;
+  border-right: 1px solid var(--bp-sidebar-border);
 }
 
 :root[data-mode="standard"] .bp-header {
   background: var(--bp-sidebar-tint) !important;
-  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  border-bottom-color: var(--bp-sidebar-border) !important;
 }
 
-:root[data-mode="standard"] .bp-header-name,
-:root[data-mode="standard"] .bp-breadcrumb-current {
+/* ---- Standard + Dark: chrome flips to dark navy/near-black, matching
+   the dark content area, same "framing" convention as Standard + Light
+   but inverted — never applied while the theme is light. ---- */
+@media (prefers-color-scheme: dark) {
+  :root[data-mode="standard"]:not([data-theme="light"]) {
+    --bp-sidebar-tint: #0d0e12;
+    --bp-sidebar-text: rgba(255, 255, 255, 0.72);
+    --bp-sidebar-text-strong: #ffffff;
+    --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+    --bp-sidebar-hover: rgba(255, 255, 255, 0.08);
+  }
+}
+
+:root[data-mode="standard"][data-theme="dark"] {
+  --bp-sidebar-tint: #0d0e12;
+  --bp-sidebar-text: rgba(255, 255, 255, 0.72);
+  --bp-sidebar-text-strong: #ffffff;
+  --bp-sidebar-border: rgba(255, 255, 255, 0.08);
+  --bp-sidebar-hover: rgba(255, 255, 255, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-name,
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-breadcrumb-current {
+    color: #ffffff !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-role,
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-breadcrumb span:not(.bp-breadcrumb-current) {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-breadcrumb-sep {
+    color: rgba(255, 255, 255, 0.3) !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-refresh-btn,
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-theme-btn,
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-signout {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-search {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-search-input {
+    color: #ffffff !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-header-profile-link:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+  :root[data-mode="standard"]:not([data-theme="light"]) .bp-admin-badge {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+  }
+}
+
+:root[data-mode="standard"][data-theme="dark"] .bp-header-name,
+:root[data-mode="standard"][data-theme="dark"] .bp-breadcrumb-current {
   color: #ffffff !important;
 }
 
-:root[data-mode="standard"] .bp-header-role,
-:root[data-mode="standard"] .bp-breadcrumb span:not(.bp-breadcrumb-current) {
+:root[data-mode="standard"][data-theme="dark"] .bp-header-role,
+:root[data-mode="standard"][data-theme="dark"] .bp-breadcrumb span:not(.bp-breadcrumb-current) {
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
-:root[data-mode="standard"] .bp-breadcrumb-sep {
+:root[data-mode="standard"][data-theme="dark"] .bp-breadcrumb-sep {
   color: rgba(255, 255, 255, 0.3) !important;
 }
 
-:root[data-mode="standard"] .bp-header-refresh-btn,
-:root[data-mode="standard"] .bp-header-theme-btn,
-:root[data-mode="standard"] .bp-header-signout {
+:root[data-mode="standard"][data-theme="dark"] .bp-header-refresh-btn,
+:root[data-mode="standard"][data-theme="dark"] .bp-header-theme-btn,
+:root[data-mode="standard"][data-theme="dark"] .bp-header-signout {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
   color: #ffffff !important;
 }
 
-:root[data-mode="standard"] .bp-header-search {
+:root[data-mode="standard"][data-theme="dark"] .bp-header-search {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.14) !important;
 }
 
-:root[data-mode="standard"] .bp-header-search-input {
+:root[data-mode="standard"][data-theme="dark"] .bp-header-search-input {
   color: #ffffff !important;
 }
 
-:root[data-mode="standard"] .bp-header-search-input::placeholder {
+:root[data-mode="standard"][data-theme="dark"] .bp-header-search-input::placeholder {
   color: rgba(255, 255, 255, 0.5) !important;
 }
 
-:root[data-mode="standard"] .bp-header-profile-link:hover {
+:root[data-mode="standard"][data-theme="dark"] .bp-header-profile-link:hover {
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
-:root[data-mode="standard"] .bp-admin-badge {
+:root[data-mode="standard"][data-theme="dark"] .bp-admin-badge {
   background: rgba(255, 255, 255, 0.12) !important;
   color: #ffffff !important;
   border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Standard + Light chrome text/controls — bordered neutral buttons and
+   dark-on-light text, matching the rest of the light content area. This
+   is the base/default for Standard mode (applies whenever the Dark-mode
+   overrides above haven't fired) rather than being gated behind a
+   ":not(dark)" selector, which would misfire when theme="system" and
+   the OS itself is dark (no data-theme attribute is set in that case, so
+   ":not([data-theme='dark'])" would incorrectly still match). The two
+   dark-mode blocks above come later in the file and both use higher-
+   specificity [data-theme="dark"] / prefers-color-scheme selectors, so
+   they correctly win over this default when dark actually applies. */
+:root[data-mode="standard"] .bp-header-refresh-btn,
+:root[data-mode="standard"] .bp-header-theme-btn,
+:root[data-mode="standard"] .bp-header-signout {
+  background: var(--bp-surface-alt);
+  border-color: var(--bp-border);
+  color: var(--bp-text);
+}
+
+:root[data-mode="standard"] .bp-header-search {
+  background: var(--bp-surface-alt);
+  border-color: var(--bp-border);
 }
 
 :root[data-mode="standard"] .bp-sidebar-link.is-active {
