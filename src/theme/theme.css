@@ -255,12 +255,10 @@
   --bp-glass-content-bg-alt: var(--bp-surface-alt);
 }
 
-/* ---- Standard + System: the NammaHearth reference look. Solid brand
-   purple sidebar (not glass-tinted, a flat fill), white header/content,
-   amber active-nav pill — this reuses the existing brand tokens
-   (--bp-brand-dark, --bp-amber) rather than inventing a new palette,
-   since the goal is literally "look like NammaHearth's chrome", which
-   already shares this brand identity. ---- */
+/* ---- Standard + System: the NammaHearth reference look, exact colors
+   specified by the user (--nh-plum / --nh-amber / --nh-plum-dark from
+   the NammaHearth codebase, not Bismi's own --bp-brand/--bp-amber —
+   close but not identical values, kept exact rather than substituted). */
 :root[data-mode="standard"][data-theme="system"] {
   --bp-text: #211a16;
   --bp-text-muted: #6a625c;
@@ -272,7 +270,7 @@
   --bp-surface-alt: #f7f3ee;
   --bp-glass-row-hover: #f7f3ee;
 
-  --bp-sidebar-tint: #431671;
+  --bp-sidebar-tint: #4a154b;
   --bp-sidebar-text: rgba(255, 255, 255, 0.82);
   --bp-sidebar-text-strong: #ffffff;
   --bp-sidebar-border: rgba(255, 255, 255, 0.1);
@@ -282,9 +280,9 @@
   --bp-standard-chrome-text: var(--bp-text);
   --bp-standard-chrome-text-muted: var(--bp-text-muted);
 
-  --bp-standard-accent: var(--bp-amber);
-  --bp-standard-accent-dark: var(--bp-amber-dark);
-  --bp-standard-accent-text: var(--bp-brand-dark);
+  --bp-standard-accent: #ffa51f;
+  --bp-standard-accent-dark: #e8940f;
+  --bp-standard-accent-text: #370f38;
 }
 
 /* ---- Standard + Light: unchanged from the previous pass — white,
@@ -315,35 +313,39 @@
   --bp-standard-accent-text: #ffffff;
 }
 
-/* ---- Standard + Dark: warm near-black, inspired by a dark mobile-app
-   mockup reference — chrome blends into the content (same near-black
-   fill, distinguished only by a hairline border) rather than being its
-   own separate-colored block, with a warm amber accent instead of a
-   cool one. ---- */
+/* ---- Standard + Dark: Microsoft 365 Copilot's dark theme, per the
+   user's reference screenshot. Near-black, almost monochrome — sidebar,
+   header, and content share the SAME near-black fill (no visible
+   boundary between chrome and content beyond a hairline border,
+   distinct from the earlier "warm near-black" pass this replaces).
+   Selected/hover states are a subtle lighter-gray fill, not a color —
+   Copilot's own UI has essentially no accent color in this view, and
+   the user confirmed going fully neutral here rather than keeping a
+   hint of amber. */
 :root[data-mode="standard"][data-theme="dark"] {
-  --bp-text: #f2ede6;
-  --bp-text-muted: #9a938c;
-  --bp-border: #2c2925;
+  --bp-text: #ececec;
+  --bp-text-muted: #8b8b8b;
+  --bp-border: #2a2a2a;
 
-  --bp-bg: #141210;
+  --bp-bg: #0f0f0f;
   --bp-bg-image: none;
-  --bp-surface: #1c1916;
-  --bp-surface-alt: #24211d;
-  --bp-glass-row-hover: #2a2622;
+  --bp-surface: #0f0f0f;
+  --bp-surface-alt: #1a1a1a;
+  --bp-glass-row-hover: #1e1e1e;
 
-  --bp-sidebar-tint: #141210;
-  --bp-sidebar-text: rgba(242, 237, 230, 0.68);
+  --bp-sidebar-tint: #0f0f0f;
+  --bp-sidebar-text: rgba(236, 236, 236, 0.72);
   --bp-sidebar-text-strong: #ffffff;
-  --bp-sidebar-border: #2c2925;
-  --bp-sidebar-hover: #24211d;
-  --bp-standard-chrome-btn-bg: #24211d;
-  --bp-standard-chrome-btn-border: #2c2925;
-  --bp-standard-chrome-text: #f2ede6;
-  --bp-standard-chrome-text-muted: #9a938c;
+  --bp-sidebar-border: #2a2a2a;
+  --bp-sidebar-hover: #1e1e1e;
+  --bp-standard-chrome-btn-bg: #1a1a1a;
+  --bp-standard-chrome-btn-border: #2a2a2a;
+  --bp-standard-chrome-text: #ececec;
+  --bp-standard-chrome-text-muted: #8b8b8b;
 
-  --bp-standard-accent: #e8940f;
-  --bp-standard-accent-dark: #c97e0b;
-  --bp-standard-accent-text: #1c1613;
+  --bp-standard-accent: #2e2e2e;
+  --bp-standard-accent-dark: #3a3a3a;
+  --bp-standard-accent-text: #ffffff;
 }
 
 /* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
@@ -439,8 +441,13 @@
   border-bottom-color: var(--bp-standard-accent) !important;
 }
 
+/* Excludes .bp-sidebar-link — a NavLink renders as an <a>, and this
+   generic "plain inline link" color was winning over the sidebar's own
+   --bp-sidebar-text token, turning every nav label the accent color
+   (visible as all-orange nav text in Standard + Dark) instead of just
+   genuine inline text links elsewhere in the app. */
 :root[data-mode="standard"] .bp-header-refresh-btn.is-spinning,
-:root[data-mode="standard"] a {
+:root[data-mode="standard"] a:not(.bp-sidebar-link) {
   color: var(--bp-standard-accent);
 }
 
