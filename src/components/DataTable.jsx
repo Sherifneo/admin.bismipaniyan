@@ -310,16 +310,38 @@ export function ColumnHeader({ table, column }) {
     function place() {
       const r = btnRef.current?.getBoundingClientRect();
       if (!r) return;
-      setMenuPos({ top: r.bottom + 4, left: r.left });
+      // Anchor left-aligned to the button by default; if that would push
+      // the menu (min-width 190px, actual width can run wider once a
+      // date/number input renders) past the right edge, flip to
+      // right-aligned against the button's right edge instead — the
+      // classic "last column's filter renders off-screen" case. Same
+      // clamp vertically for a header near the bottom of the viewport.
+      const menuW = menuRef.current?.offsetWidth || 190;
+      const menuH = menuRef.current?.offsetHeight || 0;
+      const margin = 8;
+      let left = r.left;
+      if (left + menuW > window.innerWidth - margin) {
+        left = Math.max(margin, r.right - menuW);
+      }
+      let top = r.bottom + 4;
+      if (menuH && top + menuH > window.innerHeight - margin) {
+        top = Math.max(margin, r.top - menuH - 4);
+      }
+      setMenuPos({ top, left });
     }
     place();
+    // Placed once with estimated size, then re-measured now that the
+    // portal has actually rendered (so menuRef.current has real
+    // dimensions) — a date-input row is wider than the 190px estimate.
+    const raf = requestAnimationFrame(place);
     window.addEventListener("scroll", place, true);
     window.addEventListener("resize", place);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
     };
-  }, [open]);
+  }, [open, operator]);
 
   useEffect(() => {
     if (!open) return;
