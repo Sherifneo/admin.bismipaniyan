@@ -108,7 +108,7 @@ export default function PartnersList() {
               <tr><td colSpan={7} className="bp-table-empty">No partners found.</td></tr>
             ) : (
               partners.map((p) => (
-                <tr key={p.partner_id}>
+                <tr key={p.partner_id} onClick={() => setEditPartner(p)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-strong">{p.name}</td>
                   <td><span className={`bp-partner-type-badge bp-partner-type-${p.type}`}>{TYPE_LABELS[p.type]}</span></td>
                   <td className="bp-td-muted">{p.contact_name || "—"}{p.contact_phone ? ` · ${p.contact_phone}` : ""}</td>
@@ -116,8 +116,8 @@ export default function PartnersList() {
                   <td>{Number(p.commission_percent)}%</td>
                   <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.settlement_frequency}</td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setSettlementsFor(p)}>Settlements</button>
-                    <button type="button" className="bp-btn-sm" onClick={() => setEditPartner(p)}>Edit</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setSettlementsFor(p); }}>Settlements</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditPartner(p); }}>Edit</button>
                   </td>
                 </tr>
               ))

@@ -100,7 +100,7 @@ export default function PurchaseOrdersList() {
               <tr><td colSpan={8} className="bp-table-empty">No purchase orders found.</td></tr>
             ) : (
               orders.map((po) => (
-                <tr key={po.po_id}>
+                <tr key={po.po_id} onClick={() => setViewPo(po)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-strong">{po.po_number}</td>
                   <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>
                   <td className="bp-td-muted">{po.location_name}</td>
@@ -109,7 +109,7 @@ export default function PurchaseOrdersList() {
                   <td className="bp-td-strong">{inr(po.total)}</td>
                   <td><StatusBadge status={po.status} /></td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setViewPo(po)}>View</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setViewPo(po); }}>View</button>
                   </td>
                 </tr>
               ))

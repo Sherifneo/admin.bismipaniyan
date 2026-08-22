@@ -99,15 +99,15 @@ export default function BankAccountsList() {
                   <tr><td colSpan={6} className="bp-table-empty">No bank accounts yet.</td></tr>
                 ) : (
                   accounts.map((a) => (
-                    <tr key={a.bank_account_id}>
+                    <tr key={a.bank_account_id} onClick={() => setEditAccount(a)} style={{ cursor: "pointer" }}>
                       <td className="bp-td-strong">{a.account_name}</td>
                       <td className="bp-td-muted">{a.bank_name}</td>
                       <td className="bp-td-muted">{a.account_number_last4 ? `•••• ${a.account_number_last4}` : "—"}</td>
                       <td>{inr(a.balance)}</td>
                       <td><StatusBadge status={a.is_active ? "active" : "inactive"} /></td>
                       <td className="bp-td-actions">
-                        <button type="button" className="bp-btn-sm" onClick={() => setTxnAccount(a)}>Transactions</button>
-                        <button type="button" className="bp-btn-sm" onClick={() => setEditAccount(a)}>Edit</button>
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setTxnAccount(a); }}>Transactions</button>
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditAccount(a); }}>Edit</button>
                       </td>
                     </tr>
                   ))

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { machinesApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 
 // Production equipment (ovens, mixers, etc.) — attached to a production
 // run so output can be traced to the machine that made it.
 export default function MachinesList() {
+  const { hasPermission } = useAuth();
   const [machines, setMachines] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,14 +75,16 @@ export default function MachinesList() {
               <tr><td colSpan={5} className="bp-table-empty">No machines found.</td></tr>
             ) : (
               machines.map((m) => (
-                <tr key={m.machine_id}>
+                <tr key={m.machine_id} onClick={() => setEditMachine(m)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-strong">{m.name}</td>
                   <td className="bp-td-muted">{m.kind || "—"}</td>
                   <td className="bp-td-muted">{m.location_name || "—"}</td>
                   <td className="bp-td-muted">{m.is_active ? "Yes" : "No"}</td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setEditMachine(m)}>Edit</button>
-                    <button type="button" className="bp-btn-sm" onClick={() => remove(m)}>Remove</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditMachine(m); }}>Edit</button>
+                    {hasPermission("production.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(m); }}>Remove</button>
+                    )}
                   </td>
                 </tr>
               ))

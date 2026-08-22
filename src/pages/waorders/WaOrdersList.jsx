@@ -85,13 +85,13 @@ export default function WaOrdersList() {
               <tr><td colSpan={5} className="bp-table-empty">No WhatsApp order attempts yet.</td></tr>
             ) : (
               orders.map((o) => (
-                <tr key={o.wa_order_id}>
+                <tr key={o.wa_order_id} onClick={() => setDetailOrder(o)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-muted">{new Date(o.created_at).toLocaleString("en-IN")}</td>
                   <td className="bp-td-strong">{o.items.length} item{o.items.length === 1 ? "" : "s"}</td>
                   <td>{inr(o.subtotal)}</td>
                   <td><StatusBadge status={o.status} /></td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setDetailOrder(o)}>View</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setDetailOrder(o); }}>View</button>
                   </td>
                 </tr>
               ))

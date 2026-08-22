@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { cashbookApi, cashbookCategoriesApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
@@ -22,22 +23,35 @@ const CSV_COLUMNS = [
   { label: "Description", accessor: (e) => e.description },
 ];
 
+// Tabs own the type filter now (replaces the old dropdown). 'deleted' is
+// not an entryType value — it switches the list call to includeDeleted=true
+// instead of filtering by type.
+const TABS = [
+  { key: "all", label: "All" },
+  { key: "income", label: "Income" },
+  { key: "expense", label: "Expense" },
+  { key: "transfer", label: "Transfer" },
+  { key: "deleted", label: "Recently Deleted" },
+];
+
 // Single company-wide cash book, entries tagged by location — head office
 // enters each location's prior day's cash position manually (no POS
 // integration; this screen IS the source of truth, per the confirmed
 // "no POS, back-office ledger, next-day manual entry" requirement).
 export default function CashBookList() {
+  const { hasPermission } = useAuth();
   const [locations, setLocations] = useState([]);
   const [entries, setEntries] = useState([]);
   const [total, setTotal] = useState(0);
   const [totals, setTotals] = useState({ total_income: 0, total_expense: 0, net: 0 });
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
-  const [entryType, setEntryType] = useState("");
+  const [tab, setTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoring, setRestoring] = useState(null);
 
   useEffect(() => {
     locationsApi.list().then(setLocations).catch(() => {});
@@ -47,7 +61,13 @@ export default function CashBookList() {
     setLoading(true);
     setError("");
     try {
-      const data = await cashbookApi.list({ page, limit: LIMIT, locationId, entryType });
+      const params = { page, limit: LIMIT, locationId };
+      if (tab === "deleted") {
+        params.includeDeleted = true;
+      } else if (tab !== "all") {
+        params.entryType = tab;
+      }
+      const data = await cashbookApi.list(params);
       setEntries(data.items || []);
       setTotal(data.total);
       setTotals({ total_income: data.total_income, total_expense: data.total_expense, net: data.net });
@@ -61,7 +81,12 @@ export default function CashBookList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, locationId, entryType]);
+  }, [page, locationId, tab]);
+
+  function changeTab(key) {
+    setTab(key);
+    setPage(1);
+  }
 
   async function onSaved() {
     setShowAdd(false);
@@ -74,6 +99,18 @@ export default function CashBookList() {
     await load();
   }
 
+  async function restore(entry) {
+    setRestoring(entry.entry_id);
+    try {
+      await cashbookApi.restore(entry.entry_id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not restore this entry.");
+    } finally {
+      setRestoring(null);
+    }
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
@@ -84,31 +121,40 @@ export default function CashBookList() {
         </div>
       </div>
 
-      <div className="bp-cashbook-totals">
-        <div className="bp-kpi-card bp-kpi-success">
-          <div className="bp-kpi-label">Income (filtered)</div>
-          <div className="bp-kpi-value">{inr(totals.total_income)}</div>
+      {tab !== "deleted" && (
+        <div className="bp-cashbook-totals">
+          <div className="bp-kpi-card bp-kpi-success">
+            <div className="bp-kpi-label">Income (filtered)</div>
+            <div className="bp-kpi-value">{inr(totals.total_income)}</div>
+          </div>
+          <div className="bp-kpi-card bp-kpi-danger">
+            <div className="bp-kpi-label">Expense (filtered)</div>
+            <div className="bp-kpi-value">{inr(totals.total_expense)}</div>
+          </div>
+          <div className="bp-kpi-card">
+            <div className="bp-kpi-label">Net</div>
+            <div className="bp-kpi-value">{inr(totals.net)}</div>
+          </div>
         </div>
-        <div className="bp-kpi-card bp-kpi-danger">
-          <div className="bp-kpi-label">Expense (filtered)</div>
-          <div className="bp-kpi-value">{inr(totals.total_expense)}</div>
-        </div>
-        <div className="bp-kpi-card">
-          <div className="bp-kpi-label">Net</div>
-          <div className="bp-kpi-value">{inr(totals.net)}</div>
-        </div>
+      )}
+
+      <div className="bp-tabs" style={{ marginBottom: 14 }}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`bp-tab${tab === t.key ? " is-active" : ""}`}
+            onClick={() => changeTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       <div className="bp-cashbook-filters">
         <select className="bp-field-input" value={locationId} onChange={(e) => { setLocationId(e.target.value); setPage(1); }}>
           <option value="">All locations</option>
           {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
-        </select>
-        <select className="bp-field-input" value={entryType} onChange={(e) => { setEntryType(e.target.value); setPage(1); }}>
-          <option value="">Income &amp; expense</option>
-          <option value="income">Income only</option>
-          <option value="expense">Expense only</option>
-          <option value="transfer">Transfers only</option>
         </select>
       </div>
 
@@ -117,21 +163,34 @@ export default function CashBookList() {
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr>
-              <th>Date</th>
-              <th>Location</th>
-              <th>Type</th>
-              <th>Category</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th></th>
-            </tr>
+            {tab === "deleted" ? (
+              <tr>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Delete reason</th>
+                <th></th>
+              </tr>
+            ) : (
+              <tr>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th></th>
+              </tr>
+            )}
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={tab === "deleted" ? 8 : 7} className="bp-table-empty">Loading…</td></tr>
             ) : entries.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No cash book entries found.</td></tr>
+              <tr><td colSpan={tab === "deleted" ? 8 : 7} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
             ) : (
               entries.map((e) => (
                 <tr key={e.entry_id}>
@@ -151,9 +210,24 @@ export default function CashBookList() {
                   <td>{e.category}</td>
                   <td className="bp-td-muted">{e.description || "—"}</td>
                   <td className="bp-td-strong">{inr(e.amount)}</td>
-                  <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setDeleteTarget(e)}>Delete</button>
-                  </td>
+                  {tab === "deleted" ? (
+                    <>
+                      <td className="bp-td-muted">{e.delete_reason || "—"}</td>
+                      <td className="bp-td-actions">
+                        {hasPermission("cashbook.manage", "full_control") && (
+                          <button type="button" className="bp-btn-sm" onClick={() => restore(e)} disabled={restoring === e.entry_id}>
+                            {restoring === e.entry_id ? "Restoring…" : "Restore"}
+                          </button>
+                        )}
+                      </td>
+                    </>
+                  ) : (
+                    <td className="bp-td-actions">
+                      {hasPermission("cashbook.manage", "full_control") && (
+                        <button type="button" className="bp-btn-sm" onClick={() => setDeleteTarget(e)}>Delete</button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -306,6 +380,7 @@ function AddEntryModal({ locations, onClose, onDone }) {
 // add-category form. Renders on top of AddEntryModal so the category
 // picker there refreshes the moment something changes here.
 function CategoriesModal({ onClose, onChanged }) {
+  const { hasPermission } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -425,7 +500,9 @@ function CategoriesModal({ onClose, onChanged }) {
                     ) : (
                       <>
                         <button type="button" className="bp-btn-sm" onClick={() => startEdit(c)} disabled={busy}>Rename</button>
-                        <button type="button" className="bp-btn-sm" onClick={() => remove(c)} disabled={busy}>Delete</button>
+                        {hasPermission("cashbook.manage", "full_control") && (
+                          <button type="button" className="bp-btn-sm" onClick={() => remove(c)} disabled={busy}>Delete</button>
+                        )}
                       </>
                     )}
                   </td>

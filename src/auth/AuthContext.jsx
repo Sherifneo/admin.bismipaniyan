@@ -4,10 +4,11 @@ import { getToken, setToken, AUTH_EVENT } from "../api/client";
 
 const AuthContext = createContext(null);
 
-// Read/Write/Delete permission levels — fully nested (delete implies edit
-// implies view). Keep this in sync with the backend's permission ranking
-// once one exists.
-const ACTION_RANK = { view: 1, edit: 2, delete: 3 };
+// View/Edit/Full control permission levels — fully nested (full_control
+// implies edit implies view). 'edit' grants create+edit but NOT delete —
+// only 'full_control' does. Keep in sync with the backend's
+// require-admin.js ACTION_RANK.
+const ACTION_RANK = { view: 1, edit: 2, full_control: 3 };
 
 // Three states while booting: "loading" (checking a stored token),
 // "authed" (confirmed valid session), "guest" (no token / token rejected).

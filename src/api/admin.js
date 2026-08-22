@@ -26,6 +26,7 @@ export const cashbookApi = {
   list: (params = {}) => GET(`/api/admin/cashbook?${new URLSearchParams(cleanParams(params))}`),
   create: (body) => POST("/api/admin/cashbook", body),
   remove: (id, reason) => DEL(`/api/admin/cashbook/${id}`, { reason }),
+  restore: (id) => POST(`/api/admin/cashbook/${id}/restore`),
 };
 
 export const cashbookCategoriesApi = {

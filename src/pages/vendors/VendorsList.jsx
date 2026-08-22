@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { vendorsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import SearchBox from "../../components/SearchBox";
 
@@ -8,6 +9,7 @@ import SearchBox from "../../components/SearchBox";
 // a consignment/commission one (that's Partners & Shops). Feeds the
 // vendor dropdown on Purchase Orders.
 export default function VendorsList() {
+  const { hasPermission } = useAuth();
   const [vendors, setVendors] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -77,14 +79,16 @@ export default function VendorsList() {
               <tr><td colSpan={5} className="bp-table-empty">No vendors found.</td></tr>
             ) : (
               vendors.map((v) => (
-                <tr key={v.vendor_id}>
+                <tr key={v.vendor_id} onClick={() => setEditVendor(v)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-muted">{v.vendor_code || "—"}</td>
                   <td className="bp-td-strong">{v.name}</td>
                   <td className="bp-td-muted">{v.contact_name || "—"}{v.contact_phone ? ` · ${v.contact_phone}` : ""}</td>
                   <td className="bp-td-muted">{v.address || "—"}</td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setEditVendor(v)}>Edit</button>
-                    <button type="button" className="bp-btn-sm" onClick={() => remove(v)}>Remove</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditVendor(v); }}>Edit</button>
+                    {hasPermission("purchasing.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(v); }}>Remove</button>
+                    )}
                   </td>
                 </tr>
               ))

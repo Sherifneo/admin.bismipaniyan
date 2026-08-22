@@ -115,6 +115,17 @@
   flex: none;
 }
 
+.bp-sidebar-star {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--bp-amber);
+  flex: none;
+}
+
+.bp-sidebar-link.is-active .bp-sidebar-star {
+  color: var(--bp-brand-dark);
+}
+
 /* Below the shared mobile breakpoint (see theme.css), the sidebar becomes
    an off-canvas drawer: fixed position, translated fully off-screen by
    default, slid in via .is-open. A tap-outside overlay closes it. */

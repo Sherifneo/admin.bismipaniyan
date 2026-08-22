@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
@@ -26,6 +27,7 @@ const CSV_COLUMNS = [
 // materials bought from vendors), and the website's catalog is hand-
 // maintained separately, not fetched from here.
 export default function ProductsList() {
+  const { hasPermission } = useAuth();
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -115,7 +117,7 @@ export default function ProductsList() {
               <tr><td colSpan={8} className="bp-table-empty">No products found.</td></tr>
             ) : (
               products.map((p) => (
-                <tr key={p.product_id}>
+                <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-muted">{p.sku || "—"}</td>
                   <td className="bp-td-strong">{p.name}</td>
                   <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.item_kind.replace("_", " ")}</td>
@@ -124,8 +126,10 @@ export default function ProductsList() {
                   <td>{inr(p.selling_price)}</td>
                   <td className="bp-td-muted">{p.low_stock_alert}</td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setEditProduct(p)}>Edit</button>
-                    <button type="button" className="bp-btn-sm" onClick={() => remove(p)}>Remove</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditProduct(p); }}>Edit</button>
+                    {hasPermission("products.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Remove</button>
+                    )}
                   </td>
                 </tr>
               ))

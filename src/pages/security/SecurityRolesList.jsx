@@ -45,6 +45,9 @@ export default function SecurityRolesList() {
       <h1 className="bp-page-title">Security Roles</h1>
       <p className="bp-td-muted" style={{ margin: "-6px 0 14px" }}>
         Grant per-module permissions to staff and super users. Owners always have full access.
+        <br />
+        <strong>View</strong> — see the module only. <strong>Edit</strong> — create and edit records, cannot delete anything.{" "}
+        <strong>Full control</strong> — create, edit, and delete.
       </p>
 
       {error && <div className="bp-inline-error">{error}</div>}
@@ -151,7 +154,7 @@ function PermissionsPanel({ adminId }) {
                   <option value="none">None</option>
                   <option value="view">View</option>
                   <option value="edit">Edit</option>
-                  <option value="delete">Delete</option>
+                  <option value="full_control">Full control</option>
                 </select>
               </td>
             </tr>

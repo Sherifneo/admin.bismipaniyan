@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { costParametersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 
 // Reference numbers used in production costing (e.g. flour cost per kg,
 // electricity per unit) — not historical records, so edits/deletes are
 // hard, not soft-deleted like most other reference data.
 export default function CostParametersList() {
+  const { hasPermission } = useAuth();
   const [params, setParams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -72,14 +74,16 @@ export default function CostParametersList() {
               <tr><td colSpan={5} className="bp-table-empty">No cost parameters found.</td></tr>
             ) : (
               params.map((p) => (
-                <tr key={p.param_id}>
+                <tr key={p.param_id} onClick={() => setEditParam(p)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-strong">{p.name}</td>
                   <td>{p.value}</td>
                   <td className="bp-td-muted">{p.unit || "—"}</td>
                   <td className="bp-td-muted">{p.notes || "—"}</td>
                   <td className="bp-td-actions">
-                    <button type="button" className="bp-btn-sm" onClick={() => setEditParam(p)}>Edit</button>
-                    <button type="button" className="bp-btn-sm" onClick={() => remove(p)}>Remove</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditParam(p); }}>Edit</button>
+                    {hasPermission("production.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Remove</button>
+                    )}
                   </td>
                 </tr>
               ))
