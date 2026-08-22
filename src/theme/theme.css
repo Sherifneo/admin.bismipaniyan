@@ -493,50 +493,6 @@
   backdrop-filter: blur(3px) !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root[data-mode="standard"]:not([data-theme="light"]) {
-    --bp-text: #e8e9ec;
-    --bp-text-muted: #9096a0;
-    --bp-border: #33363d;
-
-    --bp-bg: #16171b;
-    --bp-surface: #1e2025;
-    --bp-surface-alt: #26282e;
-
-    --bp-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --bp-glass-shadow-lg: 0 4px 18px rgba(0, 0, 0, 0.5);
-    --bp-glass-row-hover: #23262d;
-
-    --bp-sidebar-tint: #0d0e12;
-    --bp-sidebar-text: rgba(255, 255, 255, 0.68);
-    --bp-sidebar-hover: rgba(255, 255, 255, 0.06);
-
-    --bp-standard-accent: #5b8dfd;
-    --bp-standard-accent-dark: #3f6fe0;
-  }
-}
-
-:root[data-mode="standard"][data-theme="dark"] {
-  --bp-text: #e8e9ec;
-  --bp-text-muted: #9096a0;
-  --bp-border: #33363d;
-
-  --bp-bg: #16171b;
-  --bp-surface: #1e2025;
-  --bp-surface-alt: #26282e;
-
-  --bp-glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --bp-glass-shadow-lg: 0 4px 18px rgba(0, 0, 0, 0.5);
-  --bp-glass-row-hover: #23262d;
-
-  --bp-sidebar-tint: #0d0e12;
-  --bp-sidebar-text: rgba(255, 255, 255, 0.68);
-  --bp-sidebar-hover: rgba(255, 255, 255, 0.06);
-
-  --bp-standard-accent: #5b8dfd;
-  --bp-standard-accent-dark: #3f6fe0;
-}
-
 /* Shared mobile breakpoint — below this width the sidebar becomes a
    slide-in drawer and pages should collapse to a single column. Keep
    every "@media (max-width: 860px)" in this repo in sync with this
