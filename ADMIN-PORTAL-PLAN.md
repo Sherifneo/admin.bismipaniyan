@@ -1,5 +1,7 @@
 # Bismipaniyan Admin Portal — Plan
 
+> **Historical planning document, frozen at the pre-build stage.** Written before any module had a live backend — see "What's built so far (shell only, no live backend)" below. It is not kept current as a build-status tracker; almost everything it lists as future work is now built. For actual current build status, see `CLAUDE.md`'s "What's built vs. not" section.
+
 **Type:** Internal back-office tool. No customer-facing e-commerce features (no Orders/Carts/Payments/Returns/Customers modules — those are nammahearth-specific and don't apply here).
 **Stack:** React 19 + Vite + react-router-dom + recharts (same stack/architecture as nh-adminportal).
 **Repo path:** `admin-portal/`

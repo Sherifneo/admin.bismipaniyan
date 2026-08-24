@@ -31,9 +31,9 @@ This is a Vite SPA — `npm run build` produces static files in `dist/`. Hosting
 
 ## What's built vs. not
 
-Built: Login, Dashboard, Cash Book, Inventory, WhatsApp Orders, Partners & Shops.
+Built: Login, Dashboard, Cash Book (Cash Book / Ledger Transaction / Reversals / Recently Deleted / Categories tabs), Inventory, WhatsApp Orders, Partners & Shops, Products, Vendors, Purchase Orders, Production, Machines, Cost Parameters, Reports, Settings, Team, Security Roles, Number Sequences, System Errors, and the financial-accounts subsystem — Cash & Bank (`bank-accounts` route/nav key, page at `src/pages/bank-accounts/`, renamed from "Bank Accounts"), Bank Transactions (`src/pages/bank-transactions/`, a filterable list across every account), and Financial Control (accounts overview, Financial Dimensions, per-account Reconciliation).
 
-Not built: Bank Accounts, Products (CRUD UI — products currently only exist via the backend's seed script), Vendors, Purchase Orders, Production, Machines, Cost Parameters, Reports, Financial Control, Settings, Team, Security Roles, Number Sequences, System Errors. See `ADMIN-PORTAL-PLAN.md` for the full build order.
+Not built: a change-password screen. See `ADMIN-PORTAL-PLAN.md` for the original module list and build order (a pre-build plan, not kept current as a build tracker — treat its "not built" markers with caution).
 
 ## Conventions to follow
 
