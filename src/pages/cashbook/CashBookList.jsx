@@ -22,18 +22,20 @@ const CSV_COLUMNS = [
   { label: "Financial Account", accessor: (e) => e.financial_account_name },
   { label: "Type", accessor: (e) => e.entry_type },
   { label: "Category", accessor: (e) => e.category },
+  { label: "Source", accessor: (e) => e.source },
   { label: "Amount", accessor: (e) => e.amount },
   { label: "Description", accessor: (e) => e.description },
 ];
 
-// Tabs own the type filter now (replaces the old dropdown). 'deleted' is
-// not an entryType value — it switches the list call to includeDeleted=true
-// instead of filtering by type.
+// Cash Book (this tab) shows manual entries only (source='manual') — no
+// automatic sales/purchase/salary/settlement/transfer postings, per the
+// owner's confirmed requirement. Ledger Transaction shows everything
+// (manual + automatic), with its own income/expense/type/period filters
+// — the "All" view this screen used to be. 'deleted' isn't a source/
+// entryType value — it switches the list call to includeDeleted=true.
 const TABS = [
-  { key: "all", label: "All" },
-  { key: "income", label: "Income" },
-  { key: "expense", label: "Expense" },
-  { key: "transfer", label: "Transfer" },
+  { key: "cashbook", label: "Cash Book" },
+  { key: "ledger", label: "Ledger Transaction" },
   { key: "reversals", label: "Reversals" },
   { key: "deleted", label: "Recently Deleted" },
   { key: "categories", label: "Categories" },
@@ -52,7 +54,9 @@ export default function CashBookList() {
   const [totals, setTotals] = useState({ total_income: 0, total_expense: 0, net: 0 });
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
-  const [tab, setTab] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [ledgerEntryType, setLedgerEntryType] = useState("");
+  const [tab, setTab] = useState("cashbook");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -79,8 +83,11 @@ export default function CashBookList() {
         const params = { page, limit: LIMIT, locationId };
         if (tab === "deleted") {
           params.includeDeleted = true;
-        } else if (tab !== "all") {
-          params.entryType = tab;
+        } else if (tab === "cashbook") {
+          params.source = "manual";
+          if (statusFilter) params.status = statusFilter;
+        } else if (tab === "ledger") {
+          if (ledgerEntryType) params.entryType = ledgerEntryType;
         }
         const data = await cashbookApi.list(params);
         setEntries(data.items || []);
@@ -97,7 +104,7 @@ export default function CashBookList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, locationId, tab]);
+  }, [page, locationId, tab, statusFilter, ledgerEntryType]);
 
   function changeTab(key) {
     setTab(key);
@@ -154,6 +161,11 @@ export default function CashBookList() {
       options: [{ value: "income", label: "Income" }, { value: "expense", label: "Expense" }, { value: "transfer", label: "Transfer" }],
     },
     { key: "category", label: "Category", accessor: (e) => e.category },
+    {
+      key: "source", label: "Source", accessor: (e) => e.source, filter: "select",
+      options: [{ value: "manual", label: "Manual" }, { value: "system", label: "Automatic" }],
+      hiddenByDefault: tab === "cashbook",
+    },
     { key: "description", label: "Description", accessor: (e) => e.description || "" },
     { key: "amount", label: "Amount", accessor: (e) => e.amount, filter: "number" },
     {
@@ -184,7 +196,9 @@ export default function CashBookList() {
             </button>
           )}
           <ExportMenu filename="cashbook" rows={entries} columns={CSV_COLUMNS} />
-          <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add entry</button>
+          {(tab === "cashbook" || tab === "ledger") && (
+            <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add entry</button>
+          )}
         </div>
       </div>
 
@@ -224,6 +238,21 @@ export default function CashBookList() {
             <option value="">All locations</option>
             {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
           </select>
+          {tab === "cashbook" && (
+            <select className="bp-field-input" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
+              <option value="">Approved &amp; Draft</option>
+              <option value="approved">Approved</option>
+              <option value="draft">Draft</option>
+            </select>
+          )}
+          {tab === "ledger" && (
+            <select className="bp-field-input" value={ledgerEntryType} onChange={(e) => { setLedgerEntryType(e.target.value); setPage(1); }}>
+              <option value="">All types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          )}
         </div>
       )}
 
@@ -299,9 +328,9 @@ export default function CashBookList() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={tab === "deleted" ? 15 : 14} className="bp-table-empty">Loading…</td></tr>
+                  <tr><td colSpan={tab === "deleted" ? 16 : 15} className="bp-table-empty">Loading…</td></tr>
                 ) : table.filteredRows.length === 0 ? (
-                  <tr><td colSpan={tab === "deleted" ? 15 : 14} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : "No cash book entries found."}</td></tr>
+                  <tr><td colSpan={tab === "deleted" ? 16 : 15} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : tab === "cashbook" ? "No manual cash book entries found." : "No ledger transactions found."}</td></tr>
                 ) : (
                   table.filteredRows.map((e) => (
                     <tr key={e.entry_id}>
@@ -324,6 +353,7 @@ export default function CashBookList() {
                         </td>
                       )}
                       {table.isColumnVisible("category") && <td>{e.category}</td>}
+                      {table.isColumnVisible("source") && <td className="bp-td-muted">{e.source === "manual" ? "Manual" : "Automatic"}</td>}
                       {table.isColumnVisible("description") && <td className="bp-td-muted">{e.description || "—"}</td>}
                       {table.isColumnVisible("amount") && <td className="bp-td-strong">{inr(e.amount)}</td>}
                       {table.isColumnVisible("status") && (

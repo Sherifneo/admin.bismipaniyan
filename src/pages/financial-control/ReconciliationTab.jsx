@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { financialReconciliationApi } from "../../api/admin";
+import { financialReconciliationApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import StatusBadge from "../../components/StatusBadge";
@@ -12,19 +12,22 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Calculate -> Review -> Reconcile -> Approve. A batch never creates a
+// Calculate -> Review -> Reconcile -> Approve, one Financial Account at a
+// time — matches how a real cash-drawer count or bank statement
+// reconciliation actually works (Petty Cash reconciled separately from
+// HDFC, separately from any other account). A batch never creates a
 // financial transaction of its own — Calculate is a pure preview read
-// over cashbook_entries/bank_transactions, and Reconcile/Approve only
-// flip the batch's own status. The company's live cash/bank balance is
-// completely unaffected by this workflow; it was already correct the
-// moment each underlying transaction was individually approved in Cash
-// Book (see cashbook.js's Draft/Approve/Reverse) or written by a sale/
-// purchase/salary/transfer/settlement.
+// over cashbook_entries/bank_transactions for that one account, and
+// Reconcile/Approve only flip the batch's own status. The account's live
+// balance is completely unaffected by this workflow; it was already
+// correct the moment each underlying transaction was individually
+// approved (see cashbook.js's / bank-accounts.js's Draft/Approve/Reverse).
 export default function ReconciliationTab() {
   const { hasPermission } = useAuth();
   const [from, setFrom] = useState(todayStr());
   const [to, setTo] = useState(todayStr());
-  const [accountType, setAccountType] = useState("all");
+  const [financialAccounts, setFinancialAccounts] = useState([]);
+  const [financialAccountId, setFinancialAccountId] = useState("");
   const [summary, setSummary] = useState(null);
   const [calculating, setCalculating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,11 @@ export default function ReconciliationTab() {
 
   useEffect(() => {
     loadRecent();
+    financialAccountsApi.list().then((data) => {
+      const items = data.items || [];
+      setFinancialAccounts(items);
+      setFinancialAccountId((prev) => prev || items[0]?.financial_account_id || "");
+    }).catch(() => {});
   }, []);
 
   async function calculate() {
@@ -54,11 +62,15 @@ export default function ReconciliationTab() {
       setError("From date must be on or before the to date.");
       return;
     }
+    if (!financialAccountId) {
+      setError("Select a financial account.");
+      return;
+    }
     setCalculating(true);
     setError("");
     setBatch(null);
     try {
-      const data = await financialReconciliationApi.calculate({ from, to, account_type: accountType });
+      const data = await financialReconciliationApi.calculate({ from, to, financial_account_id: financialAccountId });
       setSummary(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not calculate this period.");
@@ -75,7 +87,7 @@ export default function ReconciliationTab() {
       const created = await financialReconciliationApi.create({
         from,
         to,
-        account_type: accountType,
+        financial_account_id: financialAccountId,
         opening_balance: summary.opening_balance,
         total_in: summary.total_in,
         total_out: summary.total_out,
@@ -128,7 +140,7 @@ export default function ReconciliationTab() {
       setBatch(full);
       setFrom(full.from_date);
       setTo(full.to_date);
-      setAccountType(full.account_type);
+      setFinancialAccountId(full.financial_account_id || "");
       setSummary({
         opening_balance: full.opening_balance,
         total_in: full.total_in,
@@ -155,11 +167,10 @@ export default function ReconciliationTab() {
           <input id="rcTo" type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => { setTo(e.target.value); setBatch(null); setSummary(null); }} />
         </div>
         <div>
-          <label className="bp-field-label" htmlFor="rcType">Account</label>
-          <select id="rcType" className="bp-field-input" style={{ width: "auto" }} value={accountType} onChange={(e) => { setAccountType(e.target.value); setBatch(null); setSummary(null); }}>
-            <option value="all">All</option>
-            <option value="cash">Cash</option>
-            <option value="bank">Bank</option>
+          <label className="bp-field-label" htmlFor="rcType">Financial account</label>
+          <select id="rcType" className="bp-field-input" style={{ width: "auto" }} value={financialAccountId} onChange={(e) => { setFinancialAccountId(e.target.value); setBatch(null); setSummary(null); }}>
+            {financialAccounts.length === 0 && <option value="">Loading…</option>}
+            {financialAccounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
           </select>
         </div>
         <button type="button" className="bp-btn-primary" onClick={calculate} disabled={calculating}>
@@ -274,7 +285,7 @@ export default function ReconciliationTab() {
                 <tr key={b.batch_id} onClick={() => openBatch(b)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-muted">{b.batch_code || "—"}</td>
                   <td className="bp-td-strong">{b.from_date} to {b.to_date}</td>
-                  <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{b.account_type}</td>
+                  <td className="bp-td-muted">{b.financial_account_name || "—"}</td>
                   <td>{inr(b.calculated_balance)}</td>
                   <td><StatusBadge status={b.status} /></td>
                   <td className="bp-td-actions">

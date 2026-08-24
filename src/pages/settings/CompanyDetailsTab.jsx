@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { companySettingsApi } from "../../api/admin";
+import { companySettingsApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 
 // Owner-only. Legal/statutory identity for Bismi Bakery — feeds the
@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 // plain form (load → edit → save), not a list.
 export default function CompanyDetailsTab() {
   const [form, setForm] = useState(null);
+  const [financialAccounts, setFinancialAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -17,8 +18,9 @@ export default function CompanyDetailsTab() {
     (async () => {
       setLoading(true);
       try {
-        const data = await companySettingsApi.get();
+        const [data, accountsData] = await Promise.all([companySettingsApi.get(), financialAccountsApi.list()]);
         setForm(data || {});
+        setFinancialAccounts(accountsData.items || []);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Could not load company details.");
       } finally {
@@ -141,6 +143,24 @@ export default function CompanyDetailsTab() {
             <input id="stateCode" className="bp-field-input" value={form.state_code || ""} onChange={set("state_code")} />
           </div>
         </div>
+
+        <FieldSectionLabel>Finance</FieldSectionLabel>
+        <label className="bp-field-label" htmlFor="defaultFinancialAccount">Default financial account</label>
+        <select
+          id="defaultFinancialAccount"
+          className="bp-field-input"
+          value={form.default_financial_account_id || ""}
+          onChange={set("default_financial_account_id")}
+        >
+          <option value="">— Not set —</option>
+          {financialAccounts.map((a) => (
+            <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>
+          ))}
+        </select>
+        <p className="bp-td-muted" style={{ margin: "-6px 0 12px", fontSize: 12 }}>
+          Sales, purchase payments, salary, and partner settlements post here automatically unless a different
+          account is chosen for that transaction.
+        </p>
 
         <div className="bp-form-actions">
           <button type="submit" className="bp-btn-primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>

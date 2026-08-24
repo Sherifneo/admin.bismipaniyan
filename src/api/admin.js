@@ -124,6 +124,10 @@ export const financialAccountsApi = {
   balances: () => GET("/api/admin/financial-accounts/balances"),
 };
 
+export const bankTransactionsApi = {
+  list: (params = {}) => GET(`/api/admin/bank-transactions?${new URLSearchParams(cleanParams(params))}`),
+};
+
 export const financialDimensionsApi = {
   list: (params = {}) => GET(`/api/admin/financial-dimensions?${new URLSearchParams(cleanParams(params))}`),
   create: (body) => POST("/api/admin/financial-dimensions", body),
@@ -132,7 +136,6 @@ export const financialDimensionsApi = {
 };
 
 export const financialReconciliationApi = {
-  listTransactions: (params = {}) => GET(`/api/admin/financial-reconciliation/transactions?${new URLSearchParams(cleanParams(params))}`),
   calculate: (body) => POST("/api/admin/financial-reconciliation/calculate", body),
   create: (body) => POST("/api/admin/financial-reconciliation", body),
   reconcile: (id) => PUT(`/api/admin/financial-reconciliation/${id}/reconcile`),

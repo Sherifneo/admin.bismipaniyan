@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { bankAccountsApi, financialControlApi, locationsApi } from "../../api/admin";
+import { bankAccountsApi, financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
@@ -20,11 +20,12 @@ const TABS = [
   { key: "transfer", label: "Transfer" },
 ];
 
-// Bank Accounts + the Cash <-> Bank transfer tool live together here — a
-// transfer writes one cashbook_entries row and one bank_transactions row
-// in a single backend transaction (see backend/src/routes/financial-control.js).
-// Financial Control (navConfig's separate "financialcontrol" item) is now
-// just a slim cash+bank overview that points here for the actual transfer
+// Cash & Bank (every Financial Account — Petty Cash and every named bank
+// account) + the transfer tool live together here — a transfer writes
+// one bank_transactions row on each side, in a single backend
+// transaction (see backend/src/routes/financial-control.js). Financial
+// Control (navConfig's separate "financialcontrol" item) is now just a
+// slim company-wide overview that points here for the actual transfer
 // form, same tab-switch pattern as ReportsPage.jsx.
 export default function BankAccountsList() {
   const urlSearch = useUrlSearch();
@@ -60,9 +61,12 @@ export default function BankAccountsList() {
   }
 
   const columns = [
-    { key: "account_name", label: "Account name", accessor: (a) => a.account_name },
+    { key: "account_name", label: "Bank ID", accessor: (a) => a.account_name },
     { key: "bank_name", label: "Bank", accessor: (a) => a.bank_name },
     { key: "account_number_last4", label: "Account #", accessor: (a) => a.account_number_last4 ? `•••• ${a.account_number_last4}` : "" },
+    { key: "ifsc", label: "IFSC", accessor: (a) => a.ifsc || "", hiddenByDefault: true },
+    { key: "iban", label: "IBAN", accessor: (a) => a.iban || "", hiddenByDefault: true },
+    { key: "currency", label: "Currency", accessor: (a) => a.currency || "INR", hiddenByDefault: true },
     { key: "balance", label: "Balance", accessor: (a) => a.balance, filter: "number" },
     {
       key: "is_active", label: "Status", accessor: (a) => (a.is_active ? "active" : "inactive"), filter: "select",
@@ -83,7 +87,7 @@ export default function BankAccountsList() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-        <h1 className="bp-page-title">Bank Accounts</h1>
+        <h1 className="bp-page-title">Cash & Bank</h1>
         {tab === "accounts" && (
           <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add account</button>
         )}
@@ -117,23 +121,15 @@ export default function BankAccountsList() {
               <thead>
                 <tr>
                   <SelectAllHeaderCell table={table} />
-                  {table.isColumnVisible(columns[0].key) && <ColumnHeader table={table} column={columns[0]} />}
-                  {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
-                  {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
-                  {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
-                  {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
-                  {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
-                  {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
-                  {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
-                  {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
+                  {columns.map((c) => table.isColumnVisible(c.key) && <ColumnHeader key={c.key} table={table} column={c} />)}
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="bp-table-empty">Loading…</td></tr>
+                  <tr><td colSpan={columns.length + 2} className="bp-table-empty">Loading…</td></tr>
                 ) : table.filteredRows.length === 0 ? (
-                  <tr><td colSpan={11} className="bp-table-empty">No bank accounts yet.</td></tr>
+                  <tr><td colSpan={columns.length + 2} className="bp-table-empty">No bank accounts yet.</td></tr>
                 ) : (
                   table.filteredRows.map((a) => (
                     <tr key={a.bank_account_id} onClick={() => setEditAccount(a)} style={{ cursor: "pointer" }}>
@@ -141,6 +137,9 @@ export default function BankAccountsList() {
                       {table.isColumnVisible("account_name") && <td className="bp-td-strong">{a.account_name}</td>}
                       {table.isColumnVisible("bank_name") && <td className="bp-td-muted">{a.bank_name}</td>}
                       {table.isColumnVisible("account_number_last4") && <td className="bp-td-muted">{a.account_number_last4 ? `•••• ${a.account_number_last4}` : "—"}</td>}
+                      {table.isColumnVisible("ifsc") && <td className="bp-td-muted">{a.ifsc || "—"}</td>}
+                      {table.isColumnVisible("iban") && <td className="bp-td-muted">{a.iban || "—"}</td>}
+                      {table.isColumnVisible("currency") && <td className="bp-td-muted">{a.currency || "INR"}</td>}
                       {table.isColumnVisible("balance") && <td>{inr(a.balance)}</td>}
                       {table.isColumnVisible("is_active") && <td><StatusBadge status={a.is_active ? "active" : "inactive"} /></td>}
                       {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{a.created_by_name || "—"}</td>}
@@ -159,7 +158,7 @@ export default function BankAccountsList() {
           </div>
         </>
       ) : (
-        <TransferTab accounts={accounts} onTransferred={load} />
+        <TransferTab onTransferred={load} />
       )}
 
       {showAdd && <AccountModal onClose={() => setShowAdd(false)} onDone={onSaved} />}
@@ -173,7 +172,10 @@ function AccountModal({ account, onClose, onDone }) {
   const isEdit = !!account;
   const [accountName, setAccountName] = useState(account?.account_name || "");
   const [bankName, setBankName] = useState(account?.bank_name || "");
-  const [last4, setLast4] = useState(account?.account_number_last4 || "");
+  const [accountNumber, setAccountNumber] = useState(account?.account_number || "");
+  const [ifsc, setIfsc] = useState(account?.ifsc || "");
+  const [iban, setIban] = useState(account?.iban || "");
+  const [currency, setCurrency] = useState(account?.currency || "INR");
   const [openingBalance, setOpeningBalance] = useState(account ? String(account.opening_balance) : "0");
   const [isActive, setIsActive] = useState(account ? !!account.is_active : true);
   const [error, setError] = useState("");
@@ -182,7 +184,7 @@ function AccountModal({ account, onClose, onDone }) {
   async function submit(e) {
     e.preventDefault();
     if (!accountName.trim() || !bankName.trim()) {
-      setError("Account name and bank name are required.");
+      setError("Bank ID and bank name are required.");
       return;
     }
     const openingNum = Number(openingBalance);
@@ -196,7 +198,10 @@ function AccountModal({ account, onClose, onDone }) {
       const body = {
         account_name: accountName.trim(),
         bank_name: bankName.trim(),
-        account_number_last4: last4 || undefined,
+        account_number: accountNumber.trim() || undefined,
+        ifsc: ifsc.trim() || undefined,
+        iban: iban.trim() || undefined,
+        currency: currency.trim() || "INR",
         opening_balance: openingNum,
       };
       if (isEdit) {
@@ -216,22 +221,36 @@ function AccountModal({ account, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        <label className="bp-field-label" htmlFor="baName">Account name</label>
+        <label className="bp-field-label" htmlFor="baName">Bank ID</label>
         <input id="baName" type="text" className="bp-field-input" value={accountName} onChange={(e) => setAccountName(e.target.value)} required autoFocus />
+
+        <label className="bp-field-label" htmlFor="baBank">Bank name</label>
+        <input id="baBank" type="text" className="bp-field-input" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+
+        <label className="bp-field-label" htmlFor="baAccountNumber">Account number</label>
+        <input id="baAccountNumber" type="text" className="bp-field-input" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="baBank">Bank name</label>
-            <input id="baBank" type="text" className="bp-field-input" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+            <label className="bp-field-label" htmlFor="baIfsc">IFSC</label>
+            <input id="baIfsc" type="text" maxLength={11} className="bp-field-input" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} />
           </div>
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="baLast4">Account # (last 4)</label>
-            <input id="baLast4" type="text" maxLength={8} className="bp-field-input" value={last4} onChange={(e) => setLast4(e.target.value)} />
+            <label className="bp-field-label" htmlFor="baIban">IBAN</label>
+            <input id="baIban" type="text" maxLength={34} className="bp-field-input" value={iban} onChange={(e) => setIban(e.target.value.toUpperCase())} />
           </div>
         </div>
 
-        <label className="bp-field-label" htmlFor="baOpening">Opening balance (₹)</label>
-        <input id="baOpening" type="number" min="0" step="0.01" className="bp-field-input" value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} required />
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="baCurrency">Currency</label>
+            <input id="baCurrency" type="text" maxLength={3} className="bp-field-input" value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="baOpening">Opening balance (₹)</label>
+            <input id="baOpening" type="number" min="0" step="0.01" className="bp-field-input" value={openingBalance} onChange={(e) => setOpeningBalance(e.target.value)} required />
+          </div>
+        </div>
 
         {isEdit && (
           <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
@@ -422,57 +441,48 @@ function AddTransactionModal({ accountId, onClose, onDone }) {
   );
 }
 
-// "From" -> "To" reads explicitly rather than an abstract direction
-// dropdown. Bank-to-bank isn't supported (out of scope) — picking the
-// same bank account (or a bank account on both sides) is blocked in the
-// UI rather than left to the server to reject.
-function TransferTab({ accounts, onTransferred }) {
-  const [locations, setLocations] = useState([]);
-  const [fromKey, setFromKey] = useState("cash");
-  const [toKey, setToKey] = useState("");
-  const [locationId, setLocationId] = useState("");
+// "From" -> "To" reads explicitly. Any Financial Account can transfer to
+// any other now (Petty Cash <-> HDFC, or HDFC <-> SBI) — both legs are
+// bank_transactions rows against their own account (see
+// financial-control.js's POST /transfer), so there's no cash-only
+// special case in the UI anymore.
+function TransferTab({ onTransferred }) {
+  const [financialAccounts, setFinancialAccounts] = useState([]);
+  const [fromId, setFromId] = useState("");
+  const [toId, setToId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [summary, setSummary] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    locationsApi.list().then((d) => {
-      const items = d.items || d || [];
-      setLocations(items);
-      setLocationId((prev) => prev || items[0]?.location_id || "");
-    }).catch(() => {});
-    loadSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadSummary() {
+  async function loadAccounts() {
     try {
-      const data = await financialControlApi.getSummary();
-      setSummary(data);
+      const data = await financialAccountsApi.balances();
+      const items = data.items || [];
+      setFinancialAccounts(items);
+      setFromId((prev) => prev || items[0]?.financial_account_id || "");
     } catch {
-      // Summary is a nice-to-have inline balance hint — a failed load
-      // shouldn't block the transfer form itself.
+      // Non-critical for the initial load — the picker just stays empty.
     }
   }
 
-  // "To" options exclude whatever's selected in "From", and bank-to-bank
-  // is disallowed entirely — if From is a bank account, To can only be Cash.
-  const toOptions = fromKey === "cash"
-    ? accounts.map((a) => ({ key: a.bank_account_id, label: a.account_name }))
-    : [{ key: "cash", label: "Cash in hand" }];
+  useEffect(() => {
+    loadAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // "To" options exclude whatever's selected in "From".
+  const toOptions = financialAccounts.filter((a) => a.financial_account_id !== fromId);
 
   useEffect(() => {
-    if (!toOptions.find((o) => o.key === toKey)) {
-      setToKey(toOptions[0]?.key || "");
+    if (!toOptions.find((o) => o.financial_account_id === toId)) {
+      setToId(toOptions[0]?.financial_account_id || "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromKey, accounts.length]);
+  }, [fromId, financialAccounts.length]);
 
-  const fromAccount = fromKey !== "cash" ? accounts.find((a) => a.bank_account_id === fromKey) : null;
-  const fromBalance = fromKey === "cash" ? summary?.cash_balance : fromAccount?.balance;
+  const fromAccount = financialAccounts.find((a) => a.financial_account_id === fromId);
 
   async function submit(e) {
     e.preventDefault();
@@ -482,39 +492,23 @@ function TransferTab({ accounts, onTransferred }) {
       setError("Enter a valid amount.");
       return;
     }
-    if (!locationId) {
-      setError("Select a location.");
+    if (!fromId || !toId || fromId === toId) {
+      setError("Select two different accounts.");
       return;
     }
-    if (fromKey === toKey) {
-      setError("From and To must be different.");
-      return;
-    }
-    if (fromKey !== "cash" && toKey !== "cash") {
-      setError("Transfers between two bank accounts aren't supported yet — record two separate transfers via Cash.");
-      return;
-    }
-
-    const direction = fromKey === "cash" ? "cash_to_bank" : "bank_to_cash";
-    const bank_account_id = fromKey === "cash" ? toKey : fromKey;
 
     setSubmitting(true);
     setError("");
     try {
       await financialControlApi.transfer({
-        direction,
-        bank_account_id,
-        location_id: locationId,
+        from_account_id: fromId,
+        to_account_id: toId,
         amount: amountNum,
         description: description || undefined,
       });
       setAmount("");
       setDescription("");
-      // Both balance sources (company cash summary + each bank account's
-      // own derived balance) must be refetched before showing success —
-      // awaiting both closes the window where a user could switch to the
-      // Accounts tab and still see the pre-transfer number.
-      await Promise.all([loadSummary(), onTransferred()]);
+      await Promise.all([loadAccounts(), onTransferred()]);
       setSuccess("Transfer recorded — balances updated.");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not record this transfer.");
@@ -527,7 +521,7 @@ function TransferTab({ accounts, onTransferred }) {
     <div className="bp-card" style={{ maxWidth: 560 }}>
       <h2 className="bp-card-title">Record a transfer</h2>
       <p className="bp-td-muted" style={{ margin: "-4px 0 14px" }}>
-        Move money between physical cash and a bank account. Both ledgers update together.
+        Move money between any two Financial Accounts — Petty Cash, or any named bank account. Both balances update together.
       </p>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
@@ -536,47 +530,31 @@ function TransferTab({ accounts, onTransferred }) {
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="fcFrom">From account</label>
-            <select id="fcFrom" className="bp-field-input" value={fromKey} onChange={(e) => setFromKey(e.target.value)}>
-              <option value="cash">Cash in hand</option>
-              {accounts.map((a) => <option key={a.bank_account_id} value={a.bank_account_id}>{a.account_name}</option>)}
+            <select id="fcFrom" className="bp-field-input" value={fromId} onChange={(e) => setFromId(e.target.value)}>
+              {financialAccounts.length === 0 && <option value="">Loading…</option>}
+              {financialAccounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
             </select>
-            {fromBalance != null && (
-              <div className="bp-td-muted" style={{ marginTop: 4, fontSize: 12 }}>Available: {inr(fromBalance)}</div>
+            {fromAccount && (
+              <div className="bp-td-muted" style={{ marginTop: 4, fontSize: 12 }}>Available: {inr(fromAccount.current_balance)}</div>
             )}
           </div>
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="fcTo">To account</label>
-            <select id="fcTo" className="bp-field-input" value={toKey} onChange={(e) => setToKey(e.target.value)}>
-              {toOptions.length === 0 && <option value="">No bank accounts yet</option>}
-              {toOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            <select id="fcTo" className="bp-field-input" value={toId} onChange={(e) => setToId(e.target.value)}>
+              {toOptions.length === 0 && <option value="">No other accounts yet</option>}
+              {toOptions.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
             </select>
           </div>
         </div>
 
-        {fromKey !== "cash" && (
-          <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -4 }}>
-            Transfers between two bank accounts aren't supported yet — record two separate transfers via Cash.
-          </p>
-        )}
-
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="fcLocation">Location</label>
-            <select id="fcLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-              {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="fcAmount">Amount (₹)</label>
-            <input id="fcAmount" type="number" min="0.01" step="0.01" className="bp-field-input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-          </div>
-        </div>
+        <label className="bp-field-label" htmlFor="fcAmount">Amount (₹)</label>
+        <input id="fcAmount" type="number" min="0.01" step="0.01" className="bp-field-input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
 
         <label className="bp-field-label" htmlFor="fcDesc">Description (optional)</label>
         <textarea id="fcDesc" className="bp-field-input" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
 
         <div className="bp-form-actions">
-          <button type="submit" className="bp-btn-primary" disabled={submitting || (fromKey !== "cash" && accounts.length === 0) || !toKey}>
+          <button type="submit" className="bp-btn-primary" disabled={submitting || !fromId || !toId}>
             {submitting ? "Recording…" : "Record transfer"}
           </button>
         </div>

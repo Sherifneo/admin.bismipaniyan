@@ -4,7 +4,6 @@ import { financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import FinancialDimensionsTab from "./FinancialDimensionsTab";
 import ReconciliationTab from "./ReconciliationTab";
-import TransactionHistoryTab from "./TransactionHistoryTab";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -14,14 +13,12 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "dimensions", label: "Financial Dimensions" },
   { key: "reconciliation", label: "Reconciliation" },
-  { key: "history", label: "Transaction History" },
 ];
 
-// Company-level financial home: the cash+bank overview (Overview tab —
-// the actual transfer form lives under Bank Accounts -> Transfer, next to
-// the balances it moves) plus the Financial Dimensions management list
-// (Dimensions tab) — same "own tab, not nested modal" pattern as
-// Positions/Categories.
+// Company-level financial home: the accounts overview (Overview tab —
+// the actual transfer form and per-account transaction history live
+// under Cash & Bank / Bank Transactions) plus the Financial Dimensions
+// management list (Dimensions tab) and per-account Reconciliation.
 export default function FinancialControlPage() {
   const [tab, setTab] = useState("overview");
   const [summary, setSummary] = useState(null);
@@ -37,7 +34,7 @@ export default function FinancialControlPage() {
         setSummary(summaryData);
         setAccountBalances(balancesData.items || []);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load the cash position."))
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load the account position."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -45,7 +42,7 @@ export default function FinancialControlPage() {
     <div>
       <h1 className="bp-page-title">Financial Control</h1>
       <p className="bp-td-muted" style={{ margin: "-6px 0 14px" }}>
-        Bismi Bakery's company-wide cash/bank position, and the financial dimensions used to attribute results to
+        Bismi Bakery's company-wide account position, and the financial dimensions used to attribute results to
         each store or factory in reports.
       </p>
 
@@ -71,16 +68,8 @@ export default function FinancialControlPage() {
           ) : summary ? (
             <div className="bp-kpi-grid">
               <div className="bp-kpi-card bp-kpi-success">
-                <div className="bp-kpi-label">Cash balance</div>
-                <div className="bp-kpi-value">{inr(summary.cash_balance)}</div>
-              </div>
-              <div className="bp-kpi-card bp-kpi-success">
-                <div className="bp-kpi-label">Bank balance</div>
-                <div className="bp-kpi-value">{inr(summary.bank_balance)}</div>
-              </div>
-              <div className="bp-kpi-card">
-                <div className="bp-kpi-label">Total (cash + bank)</div>
-                <div className="bp-kpi-value">{inr(Number(summary.cash_balance) + Number(summary.bank_balance))}</div>
+                <div className="bp-kpi-label">Total balance</div>
+                <div className="bp-kpi-value">{inr(summary.total_balance)}</div>
               </div>
             </div>
           ) : null}
@@ -89,14 +78,13 @@ export default function FinancialControlPage() {
             <h2 className="bp-card-title">Financial Account balances</h2>
             <p className="bp-td-muted" style={{ marginBottom: 14 }}>
               Opening balance plus every approved amount in and out, per account — the same figures Cash Book and
-              Bank Accounts use.
+              Cash & Bank use.
             </p>
             <div className="bp-table-wrap">
               <table className="bp-table">
                 <thead>
                   <tr>
                     <th>Account</th>
-                    <th>Type</th>
                     <th>Opening</th>
                     <th>In</th>
                     <th>Out</th>
@@ -105,12 +93,11 @@ export default function FinancialControlPage() {
                 </thead>
                 <tbody>
                   {accountBalances.length === 0 ? (
-                    <tr><td colSpan={6} className="bp-table-empty">No financial accounts yet.</td></tr>
+                    <tr><td colSpan={5} className="bp-table-empty">No financial accounts yet.</td></tr>
                   ) : (
                     accountBalances.map((a) => (
                       <tr key={a.financial_account_id}>
                         <td className="bp-td-strong">{a.name}</td>
-                        <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{a.account_type}</td>
                         <td>{inr(a.opening_balance)}</td>
                         <td>{inr(a.total_in)}</td>
                         <td>{inr(a.total_out)}</td>
@@ -124,21 +111,20 @@ export default function FinancialControlPage() {
           </div>
 
           <div className="bp-card" style={{ maxWidth: 560, marginTop: 18 }}>
-            <h2 className="bp-card-title">Move money between cash and a bank account</h2>
+            <h2 className="bp-card-title">Move money between accounts</h2>
             <p className="bp-td-muted" style={{ marginBottom: 14 }}>
-              Recording a transfer, and each bank account's own deposit/withdrawal history, now live on the Bank Accounts page.
+              Recording a transfer, and every account's full transaction history, now live on the Cash & Bank and
+              Bank Transactions pages.
             </p>
             <Link to="/bank-accounts" className="bp-btn-primary" style={{ display: "inline-block", textDecoration: "none" }}>
-              Go to Bank Accounts → Transfer
+              Go to Cash & Bank → Transfer
             </Link>
           </div>
         </>
       ) : tab === "dimensions" ? (
         <FinancialDimensionsTab />
-      ) : tab === "reconciliation" ? (
-        <ReconciliationTab />
       ) : (
-        <TransactionHistoryTab />
+        <ReconciliationTab />
       )}
     </div>
   );

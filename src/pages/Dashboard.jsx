@@ -47,8 +47,7 @@ export default function Dashboard() {
         <div>Loading…</div>
       ) : stats ? (
         <div className="bp-kpi-grid">
-          <KpiCard label="Cash balance" value={inr(stats.cash_balance)} tone="success" onClick={() => navigate("/cashbook")} />
-          <KpiCard label="Bank balance" value={inr(stats.bank_balance)} tone="success" onClick={() => navigate("/bank-accounts")} />
+          <KpiCard label="Total balance" value={inr(stats.total_balance)} tone="success" onClick={() => navigate("/bank-accounts")} />
           <KpiCard label="Low stock items" value={stats.low_stock?.length || 0} tone="danger" onClick={() => navigate("/inventory")} />
           <KpiCard label="Pending purchase orders" value={stats.pending_purchase_orders || 0} tone="warning" onClick={() => navigate("/purchase-orders")} />
           <KpiCard label="Today's production runs" value={stats.today_production_runs || 0} tone="neutral" onClick={() => navigate("/production")} />
