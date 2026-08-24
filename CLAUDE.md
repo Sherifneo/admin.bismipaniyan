@@ -31,7 +31,7 @@ This is a Vite SPA — `npm run build` produces static files in `dist/`. Hosting
 
 ## What's built vs. not
 
-Built: Login, Dashboard, Cash Book (Cash Book / Ledger Transaction / Reversals / Recently Deleted / Categories tabs), Inventory, WhatsApp Orders, Partners & Shops, Products, Vendors, Purchase Orders, Production, Machines, Cost Parameters, Reports, Settings, Team, Security Roles, Number Sequences, System Errors, and the financial-accounts subsystem — Cash & Bank (`bank-accounts` route/nav key, page at `src/pages/bank-accounts/`, renamed from "Bank Accounts"), Bank Transactions (`src/pages/bank-transactions/`, a filterable list across every account), and Financial Control (accounts overview, Financial Dimensions, per-account Reconciliation).
+Built: Login, Dashboard, Cash Book (Cash Book / Ledger Transaction / Reversals / Recently Deleted / Categories tabs), Inventory, WhatsApp Orders, Partners & Shops, Products, Vendors, Purchase Orders, Production, Machines, Cost Parameters, Reports, Settings, Team, Security Roles, Number Sequences, System Errors, and the financial-accounts subsystem — Cash & Bank (`bank-accounts` route/nav key, page at `src/pages/bank-accounts/`, renamed from "Bank Accounts"; tabs are Accounts / Transfer / Bank Transaction, the last a full Dynamics-style filterable table of every deposit/withdrawal/transfer across every account, replacing the old standalone Bank Transactions page and the old per-account Transactions modal), and Financial Control (accounts overview, Financial Dimensions, per-account Reconciliation).
 
 Not built: a change-password screen. See `ADMIN-PORTAL-PLAN.md` for the original module list and build order (a pre-build plan, not kept current as a build tracker — treat its "not built" markers with caution).
 

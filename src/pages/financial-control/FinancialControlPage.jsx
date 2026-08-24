@@ -16,8 +16,8 @@ const TABS = [
 ];
 
 // Company-level financial home: the accounts overview (Overview tab —
-// the actual transfer form and per-account transaction history live
-// under Cash & Bank / Bank Transactions) plus the Financial Dimensions
+// the actual transfer form and every transaction live under Cash & Bank's
+// Transfer / Bank Transaction tabs) plus the Financial Dimensions
 // management list (Dimensions tab) and per-account Reconciliation.
 export default function FinancialControlPage() {
   const [tab, setTab] = useState("overview");
@@ -113,8 +113,8 @@ export default function FinancialControlPage() {
           <div className="bp-card" style={{ maxWidth: 560, marginTop: 18 }}>
             <h2 className="bp-card-title">Move money between accounts</h2>
             <p className="bp-td-muted" style={{ marginBottom: 14 }}>
-              Recording a transfer, and every account's full transaction history, now live on the Cash & Bank and
-              Bank Transactions pages.
+              Recording a transfer, and every account's full transaction history, now live on the Cash & Bank
+              page's Transfer and Bank Transaction tabs.
             </p>
             <Link to="/bank-accounts" className="bp-btn-primary" style={{ display: "inline-block", textDecoration: "none" }}>
               Go to Cash & Bank → Transfer

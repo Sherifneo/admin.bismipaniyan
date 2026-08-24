@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
-import { bankAccountsApi, financialControlApi, financialAccountsApi } from "../../api/admin";
+import { bankAccountsApi, bankTransactionsApi, financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
-import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
-import Pagination from "../../components/Pagination";
+import ExportMenu from "../../components/ExportMenu";
 import StatusBadge from "../../components/StatusBadge";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
-
-const LIMIT = 20;
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -18,6 +15,7 @@ function inr(n) {
 const TABS = [
   { key: "accounts", label: "Accounts" },
   { key: "transfer", label: "Transfer" },
+  { key: "banktransaction", label: "Bank Transaction" },
 ];
 
 // Cash & Bank (every Financial Account — Petty Cash and every named bank
@@ -35,7 +33,6 @@ export default function BankAccountsList() {
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editAccount, setEditAccount] = useState(null);
-  const [txnAccount, setTxnAccount] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -147,7 +144,6 @@ export default function BankAccountsList() {
                       {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{a.updated_by_name || "—"}</td>}
                       {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{a.updated_at ? new Date(a.updated_at).toLocaleString("en-IN") : "—"}</td>}
                       <td className="bp-td-actions">
-                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setTxnAccount(a); }}>Transactions</button>
                         <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditAccount(a); }}>Edit</button>
                       </td>
                     </tr>
@@ -157,13 +153,14 @@ export default function BankAccountsList() {
             </table>
           </div>
         </>
-      ) : (
+      ) : tab === "transfer" ? (
         <TransferTab onTransferred={load} />
+      ) : (
+        <BankTransactionTab onChanged={load} />
       )}
 
       {showAdd && <AccountModal onClose={() => setShowAdd(false)} onDone={onSaved} />}
       {editAccount && <AccountModal account={editAccount} onClose={() => setEditAccount(null)} onDone={onSaved} />}
-      {txnAccount && <TransactionsModal account={txnAccount} onClose={() => setTxnAccount(null)} onChanged={load} />}
     </div>
   );
 }
@@ -268,27 +265,35 @@ function AccountModal({ account, onClose, onDone }) {
   );
 }
 
-function TransactionsModal({ account, onClose, onChanged }) {
-  const { hasPermission } = useAuth();
+// Full Dynamics-style table (per TABLE-CONVENTIONS.md), same shape as
+// Cash Book's Ledger Transaction tab — every bank_transactions row
+// across every Financial Account, with account/type/status/period
+// filters via the column headers plus KPI totals. Replaces the old
+// per-account "Transactions" modal and the standalone Bank Transactions
+// page — this tab is now the one place to see and filter them all.
+function BankTransactionTab({ onChanged }) {
+  const urlSearch = useUrlSearch();
+  const [financialAccounts, setFinancialAccounts] = useState([]);
   const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [balance, setBalance] = useState(account.balance);
-  const [page, setPage] = useState(1);
+  const [totals, setTotals] = useState({ total_in: 0, total_out: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [reverseTarget, setReverseTarget] = useState(null);
 
+  useEffect(() => {
+    financialAccountsApi.list().then((data) => setFinancialAccounts(data.items || [])).catch(() => {});
+  }, []);
+
   async function load() {
     setLoading(true);
     setError("");
     try {
-      const data = await bankAccountsApi.listTransactions(account.bank_account_id, { page, limit: LIMIT });
+      const data = await bankTransactionsApi.list({ limit: 1000 });
       setItems(data.items || []);
-      setTotal(data.total || 0);
-      setBalance(data.balance);
+      setTotals({ total_in: data.total_in, total_out: data.total_out });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load transactions.");
+      setError(err instanceof ApiError ? err.message : "Could not load bank transactions.");
     } finally {
       setLoading(false);
     }
@@ -296,61 +301,111 @@ function TransactionsModal({ account, onClose, onChanged }) {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, []);
 
   async function onTxnAdded() {
     setShowAdd(false);
-    setPage(1);
     await load();
     await onChanged();
   }
 
   async function onReverseConfirmed(description) {
-    await bankAccountsApi.reverseTransaction(account.bank_account_id, reverseTarget.bank_txn_id, { description });
+    await bankAccountsApi.reverseTransaction(reverseTarget.bank_account_id, reverseTarget.bank_txn_id, { description });
     setReverseTarget(null);
     await load();
     await onChanged();
   }
 
+  const columns = [
+    { key: "txn_date", label: "Date", accessor: (t) => t.txn_date, filter: "dateRange" },
+    { key: "financial_account_name", label: "Account", accessor: (t) => t.financial_account_name || "" },
+    {
+      key: "txn_type", label: "Type", accessor: (t) => t.txn_type, filter: "select",
+      options: [{ value: "deposit", label: "Deposit" }, { value: "withdrawal", label: "Withdrawal" }],
+    },
+    { key: "amount", label: "Amount", accessor: (t) => t.amount, filter: "number" },
+    { key: "description", label: "Description", accessor: (t) => t.description || "" },
+    {
+      key: "status", label: "Status", accessor: (t) => t.status, filter: "select",
+      options: [{ value: "draft", label: "Draft" }, { value: "approved", label: "Approved" }],
+    },
+    { key: "recorded_by_name", label: "Recorded by", accessor: (t) => t.recorded_by_name || "" },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (t) => t.bank_txn_id });
+
+  useEffect(() => {
+    if (urlSearch.q) table.setFilter("description", { operator: "contains", value: urlSearch.q });
+    if (urlSearch.from || urlSearch.to) table.setFilter("txn_date", { operator: "between", from: urlSearch.from || undefined, to: urlSearch.to || undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <Modal title={`Transactions — ${account.account_name}`} onClose={onClose}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-        <div><span className="bp-td-muted">Current balance:</span> <span className="bp-td-strong">{inr(balance)}</span></div>
-        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add transaction</button>
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+        <p className="bp-td-muted" style={{ margin: 0 }}>
+          Every deposit, withdrawal, and transfer across every account — filter by account, type, status, or date.
+        </p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <ExportMenu filename="bank-transactions" rows={table.filteredRows} columns={columns.map((c) => ({ label: c.label, accessor: c.accessor }))} />
+          <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add transaction</button>
+        </div>
+      </div>
+
+      <div className="bp-kpi-grid" style={{ marginBottom: 14 }}>
+        <div className="bp-kpi-card bp-kpi-success">
+          <div className="bp-kpi-label">In</div>
+          <div className="bp-kpi-value">{inr(totals.total_in)}</div>
+        </div>
+        <div className="bp-kpi-card bp-kpi-danger">
+          <div className="bp-kpi-label">Out</div>
+          <div className="bp-kpi-value">{inr(totals.total_out)}</div>
+        </div>
+        <div className="bp-kpi-card">
+          <div className="bp-kpi-label">Net</div>
+          <div className="bp-kpi-value">{inr(Number(totals.total_in) - Number(totals.total_out))}</div>
+        </div>
       </div>
 
       {error && <div className="bp-inline-error">{error}</div>}
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
+      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Description</th>
+              <SelectAllHeaderCell table={table} />
+              {columns.map((c) => table.isColumnVisible(c.key) && <ColumnHeader key={c.key} table={table} column={c} />)}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No transactions yet.</td></tr>
+              <tr><td colSpan={columns.length + 2} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={columns.length + 2} className="bp-table-empty">No bank transactions found.</td></tr>
             ) : (
-              items.map((t) => (
+              table.filteredRows.map((t) => (
                 <tr key={t.bank_txn_id}>
-                  <td className="bp-td-muted">{t.txn_date}</td>
-                  <td>
-                    <StatusBadge status={t.txn_type === "deposit" ? "success" : "warning"} label={t.txn_type === "deposit" ? "Deposit" : "Withdrawal"} />
-                    {t.reversal_of_bank_txn_id && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversal</span>}
-                    {t.reversed && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversed</span>}
-                  </td>
-                  <td className="bp-td-strong">{inr(t.amount)}</td>
-                  <td className="bp-td-muted">{t.description || "—"}</td>
+                  <SelectRowCell table={table} row={t} />
+                  {table.isColumnVisible("txn_date") && <td className="bp-td-muted">{t.txn_date}</td>}
+                  {table.isColumnVisible("financial_account_name") && <td className="bp-td-strong">{t.financial_account_name}</td>}
+                  {table.isColumnVisible("txn_type") && (
+                    <td>
+                      <StatusBadge status={t.txn_type === "deposit" ? "success" : "warning"} label={t.txn_type === "deposit" ? "Deposit" : "Withdrawal"} />
+                      {t.reversal_of_bank_txn_id && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversal</span>}
+                      {t.reversed && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversed</span>}
+                    </td>
+                  )}
+                  {table.isColumnVisible("amount") && <td className="bp-td-strong">{inr(t.amount)}</td>}
+                  {table.isColumnVisible("description") && <td className="bp-td-muted">{t.description || "—"}</td>}
+                  {table.isColumnVisible("status") && <td><StatusBadge status={t.status} /></td>}
+                  {table.isColumnVisible("recorded_by_name") && <td className="bp-td-muted">{t.recorded_by_name || "—"}</td>}
                   <td className="bp-td-actions">
-                    {t.status === "approved" && !t.reversed && hasPermission("bank.manage", "full_control") && (
+                    {t.status === "approved" && !t.reversed && (
                       <button type="button" className="bp-btn-sm" onClick={() => setReverseTarget(t)} title="Reverse">↺</button>
                     )}
                   </td>
@@ -361,10 +416,8 @@ function TransactionsModal({ account, onClose, onChanged }) {
         </table>
       </div>
 
-      <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
-
       {showAdd && (
-        <AddTransactionModal accountId={account.bank_account_id} onClose={() => setShowAdd(false)} onDone={onTxnAdded} />
+        <AddTransactionModal financialAccounts={financialAccounts} onClose={() => setShowAdd(false)} onDone={onTxnAdded} />
       )}
       {reverseTarget && (
         <ReasonConfirmModal
@@ -377,11 +430,12 @@ function TransactionsModal({ account, onClose, onChanged }) {
           onConfirm={onReverseConfirmed}
         />
       )}
-    </Modal>
+    </div>
   );
 }
 
-function AddTransactionModal({ accountId, onClose, onDone }) {
+function AddTransactionModal({ financialAccounts, onClose, onDone }) {
+  const [accountId, setAccountId] = useState(financialAccounts[0]?.financial_account_id || "");
   const [txnType, setTxnType] = useState("deposit");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -389,8 +443,17 @@ function AddTransactionModal({ accountId, onClose, onDone }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    setAccountId((prev) => prev || financialAccounts[0]?.financial_account_id || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [financialAccounts]);
+
   async function submit(e) {
     e.preventDefault();
+    if (!accountId) {
+      setError("Select an account.");
+      return;
+    }
     const amountNum = Number(amount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       setError("Enter a valid amount.");
@@ -399,7 +462,8 @@ function AddTransactionModal({ accountId, onClose, onDone }) {
     setSubmitting(true);
     setError("");
     try {
-      await bankAccountsApi.addTransaction(accountId, {
+      const account = financialAccounts.find((a) => a.financial_account_id === accountId);
+      await bankAccountsApi.addTransaction(account.bank_account_id, {
         txn_type: txnType,
         amount: amountNum,
         description: description || undefined,
@@ -417,6 +481,12 @@ function AddTransactionModal({ accountId, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
+        <label className="bp-field-label" htmlFor="txAccount">Account</label>
+        <select id="txAccount" className="bp-field-input" value={accountId} onChange={(e) => setAccountId(e.target.value)} required>
+          {financialAccounts.length === 0 && <option value="">Loading…</option>}
+          {financialAccounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
+        </select>
+
         <label className="bp-field-label" htmlFor="txType">Type</label>
         <select id="txType" className="bp-field-input" value={txnType} onChange={(e) => setTxnType(e.target.value)}>
           <option value="deposit">Deposit</option>
@@ -424,7 +494,7 @@ function AddTransactionModal({ accountId, onClose, onDone }) {
         </select>
 
         <label className="bp-field-label" htmlFor="txAmount">Amount (₹)</label>
-        <input id="txAmount" type="number" min="0.01" step="0.01" className="bp-field-input" value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus />
+        <input id="txAmount" type="number" min="0.01" step="0.01" className="bp-field-input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
 
         <label className="bp-field-label" htmlFor="txDate">Date (optional)</label>
         <input id="txDate" type="date" className="bp-field-input" value={txnDate} onChange={(e) => setTxnDate(e.target.value)} />

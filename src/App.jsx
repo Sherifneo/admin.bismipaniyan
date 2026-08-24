@@ -21,7 +21,6 @@ import ProductsList from "./pages/products/ProductsList";
 import VendorsList from "./pages/vendors/VendorsList";
 import PurchaseOrdersList from "./pages/purchasing/PurchaseOrdersList";
 import BankAccountsList from "./pages/bank-accounts/BankAccountsList";
-import BankTransactionsList from "./pages/bank-transactions/BankTransactionsList";
 import FinancialControlPage from "./pages/financial-control/FinancialControlPage";
 import MachinesList from "./pages/machines/MachinesList";
 import CostParametersList from "./pages/production/CostParametersList";
@@ -50,7 +49,6 @@ const BUILT_PAGES = {
   vendors: VendorsList,
   purchaseorders: PurchaseOrdersList,
   bankaccounts: BankAccountsList,
-  banktransactions: BankTransactionsList,
   financialcontrol: FinancialControlPage,
   machines: MachinesList,
   costparameters: CostParametersList,
