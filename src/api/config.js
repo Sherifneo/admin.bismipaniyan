@@ -7,4 +7,4 @@ const HOST = typeof window !== "undefined" ? window.location.hostname.toLowerCas
 
 export const IS_LOCAL = HOST === "localhost" || HOST === "127.0.0.1" || HOST === "";
 
-export const API_BASE = import.meta.env.VITE_API_BASE || (IS_LOCAL ? "http://localhost:3000" : "https://api.bismipaniyan.com");
+export const API_BASE = import.meta.env.VITE_API_BASE || (IS_LOCAL ? "http://localhost:3000" : "https://api.trpbismipaniyan.com");
