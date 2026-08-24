@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { bankAccountsApi, financialControlApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
+import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 
@@ -248,6 +250,7 @@ function AccountModal({ account, onClose, onDone }) {
 }
 
 function TransactionsModal({ account, onClose, onChanged }) {
+  const { hasPermission } = useAuth();
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [balance, setBalance] = useState(account.balance);
@@ -255,6 +258,7 @@ function TransactionsModal({ account, onClose, onChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [reverseTarget, setReverseTarget] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -283,6 +287,13 @@ function TransactionsModal({ account, onClose, onChanged }) {
     await onChanged();
   }
 
+  async function onReverseConfirmed(description) {
+    await bankAccountsApi.reverseTransaction(account.bank_account_id, reverseTarget.bank_txn_id, { description });
+    setReverseTarget(null);
+    await load();
+    await onChanged();
+  }
+
   return (
     <Modal title={`Transactions — ${account.account_name}`} onClose={onClose}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
@@ -300,20 +311,30 @@ function TransactionsModal({ account, onClose, onChanged }) {
               <th>Type</th>
               <th>Amount</th>
               <th>Description</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={4} className="bp-table-empty">No transactions yet.</td></tr>
+              <tr><td colSpan={5} className="bp-table-empty">No transactions yet.</td></tr>
             ) : (
               items.map((t) => (
                 <tr key={t.bank_txn_id}>
                   <td className="bp-td-muted">{t.txn_date}</td>
-                  <td><StatusBadge status={t.txn_type === "deposit" ? "success" : "warning"} label={t.txn_type === "deposit" ? "Deposit" : "Withdrawal"} /></td>
+                  <td>
+                    <StatusBadge status={t.txn_type === "deposit" ? "success" : "warning"} label={t.txn_type === "deposit" ? "Deposit" : "Withdrawal"} />
+                    {t.reversal_of_bank_txn_id && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversal</span>}
+                    {t.reversed && <span className="bp-badge bp-badge-neutral" style={{ marginLeft: 4 }}>Reversed</span>}
+                  </td>
                   <td className="bp-td-strong">{inr(t.amount)}</td>
                   <td className="bp-td-muted">{t.description || "—"}</td>
+                  <td className="bp-td-actions">
+                    {t.status === "approved" && !t.reversed && hasPermission("bank.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={() => setReverseTarget(t)} title="Reverse">↺</button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -325,6 +346,17 @@ function TransactionsModal({ account, onClose, onChanged }) {
 
       {showAdd && (
         <AddTransactionModal accountId={account.bank_account_id} onClose={() => setShowAdd(false)} onDone={onTxnAdded} />
+      )}
+      {reverseTarget && (
+        <ReasonConfirmModal
+          title="Reverse bank transaction"
+          message={`This posts a new offsetting ${reverseTarget.txn_type === "deposit" ? "withdrawal" : "deposit"} for ${inr(reverseTarget.amount)}. The original stays on record, flagged as reversed — nothing is deleted or changed.`}
+          confirmLabel="Reverse"
+          reasonLabel="Reason for reversal"
+          danger={false}
+          onClose={() => setReverseTarget(null)}
+          onConfirm={onReverseConfirmed}
+        />
       )}
     </Modal>
   );

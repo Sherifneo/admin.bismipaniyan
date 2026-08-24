@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { financialControlApi } from "../../api/admin";
+import { financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import FinancialDimensionsTab from "./FinancialDimensionsTab";
 import ReconciliationTab from "./ReconciliationTab";
@@ -25,15 +25,18 @@ const TABS = [
 export default function FinancialControlPage() {
   const [tab, setTab] = useState("overview");
   const [summary, setSummary] = useState(null);
+  const [accountBalances, setAccountBalances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setLoading(true);
     setError("");
-    financialControlApi
-      .getSummary()
-      .then(setSummary)
+    Promise.all([financialControlApi.getSummary(), financialAccountsApi.balances()])
+      .then(([summaryData, balancesData]) => {
+        setSummary(summaryData);
+        setAccountBalances(balancesData.items || []);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load the cash position."))
       .finally(() => setLoading(false));
   }, []);
@@ -81,6 +84,44 @@ export default function FinancialControlPage() {
               </div>
             </div>
           ) : null}
+
+          <div className="bp-card" style={{ marginTop: 18 }}>
+            <h2 className="bp-card-title">Financial Account balances</h2>
+            <p className="bp-td-muted" style={{ marginBottom: 14 }}>
+              Opening balance plus every approved amount in and out, per account — the same figures Cash Book and
+              Bank Accounts use.
+            </p>
+            <div className="bp-table-wrap">
+              <table className="bp-table">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Type</th>
+                    <th>Opening</th>
+                    <th>In</th>
+                    <th>Out</th>
+                    <th>Current balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountBalances.length === 0 ? (
+                    <tr><td colSpan={6} className="bp-table-empty">No financial accounts yet.</td></tr>
+                  ) : (
+                    accountBalances.map((a) => (
+                      <tr key={a.financial_account_id}>
+                        <td className="bp-td-strong">{a.name}</td>
+                        <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{a.account_type}</td>
+                        <td>{inr(a.opening_balance)}</td>
+                        <td>{inr(a.total_in)}</td>
+                        <td>{inr(a.total_out)}</td>
+                        <td className="bp-td-strong">{inr(a.current_balance)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
           <div className="bp-card" style={{ maxWidth: 560, marginTop: 18 }}>
             <h2 className="bp-card-title">Move money between cash and a bank account</h2>

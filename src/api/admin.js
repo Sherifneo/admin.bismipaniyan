@@ -110,11 +110,18 @@ export const bankAccountsApi = {
   update: (id, body) => PUT(`/api/admin/bank-accounts/${id}`, body),
   listTransactions: (accountId, params = {}) => GET(`/api/admin/bank-accounts/${accountId}/transactions?${new URLSearchParams(cleanParams(params))}`),
   addTransaction: (accountId, body) => POST(`/api/admin/bank-accounts/${accountId}/transactions`, body),
+  approveTransaction: (accountId, txnId) => PUT(`/api/admin/bank-accounts/${accountId}/transactions/${txnId}/approve`),
+  reverseTransaction: (accountId, txnId, body) => POST(`/api/admin/bank-accounts/${accountId}/transactions/${txnId}/reverse`, body),
 };
 
 export const financialControlApi = {
   getSummary: () => GET("/api/admin/financial-control/summary"),
   transfer: (body) => POST("/api/admin/financial-control/transfer", body),
+};
+
+export const financialAccountsApi = {
+  list: (params = {}) => GET(`/api/admin/financial-accounts?${new URLSearchParams(cleanParams(params))}`),
+  balances: () => GET("/api/admin/financial-accounts/balances"),
 };
 
 export const financialDimensionsApi = {
