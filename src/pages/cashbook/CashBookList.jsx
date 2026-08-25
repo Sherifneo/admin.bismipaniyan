@@ -573,7 +573,7 @@ function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
           {financialAccounts.length === 0 && <option value="">Loading…</option>}
           {financialAccounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
         </select>
-        <div className="bp-td-muted" style={{ fontSize: 11, marginTop: -8 }}>
+        <div className="bp-td-muted" style={{ fontSize: 11, margin: "4px 0 0" }}>
           Where the money actually moved — Cash or a specific bank account.
         </div>
 
