@@ -20,7 +20,7 @@ export const NAV_ITEMS = [
   { key: "hr", label: "HR", icon: "🧑‍🍳", path: "/hr", requiredPermission: "hr.manage" },
   { key: "customers", label: "Customers", icon: "🧑‍🤝‍🧑", path: "/customers", requiredPermission: "sales.manage" },
   { key: "cashbook", label: "Cash Book", icon: "💰", path: "/cashbook", requiredPermission: "cashbook.manage" },
-  { key: "bankaccounts", label: "Cash & Bank", icon: "🏦", path: "/bank-accounts", requiredPermission: "bank.manage" },
+  { key: "bankaccounts", label: "Banking", icon: "🏦", path: "/bank-accounts", requiredPermission: "bank.manage" },
   { key: "products", label: "Products", icon: "🛍️", path: "/products", requiredPermission: "products.manage" },
   { key: "inventory", label: "Inventory", icon: "📊", path: "/inventory", requiredPermission: "inventory.manage" },
   { key: "partners", label: "Partners & Shops", icon: "🤝", path: "/partners", requiredPermission: "partners.manage" },

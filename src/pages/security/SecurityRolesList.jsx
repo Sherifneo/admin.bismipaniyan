@@ -8,7 +8,7 @@ import { ApiError } from "../../api/client";
 const PERMISSION_KEYS = [
   { key: "cashbook.manage", label: "Cash Book" },
   { key: "inventory.manage", label: "Inventory" },
-  { key: "bank.manage", label: "Cash & Bank" },
+  { key: "bank.manage", label: "Banking" },
   { key: "products.manage", label: "Products" },
   { key: "partners.manage", label: "Partners & Shops" },
   { key: "purchasing.manage", label: "Purchasing" },

@@ -52,7 +52,7 @@ export default function CashBookList() {
   const [locations, setLocations] = useState([]);
   const [entries, setEntries] = useState([]);
   const [total, setTotal] = useState(0);
-  const [totals, setTotals] = useState({ total_income: 0, total_expense: 0, net: 0 });
+  const [totals, setTotals] = useState({ total_income: 0, total_expense: 0, total_equity: 0, total_advance: 0, net: 0 });
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -160,7 +160,7 @@ export default function CashBookList() {
     { key: "financial_account_name", label: "Financial Account", accessor: (e) => e.financial_account_name || "" },
     {
       key: "entry_type", label: "Type", accessor: (e) => e.entry_type, filter: "select",
-      options: [{ value: "income", label: "Income" }, { value: "expense", label: "Expense" }, { value: "transfer", label: "Transfer" }],
+      options: [{ value: "income", label: "Income" }, { value: "expense", label: "Expense" }, { value: "transfer", label: "Transfer" }, { value: "equity", label: "Equity" }, { value: "advance", label: "Advance" }],
     },
     { key: "category", label: "Category", accessor: (e) => e.category },
     {
@@ -215,6 +215,14 @@ export default function CashBookList() {
             <div className="bp-kpi-value">{inr(totals.total_expense)}</div>
           </div>
           <div className="bp-kpi-card">
+            <div className="bp-kpi-label">Equity (filtered)</div>
+            <div className="bp-kpi-value">{inr(totals.total_equity)}</div>
+          </div>
+          <div className="bp-kpi-card">
+            <div className="bp-kpi-label">Advance (filtered)</div>
+            <div className="bp-kpi-value">{inr(totals.total_advance)}</div>
+          </div>
+          <div className="bp-kpi-card">
             <div className="bp-kpi-label">Net</div>
             <div className="bp-kpi-value">{inr(totals.net)}</div>
           </div>
@@ -253,6 +261,8 @@ export default function CashBookList() {
               <option value="income">Income</option>
               <option value="expense">Expense</option>
               <option value="transfer">Transfer</option>
+              <option value="equity">Equity</option>
+              <option value="advance">Advance</option>
             </select>
           )}
         </div>
@@ -353,6 +363,14 @@ export default function CashBookList() {
                             <span className="bp-badge bp-badge-neutral">
                               {e.direction === "subtract" ? "→ Bank" : "← Bank"}
                             </span>
+                          ) : e.entry_type === "equity" ? (
+                            <span className="bp-badge bp-badge-neutral">
+                              {e.direction === "subtract" ? "Equity — Out" : "Equity — In"}
+                            </span>
+                          ) : e.entry_type === "advance" ? (
+                            <span className="bp-badge bp-badge-neutral">
+                              {e.direction === "subtract" ? "Advance — Given" : "Advance — Recovered"}
+                            </span>
                           ) : (
                             <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>
                               {e.entry_type === "income" ? "Income" : "Expense"}
@@ -442,6 +460,7 @@ export default function CashBookList() {
 function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
   const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
   const [entryType, setEntryType] = useState("income");
+  const [direction, setDirection] = useState("add");
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
@@ -451,6 +470,8 @@ function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
   const [financialAccountId, setFinancialAccountId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const needsDirection = entryType === "equity" || entryType === "advance";
 
   useEffect(() => {
     financialAccountsApi.list().then((data) => {
@@ -506,6 +527,7 @@ function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
       await cashbookApi.create({
         location_id: locationId,
         entry_type: entryType,
+        direction: needsDirection ? direction : undefined,
         category,
         amount: amountNum,
         description: description || undefined,
@@ -524,16 +546,27 @@ function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        <label className="bp-field-label" htmlFor="cbLocation">Location</label>
-        <select id="cbLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
-          {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
-        </select>
-
         <label className="bp-field-label" htmlFor="cbType">Type</label>
         <select id="cbType" className="bp-field-input" value={entryType} onChange={(e) => changeType(e.target.value)}>
           <option value="income">Income</option>
           <option value="expense">Expense</option>
+          <option value="equity">Equity</option>
+          <option value="advance">Advance</option>
         </select>
+
+        {needsDirection && (
+          <>
+            <label className="bp-field-label" htmlFor="cbDirection">Direction</label>
+            <select id="cbDirection" className="bp-field-input" value={direction} onChange={(e) => setDirection(e.target.value)}>
+              <option value="add">
+                {entryType === "equity" ? "In — owner putting money into the business" : "In — advance recovered"}
+              </option>
+              <option value="subtract">
+                {entryType === "equity" ? "Out — owner drawing money out" : "Out — advance given"}
+              </option>
+            </select>
+          </>
+        )}
 
         <label className="bp-field-label" htmlFor="cbFinancialAccount">Financial Account</label>
         <select id="cbFinancialAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required>
@@ -569,6 +602,11 @@ function AddEntryModal({ locations, onClose, onDone, onManageCategories }) {
             <input id="cbDate" type="date" className="bp-field-input" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} required />
           </div>
         </div>
+
+        <label className="bp-field-label" htmlFor="cbLocation">Location</label>
+        <select id="cbLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
+          {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+        </select>
 
         <label className="bp-field-label" htmlFor="cbDesc">Description (optional)</label>
         <input id="cbDesc" type="text" className="bp-field-input" value={description} onChange={(e) => setDescription(e.target.value)} />

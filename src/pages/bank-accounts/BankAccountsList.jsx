@@ -85,7 +85,7 @@ export default function BankAccountsList() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-        <h1 className="bp-page-title">Cash & Bank</h1>
+        <h1 className="bp-page-title">Banking</h1>
         {tab === "accounts" && (
           <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add account</button>
         )}

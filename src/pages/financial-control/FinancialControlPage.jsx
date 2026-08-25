@@ -78,7 +78,7 @@ export default function FinancialControlPage() {
             <h2 className="bp-card-title">Financial Account balances</h2>
             <p className="bp-td-muted" style={{ marginBottom: 14 }}>
               Opening balance plus every approved amount in and out, per account — the same figures Cash Book and
-              Cash & Bank use.
+              Banking use.
             </p>
             <div className="bp-table-wrap">
               <table className="bp-table">
@@ -113,11 +113,11 @@ export default function FinancialControlPage() {
           <div className="bp-card" style={{ maxWidth: 560, marginTop: 18 }}>
             <h2 className="bp-card-title">Move money between accounts</h2>
             <p className="bp-td-muted" style={{ marginBottom: 14 }}>
-              Recording a transfer, and every account's full transaction history, now live on the Cash & Bank
+              Recording a transfer, and every account's full transaction history, now live on the Banking
               page's Transfer and Bank Transaction tabs.
             </p>
             <Link to="/bank-accounts" className="bp-btn-primary" style={{ display: "inline-block", textDecoration: "none" }}>
-              Go to Cash & Bank → Transfer
+              Go to Banking → Transfer
             </Link>
           </div>
         </>
