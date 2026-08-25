@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { cashbookApi, cashbookCategoriesApi, locationsApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -153,6 +154,7 @@ export default function CashBookList() {
   }
 
   const columns = [
+    { key: "universal_trans_id", label: "TransID", accessor: (e) => e.universal_trans_id || "" },
     { key: "entry_date", label: "Date", accessor: (e) => e.entry_date, filter: "dateRange" },
     { key: "location_name", label: "Location", accessor: (e) => e.location_name },
     { key: "financial_account_name", label: "Financial Account", accessor: (e) => e.financial_account_name || "" },
@@ -328,13 +330,20 @@ export default function CashBookList() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={tab === "deleted" ? 16 : 15} className="bp-table-empty">Loading…</td></tr>
+                  <tr><td colSpan={tab === "deleted" ? 17 : 16} className="bp-table-empty">Loading…</td></tr>
                 ) : table.filteredRows.length === 0 ? (
-                  <tr><td colSpan={tab === "deleted" ? 16 : 15} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : tab === "cashbook" ? "No manual cash book entries found." : "No ledger transactions found."}</td></tr>
+                  <tr><td colSpan={tab === "deleted" ? 17 : 16} className="bp-table-empty">{tab === "deleted" ? "No deleted entries." : tab === "cashbook" ? "No manual cash book entries found." : "No ledger transactions found."}</td></tr>
                 ) : (
                   table.filteredRows.map((e) => (
                     <tr key={e.entry_id}>
                       <SelectRowCell table={table} row={e} />
+                      {table.isColumnVisible("universal_trans_id") && (
+                        <td>
+                          {e.universal_trans_id ? (
+                            <Link to={`/global-search?trans=${encodeURIComponent(e.universal_trans_id)}`} className="bp-trans-id-link">{e.universal_trans_id}</Link>
+                          ) : "—"}
+                        </td>
+                      )}
                       {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{e.entry_date}</td>}
                       {table.isColumnVisible("location_name") && <td className="bp-td-strong">{e.location_name}</td>}
                       {table.isColumnVisible("financial_account_name") && <td className="bp-td-muted">{e.financial_account_name || "—"}</td>}

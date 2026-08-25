@@ -11,6 +11,11 @@ export const dashboardApi = {
   getStats: (periodDays) => GET(`/api/admin/dashboard?period=${periodDays}`),
 };
 
+export const globalSearchApi = {
+  search: (q) => GET(`/api/admin/global-search?${new URLSearchParams({ q })}`),
+  getTransaction: (universalTransId) => GET(`/api/admin/global-search/transaction/${encodeURIComponent(universalTransId)}`),
+};
+
 export const locationsApi = {
   list: () => GET("/api/admin/locations"),
   summary: (id) => GET(`/api/admin/locations/${id}/summary`),
@@ -52,6 +57,7 @@ export const positionsApi = {
 export const inventoryApi = {
   list: (params = {}) => GET(`/api/admin/inventory?${new URLSearchParams(cleanParams(params))}`),
   movements: (params = {}) => GET(`/api/admin/inventory/movements?${new URLSearchParams(cleanParams(params))}`),
+  transactions: (params = {}) => GET(`/api/admin/inventory/transactions?${new URLSearchParams(cleanParams(params))}`),
   recordMovement: (body) => POST("/api/admin/inventory/movements", body),
 };
 

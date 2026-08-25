@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { partnersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
@@ -339,6 +340,7 @@ function SettlementsModal({ partner, onClose }) {
     },
     { key: "updated_by_name", label: "Updated by", accessor: (s) => s.updated_by_name || "", hiddenByDefault: true },
     { key: "updated_at", label: "Updated at", accessor: (s) => s.updated_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "universal_trans_id", label: "TransID", accessor: (s) => s.universal_trans_id || "", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: settlements, columns, rowKey: (s) => s.settlement_id });
 
@@ -378,6 +380,7 @@ function SettlementsModal({ partner, onClose }) {
                 {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
                 {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
                 {table.isColumnVisible(columns[5].key) && <ColumnHeader table={table} column={columns[5]} />}
+                {table.isColumnVisible(columns[6].key) && <ColumnHeader table={table} column={columns[6]} />}
                 <th></th>
               </tr>
             </thead>
@@ -391,6 +394,13 @@ function SettlementsModal({ partner, onClose }) {
                   {table.isColumnVisible("status") && <td><StatusBadge status={s.status} /></td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{s.updated_by_name || "—"}</td>}
                   {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{s.updated_at ? new Date(s.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("universal_trans_id") && (
+                    <td>
+                      {s.universal_trans_id ? (
+                        <Link to={`/global-search?trans=${encodeURIComponent(s.universal_trans_id)}`} className="bp-trans-id-link">{s.universal_trans_id}</Link>
+                      ) : "—"}
+                    </td>
+                  )}
                   <td className="bp-td-actions">
                     {s.status === "pending" && (
                       <button type="button" className="bp-btn-sm" onClick={() => markPaid(s)}>Mark paid</button>

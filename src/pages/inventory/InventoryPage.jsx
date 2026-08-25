@@ -1,10 +1,12 @@
 import { useState } from "react";
 import InventoryList from "./InventoryList";
 import StockTransfersList from "./StockTransfersList";
+import InventoryTransactionsList from "./InventoryTransactionsList";
 
 const TABS = [
   { key: "stock", label: "Stock" },
   { key: "transfers", label: "Transfers" },
+  { key: "transactions", label: "Transactions" },
 ];
 
 // One Inventory module, one nav entry — Stock and Transfers are tabs on
@@ -38,6 +40,7 @@ export default function InventoryPage() {
 
       {tab === "stock" && <InventoryList />}
       {tab === "transfers" && <StockTransfersList />}
+      {tab === "transactions" && <InventoryTransactionsList />}
     </div>
   );
 }

@@ -31,12 +31,14 @@ import TeamList from "./pages/team/TeamList";
 import SecurityRolesList from "./pages/security/SecurityRolesList";
 import NumberSequencesPage from "./pages/settings/NumberSequencesPage";
 import ActivityLogPage from "./pages/settings/ActivityLogPage";
+import GlobalSearchPage from "./pages/global-search/GlobalSearchPage";
 import { NAV_ITEMS } from "./layout/navConfig";
 
 // Modules with a real page built go here instead of the ComingSoon
 // fallback below, keyed by nav item key. Add an entry here as each
 // module's list page gets built.
 const BUILT_PAGES = {
+  globalsearch: GlobalSearchPage,
   cashbook: CashBookList,
   inventory: InventoryPage,
   waorders: WaOrdersList,

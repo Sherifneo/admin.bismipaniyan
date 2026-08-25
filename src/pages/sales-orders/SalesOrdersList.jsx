@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { salesOrdersApi, customersApi, locationsApi, productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
@@ -82,6 +83,7 @@ export default function SalesOrdersList() {
     { key: "created_at", label: "Created at", accessor: (so) => so.created_at || "", filter: "dateRange", hiddenByDefault: true },
     { key: "updated_by_name", label: "Updated by", accessor: (so) => so.updated_by_name || "", hiddenByDefault: true },
     { key: "updated_at", label: "Updated at", accessor: (so) => so.updated_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "universal_trans_id", label: "TransID", accessor: (so) => so.universal_trans_id || "", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: orders, columns, rowKey: (so) => so.so_id });
 
@@ -132,14 +134,15 @@ export default function SalesOrdersList() {
               {table.isColumnVisible(columns[7].key) && <ColumnHeader table={table} column={columns[7]} />}
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
+              {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={12} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={13} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={12} className="bp-table-empty">No sales orders found.</td></tr>
+              <tr><td colSpan={13} className="bp-table-empty">No sales orders found.</td></tr>
             ) : (
               table.filteredRows.map((so) => (
                 <tr key={so.so_id} onClick={() => setViewSo(so)} style={{ cursor: "pointer" }}>
@@ -154,6 +157,13 @@ export default function SalesOrdersList() {
                   {table.isColumnVisible("created_at") && <td className="bp-td-muted">{so.created_at ? new Date(so.created_at).toLocaleString("en-IN") : "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{so.updated_by_name || "—"}</td>}
                   {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{so.updated_at ? new Date(so.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("universal_trans_id") && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {so.universal_trans_id ? (
+                        <Link to={`/global-search?trans=${encodeURIComponent(so.universal_trans_id)}`} className="bp-trans-id-link">{so.universal_trans_id}</Link>
+                      ) : "—"}
+                    </td>
+                  )}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setViewSo(so); }}>View</button>
                   </td>

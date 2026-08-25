@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { productionApi, machinesApi, locationsApi, productsApi, employeesApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
@@ -83,6 +84,7 @@ export default function ProductionRunsList() {
     { key: "created_at", label: "Created at", accessor: (run) => run.created_at || "", filter: "dateRange", hiddenByDefault: true },
     { key: "updated_by_name", label: "Updated by", accessor: (run) => run.updated_by_name || "", hiddenByDefault: true },
     { key: "updated_at", label: "Updated at", accessor: (run) => run.updated_at || "", filter: "dateRange", hiddenByDefault: true },
+    { key: "universal_trans_id", label: "TransID", accessor: (run) => run.universal_trans_id || "", hiddenByDefault: true },
   ];
   const table = useDataTable({ rows: runs, columns, rowKey: (run) => run.run_id });
 
@@ -156,6 +158,13 @@ export default function ProductionRunsList() {
                   {table.isColumnVisible("created_at") && <td className="bp-td-muted">{run.created_at ? new Date(run.created_at).toLocaleString("en-IN") : "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{run.updated_by_name || "—"}</td>}
                   {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{run.updated_at ? new Date(run.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("universal_trans_id") && (
+                    <td>
+                      {run.universal_trans_id ? (
+                        <Link to={`/global-search?trans=${encodeURIComponent(run.universal_trans_id)}`} className="bp-trans-id-link" onClick={(e) => e.stopPropagation()}>{run.universal_trans_id}</Link>
+                      ) : "—"}
+                    </td>
+                  )}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={() => setViewRun(run)}>View</button>
                   </td>

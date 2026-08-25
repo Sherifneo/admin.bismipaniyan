@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { bankAccountsApi, bankTransactionsApi, financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
@@ -317,6 +318,7 @@ function BankTransactionTab({ onChanged }) {
   }
 
   const columns = [
+    { key: "universal_trans_id", label: "TransID", accessor: (t) => t.universal_trans_id || "" },
     { key: "txn_date", label: "Date", accessor: (t) => t.txn_date, filter: "dateRange" },
     { key: "financial_account_name", label: "Account", accessor: (t) => t.financial_account_name || "" },
     {
@@ -391,6 +393,13 @@ function BankTransactionTab({ onChanged }) {
               table.filteredRows.map((t) => (
                 <tr key={t.bank_txn_id}>
                   <SelectRowCell table={table} row={t} />
+                  {table.isColumnVisible("universal_trans_id") && (
+                    <td>
+                      {t.universal_trans_id ? (
+                        <Link to={`/global-search?trans=${encodeURIComponent(t.universal_trans_id)}`} className="bp-trans-id-link">{t.universal_trans_id}</Link>
+                      ) : "—"}
+                    </td>
+                  )}
                   {table.isColumnVisible("txn_date") && <td className="bp-td-muted">{t.txn_date}</td>}
                   {table.isColumnVisible("financial_account_name") && <td className="bp-td-strong">{t.financial_account_name}</td>}
                   {table.isColumnVisible("txn_type") && (

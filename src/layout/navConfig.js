@@ -13,6 +13,7 @@
 // source of truth for revenue.
 export const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "🏠", path: "/" },
+  { key: "globalsearch", label: "Transaction Search", icon: "🔎", path: "/global-search" },
   { key: "waorders", label: "WhatsApp Orders", icon: "💚", path: "/wa-orders", requiredPermission: "orders.manage" },
   { key: "salesorders", label: "Sales Orders", icon: "🧾", path: "/sales-orders", requiredPermission: "sales.manage" },
   { key: "stores", label: "Retail Stores", icon: "🏬", path: "/stores", requiredPermission: "stores.manage" },
