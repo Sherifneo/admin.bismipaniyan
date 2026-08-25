@@ -186,6 +186,11 @@ export const teamApi = {
   update: (id, body) => PUT(`/api/admin/team/${id}`, body),
 };
 
+export const workflowsApi = {
+  list: () => GET("/api/admin/workflows"),
+  update: (key, body) => PUT(`/api/admin/workflows/${key}`, body),
+};
+
 export const reportsApi = {
   cashbookSummary: (params = {}) => GET(`/api/admin/reports/cashbook-summary?${new URLSearchParams(cleanParams(params))}`),
   stockMovements: (params = {}) => GET(`/api/admin/reports/stock-movements?${new URLSearchParams(cleanParams(params))}`),

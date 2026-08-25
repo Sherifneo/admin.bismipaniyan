@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { financialReconciliationApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -269,7 +268,6 @@ export default function ReconciliationTab() {
           <thead>
             <tr>
               <th>Code</th>
-              <th>TransID</th>
               <th>Period</th>
               <th>Account</th>
               <th>Calculated balance</th>
@@ -279,18 +277,13 @@ export default function ReconciliationTab() {
           </thead>
           <tbody>
             {loadingRecent ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
             ) : recentBatches.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No reconciliations yet.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">No reconciliations yet.</td></tr>
             ) : (
               recentBatches.map((b) => (
                 <tr key={b.batch_id} onClick={() => openBatch(b)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-muted">{b.batch_code || "—"}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    {b.universal_trans_id ? (
-                      <Link to={`/global-search?trans=${encodeURIComponent(b.universal_trans_id)}`} className="bp-trans-id-link">{b.universal_trans_id}</Link>
-                    ) : "—"}
-                  </td>
                   <td className="bp-td-strong">{b.from_date} to {b.to_date}</td>
                   <td className="bp-td-muted">{b.financial_account_name || "—"}</td>
                   <td>{inr(b.calculated_balance)}</td>

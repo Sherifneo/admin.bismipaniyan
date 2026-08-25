@@ -32,6 +32,7 @@ import SecurityRolesList from "./pages/security/SecurityRolesList";
 import NumberSequencesPage from "./pages/settings/NumberSequencesPage";
 import ActivityLogPage from "./pages/settings/ActivityLogPage";
 import GlobalSearchPage from "./pages/global-search/GlobalSearchPage";
+import WorkflowsPage from "./pages/workflows/WorkflowsPage";
 import { NAV_ITEMS } from "./layout/navConfig";
 
 // Modules with a real page built go here instead of the ComingSoon
@@ -39,6 +40,7 @@ import { NAV_ITEMS } from "./layout/navConfig";
 // module's list page gets built.
 const BUILT_PAGES = {
   globalsearch: GlobalSearchPage,
+  workflows: WorkflowsPage,
   cashbook: CashBookList,
   inventory: InventoryPage,
   waorders: WaOrdersList,

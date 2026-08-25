@@ -96,7 +96,7 @@ export default function InventoryTransactionsList() {
   }
 
   const columns = [
-    { key: "universal_trans_id", label: "TransID", accessor: (r) => r.universal_trans_id || "" },
+    { key: "universal_trans_id", label: "TransID", accessor: (r) => r.universal_trans_id || "", hiddenByDefault: true },
     { key: "trans_id", label: "Doc #", accessor: (r) => r.trans_id || "" },
     { key: "entry_date", label: "Date", accessor: (r) => r.entry_date, filter: "dateRange" },
     { key: "product_name", label: "Product", accessor: (r) => r.product_name },

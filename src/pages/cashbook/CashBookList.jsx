@@ -154,7 +154,7 @@ export default function CashBookList() {
   }
 
   const columns = [
-    { key: "universal_trans_id", label: "TransID", accessor: (e) => e.universal_trans_id || "" },
+    { key: "universal_trans_id", label: "TransID", accessor: (e) => e.universal_trans_id || "", hiddenByDefault: true },
     { key: "entry_date", label: "Date", accessor: (e) => e.entry_date, filter: "dateRange" },
     { key: "location_name", label: "Location", accessor: (e) => e.location_name },
     { key: "financial_account_name", label: "Financial Account", accessor: (e) => e.financial_account_name || "" },
@@ -398,7 +398,7 @@ export default function CashBookList() {
                           {e.status === "approved" && !e.reversed && hasPermission("cashbook.manage", "full_control") && (
                             <button type="button" className="bp-btn-sm" onClick={() => setReverseTarget(e)} title="Reverse">↺</button>
                           )}
-                          {hasPermission("cashbook.manage", "full_control") && (
+                          {e.status !== "approved" && hasPermission("cashbook.manage", "full_control") && (
                             <button type="button" className="bp-btn-sm" onClick={() => setDeleteTarget(e)} title="Delete" aria-label="Delete">🗑</button>
                           )}
                         </td>
@@ -418,7 +418,7 @@ export default function CashBookList() {
       {deleteTarget && (
         <ReasonConfirmModal
           title="Delete cash book entry"
-          message={`This moves the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${deleteTarget.entry_date} to Recently Deleted. If it was already approved, prefer Reverse instead so the money movement stays on record.`}
+          message={`This moves the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${deleteTarget.entry_date} to Recently Deleted.`}
           confirmLabel="Delete"
           onClose={() => setDeleteTarget(null)}
           onConfirm={onDeleteConfirmed}

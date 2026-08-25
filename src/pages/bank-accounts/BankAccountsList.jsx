@@ -318,7 +318,7 @@ function BankTransactionTab({ onChanged }) {
   }
 
   const columns = [
-    { key: "universal_trans_id", label: "TransID", accessor: (t) => t.universal_trans_id || "" },
+    { key: "universal_trans_id", label: "TransID", accessor: (t) => t.universal_trans_id || "", hiddenByDefault: true },
     { key: "txn_date", label: "Date", accessor: (t) => t.txn_date, filter: "dateRange" },
     { key: "financial_account_name", label: "Account", accessor: (t) => t.financial_account_name || "" },
     {

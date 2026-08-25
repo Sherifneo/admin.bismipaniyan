@@ -35,5 +35,6 @@ export const NAV_ITEMS = [
   { key: "team", label: "Team", icon: "🔑", path: "/team", ownerOnly: true, divider: true },
   { key: "security", label: "Security Roles", icon: "🛡️", path: "/security", ownerOnly: true },
   { key: "numbersequences", label: "Number Sequences", icon: "🔢", path: "/number-sequences", ownerOnly: true },
+  { key: "workflows", label: "Workflow", icon: "🧭", path: "/workflows", ownerOnly: true },
   { key: "systemerrors", label: "System Errors", icon: "🛠️", path: "/system-errors", ownerOnly: true },
 ];
