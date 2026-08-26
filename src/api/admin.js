@@ -42,6 +42,7 @@ export const bomsApi = {
   get: (id) => GET(`/api/admin/boms/${id}`),
   create: (body) => POST("/api/admin/boms", body),
   update: (id, body) => PUT(`/api/admin/boms/${id}`, body),
+  approve: (id) => PUT(`/api/admin/boms/${id}/approve`),
   remove: (id) => DEL(`/api/admin/boms/${id}`),
 };
 

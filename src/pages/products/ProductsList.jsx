@@ -523,12 +523,13 @@ function UomTab() {
 }
 
 function BomTab() {
-  const { hasPermission } = useAuth();
+  const { admin, hasPermission } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editBom, setEditBom] = useState(null);
+  const [busy, setBusy] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -558,6 +559,19 @@ function BomTab() {
     await load();
   }
 
+  async function approve(b) {
+    setBusy(b.bom_id);
+    setError("");
+    try {
+      await bomsApi.approve(b.bom_id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not approve this BOM.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function remove(b) {
     if (!window.confirm(`Delete BOM "${b.bom_name}"?`)) return;
     try {
@@ -579,29 +593,39 @@ function BomTab() {
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><th>Product</th><th>BOM name</th><th>Output qty</th><th>Active</th><th></th></tr>
+            <tr><th>Product</th><th>BOM name</th><th>Output qty</th><th>Status</th><th>Active</th><th></th></tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={5} className="bp-table-empty">No BOMs yet.</td></tr>
+              <tr><td colSpan={6} className="bp-table-empty">No BOMs yet.</td></tr>
             ) : (
               items.map((b) => (
                 <tr key={b.bom_id} onClick={() => setEditBom(b)} style={{ cursor: "pointer", opacity: b.is_active ? 1 : 0.55 }}>
                   <td className="bp-td-strong">{b.product_name}</td>
                   <td>{b.bom_name}</td>
                   <td className="bp-td-muted">{b.output_qty} {b.product_uom}</td>
+                  <td>
+                    <span className={`bp-badge ${b.status === "approved" ? "bp-badge-success" : "bp-badge-warning"}`}>
+                      {b.status === "approved" ? "Approved" : "Draft"}
+                    </span>
+                  </td>
                   <td className="bp-td-muted">{b.is_active ? "Yes" : "No"}</td>
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditBom(b); }}>Edit</button>
+                    {b.status === "draft" && hasPermission("products.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); approve(b); }} disabled={busy === b.bom_id}>
+                        {busy === b.bom_id ? "Approving…" : "Approve"}
+                      </button>
+                    )}
                     {hasPermission("products.manage", "full_control") && (
-                      <>
-                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); toggleActive(b); }}>
-                          {b.is_active ? "Deactivate" : "Activate"}
-                        </button>
-                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(b); }}>Delete</button>
-                      </>
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); toggleActive(b); }}>
+                        {b.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                    )}
+                    {b.status === "draft" && admin?.role === "owner" && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(b); }} title="Delete" aria-label="Delete">🗑</button>
                     )}
                   </td>
                 </tr>
@@ -697,6 +721,11 @@ function BomModal({ bomSummary, onClose, onDone }) {
       ) : (
         <form onSubmit={submit} className="bp-form">
           {error && <div className="bp-inline-error">{error}</div>}
+          {isEdit && bomSummary.status === "approved" && (
+            <p className="bp-td-muted" style={{ fontSize: 12, margin: "0 0 10px" }}>
+              This BOM is approved. Changing the name, output quantity, or lines will move it back to Draft for re-approval.
+            </p>
+          )}
 
           <div className="bp-form-row">
             <div style={{ flex: 2 }}>

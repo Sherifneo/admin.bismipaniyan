@@ -212,7 +212,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
       setBomId("");
       return;
     }
-    bomsApi.list({ productId }).then((d) => setBoms(d.items || [])).catch(() => setBoms([]));
+    bomsApi.list({ productId }).then((d) => setBoms((d.items || []).filter((b) => b.status === "approved"))).catch(() => setBoms([]));
     setBomId("");
   }, [productId]);
 
