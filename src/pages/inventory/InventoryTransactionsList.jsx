@@ -12,6 +12,7 @@ const LIMIT = 25;
 
 const MOVEMENT_TYPE_LABELS = {
   production_in: "Production received",
+  production_consume: "Used in production (BOM)",
   purchase_in: "Purchase received",
   transfer_in: "Transfer in",
   transfer_out: "Transfer out",

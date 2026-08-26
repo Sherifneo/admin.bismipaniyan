@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { productionApi, machinesApi, locationsApi, productsApi, employeesApi } from "../../api/admin";
+import { productionApi, machinesApi, locationsApi, productsApi, employeesApi, bomsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
@@ -194,6 +194,8 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   const [locationId, setLocationId] = useState(factoryLocations[0]?.location_id || "");
   const [machineId, setMachineId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [boms, setBoms] = useState([]);
+  const [bomId, setBomId] = useState("");
   const [runDate, setRunDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [defaultEmployeeId, setDefaultEmployeeId] = useState("");
@@ -203,6 +205,16 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   const [stageEditedManually, setStageEditedManually] = useState(() => new Set());
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!productId) {
+      setBoms([]);
+      setBomId("");
+      return;
+    }
+    bomsApi.list({ productId }).then((d) => setBoms(d.items || [])).catch(() => setBoms([]));
+    setBomId("");
+  }, [productId]);
 
   function changeDefaultEmployee(value) {
     setDefaultEmployeeId(value);
@@ -240,6 +252,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
         quantity_produced: Number(quantity),
         run_date: runDate || undefined,
         notes: notes || undefined,
+        bom_id: bomId || undefined,
         default_employee_id: defaultEmployeeId || undefined,
         stage_employees: {
           mixing: stageEmployees.mixing || undefined,
@@ -288,6 +301,16 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
             <input id="runQty" type="number" min="0" step="0.01" className="bp-field-input" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
           </div>
         </div>
+
+        {boms.length > 0 && (
+          <>
+            <label className="bp-field-label" htmlFor="runBom">BOM (optional — consumes raw materials on completion)</label>
+            <select id="runBom" className="bp-field-input" value={bomId} onChange={(e) => setBomId(e.target.value)}>
+              <option value="">— None —</option>
+              {boms.map((b) => <option key={b.bom_id} value={b.bom_id}>{b.bom_name} (makes {b.output_qty} {b.product_uom})</option>)}
+            </select>
+          </>
+        )}
 
         <label className="bp-field-label" htmlFor="runDate">Run date (optional)</label>
         <input id="runDate" type="date" className="bp-field-input" value={runDate} onChange={(e) => setRunDate(e.target.value)} />
@@ -396,6 +419,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
             <div><span className="bp-td-muted">Quantity:</span> {run.quantity_produced} {run.uom}</div>
             <div><span className="bp-td-muted">Run date:</span> {formatDate(run.run_date)}</div>
             {run.machine_name && <div><span className="bp-td-muted">Machine:</span> {run.machine_name}</div>}
+            {run.bom_name && <div><span className="bp-td-muted">BOM:</span> {run.bom_name}</div>}
           </div>
 
           {run.notes && <p className="bp-td-muted" style={{ marginTop: 0, marginBottom: 12 }}>{run.notes}</p>}

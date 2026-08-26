@@ -174,6 +174,7 @@ const STOCK_CSV_COLUMNS = [
 
 const MOVEMENT_TYPE_OPTIONS = [
   { value: "production_in", label: "production_in" },
+  { value: "production_consume", label: "production_consume" },
   { value: "purchase_in", label: "purchase_in" },
   { value: "transfer_in", label: "transfer_in" },
   { value: "transfer_out", label: "transfer_out" },

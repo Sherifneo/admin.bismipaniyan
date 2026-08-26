@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { productsApi } from "../../api/admin";
+import { productsApi, uomsApi, bomsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
@@ -17,6 +17,12 @@ function inr(n) {
   return n === null || n === undefined || n === "" ? "—" : "₹" + Number(n).toLocaleString("en-IN");
 }
 
+const TABS = [
+  { key: "products", label: "Products" },
+  { key: "uom", label: "UOM" },
+  { key: "bom", label: "BOM" },
+];
+
 const CSV_COLUMNS = [
   { label: "SKU", accessor: (p) => p.sku },
   { label: "Name", accessor: (p) => p.name },
@@ -33,6 +39,7 @@ const CSV_COLUMNS = [
 export default function ProductsList() {
   const { hasPermission } = useAuth();
   const urlSearch = useUrlSearch();
+  const [tab, setTab] = useState("products");
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -44,6 +51,7 @@ export default function ProductsList() {
   const [editProduct, setEditProduct] = useState(null);
 
   async function load() {
+    if (tab !== "products") return;
     setLoading(true);
     setError("");
     try {
@@ -60,7 +68,7 @@ export default function ProductsList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, itemKind, q]);
+  }, [page, itemKind, q, tab]);
 
   function submitSearch(value) {
     setPage(1);
@@ -111,18 +119,39 @@ export default function ProductsList() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
         <h1 className="bp-page-title">Products</h1>
-        <div style={{ display: "flex", gap: 8 }}>
-          {table.selectedRows.length > 0 && (
-            <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("products")}>
-              Export selected ({table.selectedRows.length})
-            </button>
-          )}
-          <ExportMenu filename="products" rows={products} columns={CSV_COLUMNS} />
-          <ColumnChooserButton table={table} columns={columns} />
-          <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add product</button>
-        </div>
+        {tab === "products" && (
+          <div style={{ display: "flex", gap: 8 }}>
+            {table.selectedRows.length > 0 && (
+              <button type="button" className="bp-btn-sm bp-btn-outline" onClick={() => table.exportSelected("products")}>
+                Export selected ({table.selectedRows.length})
+              </button>
+            )}
+            <ExportMenu filename="products" rows={products} columns={CSV_COLUMNS} />
+            <ColumnChooserButton table={table} columns={columns} />
+            <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add product</button>
+          </div>
+        )}
       </div>
 
+      <div className="bp-tabs" style={{ marginBottom: 14 }}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`bp-tab${tab === t.key ? " is-active" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "uom" ? (
+        <UomTab />
+      ) : tab === "bom" ? (
+        <BomTab />
+      ) : (
+        <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
         <select className="bp-field-input" style={{ width: "auto" }} value={itemKind} onChange={(e) => { setItemKind(e.target.value); setPage(1); }}>
           <option value="">All kinds</option>
@@ -201,6 +230,8 @@ export default function ProductsList() {
 
       {showAdd && <ProductModal onClose={() => setShowAdd(false)} onDone={onSaved} />}
       {editProduct && <ProductModal product={editProduct} onClose={() => setEditProduct(null)} onDone={onSaved} />}
+        </>
+      )}
     </div>
   );
 }
@@ -217,7 +248,12 @@ function ProductModal({ product, onClose, onDone }) {
   const [isActive, setIsActive] = useState(product ? !!product.is_active : true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [uoms, setUoms] = useState([]);
   const codeField = useCodePreview("product", isEdit ? product.product_code : null);
+
+  useEffect(() => {
+    uomsApi.list({}).then((data) => setUoms(data.items || [])).catch(() => {});
+  }, []);
 
   async function submit(e) {
     e.preventDefault();
@@ -284,8 +320,8 @@ function ProductModal({ product, onClose, onDone }) {
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pUom">Unit of measure</label>
             <select id="pUom" className="bp-field-input" value={uom} onChange={(e) => setUom(e.target.value)}>
-              <option value="each">Each</option>
-              <option value="kg">Kg</option>
+              {uoms.map((u) => <option key={u.uom_id} value={u.code}>{u.label}</option>)}
+              {uom && !uoms.some((u) => u.code === uom) && <option value={uom}>{uom}</option>}
             </select>
           </div>
         </div>
@@ -316,6 +352,404 @@ function ProductModal({ product, onClose, onDone }) {
           <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add product"}</button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function UomTab() {
+  const { hasPermission } = useAuth();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [newCode, setNewCode] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingLabel, setEditingLabel] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await uomsApi.list({ includeInactive: true });
+      setItems(data.items || []);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load units.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function addUom(e) {
+    e.preventDefault();
+    if (!newCode.trim() || !newLabel.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await uomsApi.create({ code: newCode.trim(), label: newLabel.trim() });
+      setNewCode("");
+      setNewLabel("");
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add this unit.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(u) {
+    setEditingId(u.uom_id);
+    setEditingLabel(u.label);
+  }
+
+  async function saveEdit(id) {
+    if (!editingLabel.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await uomsApi.update(id, { label: editingLabel.trim() });
+      setEditingId(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not rename this unit.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleActive(u) {
+    setBusy(true);
+    setError("");
+    try {
+      await uomsApi.update(u.uom_id, { is_active: !u.is_active });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update this unit.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(u) {
+    if (!window.confirm(`Delete unit "${u.label}"?`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await uomsApi.remove(u.uom_id);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not delete this unit.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
+        <table className="bp-table">
+          <thead>
+            <tr><th>Code</th><th>Label</th><th>Active</th><th></th></tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={4} className="bp-table-empty">Loading…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={4} className="bp-table-empty">No units yet.</td></tr>
+            ) : (
+              items.map((u) => (
+                <tr key={u.uom_id} style={{ opacity: u.is_active ? 1 : 0.55 }}>
+                  <td className="bp-td-muted">{u.code}</td>
+                  <td>
+                    {editingId === u.uom_id ? (
+                      <input
+                        type="text"
+                        className="bp-field-input"
+                        value={editingLabel}
+                        onChange={(e) => setEditingLabel(e.target.value)}
+                        autoFocus
+                      />
+                    ) : (
+                      u.label
+                    )}
+                  </td>
+                  <td className="bp-td-muted">{u.is_active ? "Yes" : "No"}</td>
+                  <td className="bp-td-actions">
+                    {editingId === u.uom_id ? (
+                      <>
+                        <button type="button" className="bp-btn-sm" onClick={() => saveEdit(u.uom_id)} disabled={busy}>Save</button>
+                        <button type="button" className="bp-btn-sm" onClick={() => setEditingId(null)} disabled={busy}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className="bp-btn-sm" onClick={() => startEdit(u)} disabled={busy}>Rename</button>
+                        {hasPermission("products.manage", "full_control") && (
+                          <>
+                            <button type="button" className="bp-btn-sm" onClick={() => toggleActive(u)} disabled={busy}>
+                              {u.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                            <button type="button" className="bp-btn-sm" onClick={() => remove(u)} disabled={busy}>Delete</button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <form onSubmit={addUom} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <label className="bp-field-label" htmlFor="uomCode">Code</label>
+          <input id="uomCode" type="text" className="bp-field-input" value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="e.g. litre" />
+        </div>
+        <div style={{ flex: 2 }}>
+          <label className="bp-field-label" htmlFor="uomLabel">Label</label>
+          <input id="uomLabel" type="text" className="bp-field-input" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Litre" />
+        </div>
+        <button type="submit" className="bp-btn-primary" disabled={busy || !newCode.trim() || !newLabel.trim()}>+ Add</button>
+      </form>
+    </div>
+  );
+}
+
+function BomTab() {
+  const { hasPermission } = useAuth();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [editBom, setEditBom] = useState(null);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await bomsApi.list({ includeInactive: true });
+      setItems(data.items || []);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load BOMs.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function onSaved() {
+    setShowAdd(false);
+    setEditBom(null);
+    await load();
+  }
+
+  async function toggleActive(b) {
+    await bomsApi.update(b.bom_id, { is_active: !b.is_active });
+    await load();
+  }
+
+  async function remove(b) {
+    if (!window.confirm(`Delete BOM "${b.bom_name}"?`)) return;
+    try {
+      await bomsApi.remove(b.bom_id);
+      await load();
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : "Could not delete this BOM.");
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ Add BOM</button>
+      </div>
+
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      <div className="bp-table-wrap">
+        <table className="bp-table">
+          <thead>
+            <tr><th>Product</th><th>BOM name</th><th>Output qty</th><th>Active</th><th></th></tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={5} className="bp-table-empty">No BOMs yet.</td></tr>
+            ) : (
+              items.map((b) => (
+                <tr key={b.bom_id} onClick={() => setEditBom(b)} style={{ cursor: "pointer", opacity: b.is_active ? 1 : 0.55 }}>
+                  <td className="bp-td-strong">{b.product_name}</td>
+                  <td>{b.bom_name}</td>
+                  <td className="bp-td-muted">{b.output_qty} {b.product_uom}</td>
+                  <td className="bp-td-muted">{b.is_active ? "Yes" : "No"}</td>
+                  <td className="bp-td-actions">
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditBom(b); }}>Edit</button>
+                    {hasPermission("products.manage", "full_control") && (
+                      <>
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); toggleActive(b); }}>
+                          {b.is_active ? "Deactivate" : "Activate"}
+                        </button>
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(b); }}>Delete</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showAdd && <BomModal onClose={() => setShowAdd(false)} onDone={onSaved} />}
+      {editBom && <BomModal bomSummary={editBom} onClose={() => setEditBom(null)} onDone={onSaved} />}
+    </div>
+  );
+}
+
+function BomModal({ bomSummary, onClose, onDone }) {
+  const isEdit = !!bomSummary;
+  const [loading, setLoading] = useState(isEdit);
+  const [products, setProducts] = useState([]);
+  const [productId, setProductId] = useState(bomSummary?.product_id || "");
+  const [bomName, setBomName] = useState(bomSummary?.bom_name || "");
+  const [outputQty, setOutputQty] = useState(bomSummary?.output_qty ?? "1");
+  const [lines, setLines] = useState([{ raw_material_product_id: "", quantity: "" }]);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    productsApi.list({ limit: 500, includeInactive: false }).then((data) => setProducts(data.items || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!isEdit) return;
+    bomsApi.get(bomSummary.bom_id)
+      .then((data) => {
+        setLines((data.lines || []).map((l) => ({ raw_material_product_id: l.raw_material_product_id, quantity: String(l.quantity) })));
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load this BOM."))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const finishedGoods = products.filter((p) => p.item_kind === "finished_good");
+  const rawMaterials = products.filter((p) => p.item_kind === "raw_material");
+
+  function updateLine(idx, field, value) {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
+  }
+
+  function addLine() {
+    setLines((prev) => [...prev, { raw_material_product_id: "", quantity: "" }]);
+  }
+
+  function removeLine(idx) {
+    setLines((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!productId) return setError("Choose the finished good this BOM produces.");
+    if (!bomName.trim()) return setError("Enter a name for this BOM.");
+    if (!outputQty || Number(outputQty) <= 0) return setError("Output quantity must be greater than zero.");
+    const cleanLines = lines.filter((l) => l.raw_material_product_id && l.quantity);
+    if (cleanLines.length === 0) return setError("Add at least one raw material line.");
+    if (cleanLines.some((l) => Number(l.quantity) <= 0)) return setError("Every line's quantity must be greater than zero.");
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const body = {
+        product_id: productId,
+        bom_name: bomName.trim(),
+        output_qty: Number(outputQty),
+        lines: cleanLines.map((l) => ({ raw_material_product_id: l.raw_material_product_id, quantity: Number(l.quantity) })),
+      };
+      if (isEdit) {
+        await bomsApi.update(bomSummary.bom_id, body);
+      } else {
+        await bomsApi.create(body);
+      }
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not save this BOM.");
+      setSubmitting(false);
+    }
+  }
+
+  const selectedProduct = products.find((p) => p.product_id === productId);
+
+  return (
+    <Modal title={isEdit ? `Edit BOM — ${bomSummary.bom_name}` : "Add BOM"} onClose={onClose}>
+      {loading ? (
+        <div>Loading…</div>
+      ) : (
+        <form onSubmit={submit} className="bp-form">
+          {error && <div className="bp-inline-error">{error}</div>}
+
+          <div className="bp-form-row">
+            <div style={{ flex: 2 }}>
+              <label className="bp-field-label" htmlFor="bomProduct">Finished good</label>
+              <select id="bomProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} disabled={isEdit}>
+                <option value="">Select a product…</option>
+                {finishedGoods.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="bp-field-label" htmlFor="bomOutputQty">Output qty {selectedProduct ? `(${selectedProduct.uom})` : ""}</label>
+              <input id="bomOutputQty" type="number" min="0" step="0.001" className="bp-field-input" value={outputQty} onChange={(e) => setOutputQty(e.target.value)} />
+            </div>
+          </div>
+
+          <label className="bp-field-label" htmlFor="bomName">BOM name</label>
+          <input id="bomName" type="text" className="bp-field-input" value={bomName} onChange={(e) => setBomName(e.target.value)} placeholder="e.g. Standard batch" autoFocus />
+
+          <label className="bp-field-label" style={{ marginTop: 10 }}>Raw materials consumed</label>
+          {lines.map((line, idx) => (
+            <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+              <div style={{ flex: 2 }}>
+                <select
+                  className="bp-field-input"
+                  value={line.raw_material_product_id}
+                  onChange={(e) => updateLine(idx, "raw_material_product_id", e.target.value)}
+                >
+                  <option value="">Select raw material…</option>
+                  {rawMaterials.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  className="bp-field-input"
+                  placeholder="Qty"
+                  value={line.quantity}
+                  onChange={(e) => updateLine(idx, "quantity", e.target.value)}
+                />
+              </div>
+              <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1}>Remove</button>
+            </div>
+          ))}
+          <button type="button" className="bp-btn-sm" onClick={addLine} style={{ alignSelf: "flex-start" }}>+ Add line</button>
+
+          <div className="bp-form-actions">
+            <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+            <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add BOM"}</button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }

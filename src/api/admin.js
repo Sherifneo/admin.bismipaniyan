@@ -30,6 +30,21 @@ export const productsApi = {
   remove: (id) => DEL(`/api/admin/products/${id}`),
 };
 
+export const uomsApi = {
+  list: (params = {}) => GET(`/api/admin/uoms?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/uoms", body),
+  update: (id, body) => PUT(`/api/admin/uoms/${id}`, body),
+  remove: (id) => DEL(`/api/admin/uoms/${id}`),
+};
+
+export const bomsApi = {
+  list: (params = {}) => GET(`/api/admin/boms?${new URLSearchParams(cleanParams(params))}`),
+  get: (id) => GET(`/api/admin/boms/${id}`),
+  create: (body) => POST("/api/admin/boms", body),
+  update: (id, body) => PUT(`/api/admin/boms/${id}`, body),
+  remove: (id) => DEL(`/api/admin/boms/${id}`),
+};
+
 export const cashbookApi = {
   list: (params = {}) => GET(`/api/admin/cashbook?${new URLSearchParams(cleanParams(params))}`),
   create: (body) => POST("/api/admin/cashbook", body),
