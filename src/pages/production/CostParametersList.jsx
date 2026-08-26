@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 const CATEGORY_LABELS = { material: "Material", labour: "Labour", overhead: "Overhead", utility: "Utility" };
 const RATE_TYPE_LABELS = { per_hour: "Per hour", per_production: "Per production" };
@@ -140,9 +141,9 @@ export default function CostParametersList() {
                   {table.isColumnVisible("linked_employee_name") && <td className="bp-td-muted">{p.linked_employee_name || "—"}</td>}
                   {table.isColumnVisible("notes") && <td className="bp-td-muted">{p.notes || "—"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(p.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{p.updated_at ? new Date(p.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(p.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setHistoryParam(p); }}>History</button>
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditParam(p); }}>Edit</button>
@@ -325,7 +326,7 @@ function HistoryModal({ param, onClose }) {
           <tbody>
             {history.map((h) => (
               <tr key={h.history_id}>
-                <td className="bp-td-muted">{h.effective_date}</td>
+                <td className="bp-td-muted">{formatDate(h.effective_date)}</td>
                 <td className="bp-td-strong">{inr(h.value)}</td>
               </tr>
             ))}

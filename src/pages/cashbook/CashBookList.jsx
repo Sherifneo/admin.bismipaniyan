@@ -9,6 +9,7 @@ import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 import "./CashBook.css";
 
 const LIMIT = 20;
@@ -295,7 +296,7 @@ export default function CashBookList() {
               ) : (
                 reversals.map((r) => (
                   <tr key={r.reversal_entry_id}>
-                    <td className="bp-td-muted">{r.reversed_at ? new Date(r.reversed_at).toLocaleString("en-IN") : "—"}</td>
+                    <td className="bp-td-muted">{formatDateTime(r.reversed_at) || "—"}</td>
                     <td className="bp-td-muted">{r.reversed_by_name || "—"}</td>
                     <td className="bp-td-strong">{r.location_name}</td>
                     <td>
@@ -304,7 +305,7 @@ export default function CashBookList() {
                       </span>
                     </td>
                     <td>{r.category}</td>
-                    <td className="bp-td-muted">{r.original_entry_date}</td>
+                    <td className="bp-td-muted">{formatDate(r.original_entry_date)}</td>
                     <td className="bp-td-strong">{inr(r.amount)}</td>
                     <td className="bp-td-muted">{r.reversal_description || "—"}</td>
                   </tr>
@@ -354,7 +355,7 @@ export default function CashBookList() {
                           ) : "—"}
                         </td>
                       )}
-                      {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{e.entry_date}</td>}
+                      {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{formatDate(e.entry_date)}</td>}
                       {table.isColumnVisible("location_name") && <td className="bp-td-strong">{e.location_name}</td>}
                       {table.isColumnVisible("financial_account_name") && <td className="bp-td-muted">{e.financial_account_name || "—"}</td>}
                       {table.isColumnVisible("entry_type") && (
@@ -392,9 +393,9 @@ export default function CashBookList() {
                         </td>
                       )}
                       {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{e.created_by_name || "—"}</td>}
-                      {table.isColumnVisible("created_at") && <td className="bp-td-muted">{e.created_at ? new Date(e.created_at).toLocaleString("en-IN") : "—"}</td>}
+                      {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(e.created_at) || "—"}</td>}
                       {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{e.updated_by_name || "—"}</td>}
-                      {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{e.updated_at ? new Date(e.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                      {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(e.updated_at) || "—"}</td>}
                       {tab === "deleted" ? (
                         <>
                           <td className="bp-td-muted">{e.delete_reason || "—"}</td>
@@ -436,7 +437,7 @@ export default function CashBookList() {
       {deleteTarget && (
         <ReasonConfirmModal
           title="Delete cash book entry"
-          message={`This moves the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${deleteTarget.entry_date} to Recently Deleted.`}
+          message={`This moves the ${deleteTarget.entry_type} entry of ${inr(deleteTarget.amount)} for ${deleteTarget.location_name} on ${formatDate(deleteTarget.entry_date)} to Recently Deleted.`}
           confirmLabel="Delete"
           onClose={() => setDeleteTarget(null)}
           onConfirm={onDeleteConfirmed}
@@ -445,7 +446,7 @@ export default function CashBookList() {
       {reverseTarget && (
         <ReasonConfirmModal
           title="Reverse cash book entry"
-          message={`This posts a new offsetting entry for the ${reverseTarget.entry_type} of ${inr(reverseTarget.amount)} for ${reverseTarget.location_name} on ${reverseTarget.entry_date}. The original stays on record, flagged as reversed — nothing is deleted or changed.`}
+          message={`This posts a new offsetting entry for the ${reverseTarget.entry_type} of ${inr(reverseTarget.amount)} for ${reverseTarget.location_name} on ${formatDate(reverseTarget.entry_date)}. The original stays on record, flagged as reversed — nothing is deleted or changed.`}
           confirmLabel="Reverse"
           reasonLabel="Reason for reversal"
           danger={false}

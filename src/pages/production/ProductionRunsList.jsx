@@ -7,6 +7,7 @@ import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 const STAGE_LABELS = { mixing: "Mixing", baking: "Baking", packing: "Packing" };
@@ -152,12 +153,12 @@ export default function ProductionRunsList() {
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{run.location_name}</td>}
                   {table.isColumnVisible("machine_name") && <td className="bp-td-muted">{run.machine_name || "—"}</td>}
                   {table.isColumnVisible("quantity_produced") && <td className="bp-td-muted">{run.quantity_produced} {run.uom}</td>}
-                  {table.isColumnVisible("run_date") && <td className="bp-td-muted">{run.run_date}</td>}
+                  {table.isColumnVisible("run_date") && <td className="bp-td-muted">{formatDate(run.run_date)}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={run.status} /></td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{run.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{run.created_at ? new Date(run.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(run.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{run.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{run.updated_at ? new Date(run.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(run.updated_at) || "—"}</td>}
                   {table.isColumnVisible("universal_trans_id") && (
                     <td>
                       {run.universal_trans_id ? (
@@ -393,7 +394,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
           <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
             <div><span className="bp-td-muted">Status: </span><StatusBadge status={run.status} /></div>
             <div><span className="bp-td-muted">Quantity:</span> {run.quantity_produced} {run.uom}</div>
-            <div><span className="bp-td-muted">Run date:</span> {run.run_date}</div>
+            <div><span className="bp-td-muted">Run date:</span> {formatDate(run.run_date)}</div>
             {run.machine_name && <div><span className="bp-td-muted">Machine:</span> {run.machine_name}</div>}
           </div>
 

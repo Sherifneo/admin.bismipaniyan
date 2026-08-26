@@ -8,6 +8,7 @@ import StatusBadge from "../../components/StatusBadge";
 import { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 
@@ -175,8 +176,8 @@ export default function PurchaseOrdersList() {
                   {table.isColumnVisible("po_number") && <td className="bp-td-strong">{po.po_number}</td>}
                   {table.isColumnVisible("vendor_name") && <td>{po.vendor_code ? `${po.vendor_code} — ${po.vendor_name}` : po.vendor_name}</td>}
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{po.location_name}</td>}
-                  {table.isColumnVisible("order_date") && <td className="bp-td-muted">{po.order_date}</td>}
-                  {table.isColumnVisible("expected_date") && <td className="bp-td-muted">{po.expected_date || "—"}</td>}
+                  {table.isColumnVisible("order_date") && <td className="bp-td-muted">{formatDate(po.order_date)}</td>}
+                  {table.isColumnVisible("expected_date") && <td className="bp-td-muted">{formatDate(po.expected_date) || "—"}</td>}
                   {table.isColumnVisible("total") && <td className="bp-td-strong">{inr(po.total)}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={po.status} /></td>}
                   {table.isColumnVisible("payment_status") && (
@@ -189,9 +190,9 @@ export default function PurchaseOrdersList() {
                     </td>
                   )}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{po.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{po.created_at ? new Date(po.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(po.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{po.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{po.updated_at ? new Date(po.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(po.updated_at) || "—"}</td>}
                   {table.isColumnVisible("universal_trans_id") && (
                     <td onClick={(e) => e.stopPropagation()}>
                       {po.universal_trans_id ? (
@@ -527,13 +528,13 @@ function PoDetailModal({ poId, onClose, onChanged }) {
           <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
             <div><span className="bp-td-muted">Status: </span><StatusBadge status={po.status} /></div>
             <div><span className="bp-td-muted">Location:</span> {po.location_name}</div>
-            <div><span className="bp-td-muted">Order date:</span> {po.order_date}</div>
-            {po.received_date && <div><span className="bp-td-muted">Received:</span> {po.received_date}</div>}
+            <div><span className="bp-td-muted">Order date:</span> {formatDate(po.order_date)}</div>
+            {po.received_date && <div><span className="bp-td-muted">Received:</span> {formatDate(po.received_date)}</div>}
             {po.status === "received" && (
               <div>
                 <span className="bp-td-muted">Payment: </span>
                 <StatusBadge status={po.payment_status === "paid" ? "paid" : "requested"} label={po.payment_status === "paid" ? "Paid" : "Unpaid"} />
-                {po.paid_date && <span className="bp-td-muted"> ({po.paid_date})</span>}
+                {po.paid_date && <span className="bp-td-muted"> ({formatDate(po.paid_date)})</span>}
               </div>
             )}
           </div>

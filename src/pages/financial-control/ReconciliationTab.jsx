@@ -3,6 +3,7 @@ import { financialReconciliationApi, financialAccountsApi } from "../../api/admi
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import StatusBadge from "../../components/StatusBadge";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -221,7 +222,7 @@ export default function ReconciliationTab() {
                 ) : (
                   items.map((t) => (
                     <tr key={`${t.type}-${t.id}`}>
-                      <td className="bp-td-muted">{t.date}</td>
+                      <td className="bp-td-muted">{formatDate(t.date)}</td>
                       <td>{t.type}</td>
                       <td className="bp-td-muted">{t.reference || "—"}</td>
                       <td className="bp-td-muted">{t.description || "—"}</td>
@@ -256,7 +257,7 @@ export default function ReconciliationTab() {
               </button>
             )}
             {batch && batch.status === "approved" && (
-              <span className="bp-td-muted">Approved by {batch.approved_by_name || "—"} on {batch.approved_at ? new Date(batch.approved_at).toLocaleString("en-IN") : "—"}</span>
+              <span className="bp-td-muted">Approved by {batch.approved_by_name || "—"} on {formatDateTime(batch.approved_at) || "—"}</span>
             )}
           </div>
         </>
@@ -284,7 +285,7 @@ export default function ReconciliationTab() {
               recentBatches.map((b) => (
                 <tr key={b.batch_id} onClick={() => openBatch(b)} style={{ cursor: "pointer" }}>
                   <td className="bp-td-muted">{b.batch_code || "—"}</td>
-                  <td className="bp-td-strong">{b.from_date} to {b.to_date}</td>
+                  <td className="bp-td-strong">{formatDate(b.from_date)} to {formatDate(b.to_date)}</td>
                   <td className="bp-td-muted">{b.financial_account_name || "—"}</td>
                   <td>{inr(b.calculated_balance)}</td>
                   <td><StatusBadge status={b.status} /></td>

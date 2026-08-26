@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { globalSearchApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import StatusBadge from "../../components/StatusBadge";
+import { formatDate } from "../../utils/date";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -138,7 +139,7 @@ export default function GlobalSearchPage() {
                     <td className="bp-trans-id-link">{item.universal_trans_id || "—"}</td>
                     <td className="bp-td-strong">{item.module}</td>
                     <td className="bp-td-muted">{item.document_number || "—"}</td>
-                    <td className="bp-td-muted">{item.date}</td>
+                    <td className="bp-td-muted">{formatDate(item.date)}</td>
                     <td>{item.status ? <StatusBadge status={item.status} /> : "—"}</td>
                     <td className="bp-td-muted">{item.location_name || "—"}</td>
                     <td className="bp-td-muted">{item.financial_account_name || "—"}</td>
@@ -167,7 +168,7 @@ function TransactionDetail({ detail, onOpen, onBack }) {
         <DetailRow label="Transaction ID" value={<span className="bp-trans-id-link" style={{ fontSize: 14 }}>{row.universal_trans_id}</span>} />
         <DetailRow label="Transaction Type" value={moduleLabel} />
         <DetailRow label="Document" value={row.so_number || row.po_number || row.trans_id || row.transfer_number || row.batch_code || "—"} />
-        <DetailRow label="Date" value={row.entry_date || row.order_date || row.txn_date || row.transfer_date || row.run_date || row.paid_date || row.period_end || row.to_date || "—"} />
+        <DetailRow label="Date" value={formatDate(row.entry_date || row.order_date || row.txn_date || row.transfer_date || row.run_date || row.paid_date || row.period_end || row.to_date) || "—"} />
         <DetailRow label="Status" value={row.status ? <StatusBadge status={row.status} /> : "—"} />
         {row.amount !== undefined && <DetailRow label="Amount" value={inr(row.amount)} />}
         {row.total !== undefined && <DetailRow label="Total" value={inr(row.total)} />}

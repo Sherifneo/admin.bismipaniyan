@@ -7,6 +7,7 @@ import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDateTime } from "../../utils/date";
 
 // Repeat/bulk buyers only — a walk-in counter sale doesn't need a saved
 // record here at all (Sales Orders can be created with just a typed
@@ -128,9 +129,9 @@ export default function CustomersList() {
                   {table.isColumnVisible("gstin") && <td className="bp-td-muted">{c.gstin || "—"}</td>}
                   {table.isColumnVisible("is_active") && <td className="bp-td-muted">{c.is_active ? "Yes" : "No"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{c.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{c.created_at ? new Date(c.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(c.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{c.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{c.updated_at ? new Date(c.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(c.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }}>Edit</button>
                     {hasPermission("sales.manage", "full_control") && (

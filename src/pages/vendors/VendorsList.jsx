@@ -7,6 +7,7 @@ import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDateTime } from "../../utils/date";
 
 // Vendors sell raw materials TO Bismi — a purchasing relationship, not
 // a consignment/commission one (that's Partners & Shops). Feeds the
@@ -113,9 +114,9 @@ export default function VendorsList() {
                   {table.isColumnVisible("contact_name") && <td className="bp-td-muted">{v.contact_name || "—"}{v.contact_phone ? ` · ${v.contact_phone}` : ""}</td>}
                   {table.isColumnVisible("address") && <td className="bp-td-muted">{v.address || "—"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{v.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{v.created_at ? new Date(v.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(v.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{v.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{v.updated_at ? new Date(v.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(v.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditVendor(v); }}>Edit</button>
                     {hasPermission("purchasing.manage", "full_control") && (

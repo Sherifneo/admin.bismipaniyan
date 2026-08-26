@@ -6,6 +6,7 @@ import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 
@@ -123,7 +124,7 @@ export default function WaOrdersList() {
               table.filteredRows.map((o) => (
                 <tr key={o.wa_order_id} onClick={() => setDetailOrder(o)} style={{ cursor: "pointer" }}>
                   <SelectRowCell table={table} row={o} />
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{new Date(o.created_at).toLocaleString("en-IN")}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(o.created_at)}</td>}
                   {table.isColumnVisible("customer_name") && <td className="bp-td-strong">{o.customer_name || "—"}</td>}
                   {table.isColumnVisible("customer_phone") && <td className="bp-td-muted">{o.customer_phone || "—"}</td>}
                   {table.isColumnVisible("items") && <td className="bp-td-strong">{o.items.length} item{o.items.length === 1 ? "" : "s"}</td>}
@@ -131,7 +132,7 @@ export default function WaOrdersList() {
                   {table.isColumnVisible("status") && <td><StatusBadge status={o.status} /></td>}
                   {table.isColumnVisible("customer_address") && <td className="bp-td-muted">{o.customer_address || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{o.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{o.updated_at ? new Date(o.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(o.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setDetailOrder(o); }}>View</button>
                   </td>

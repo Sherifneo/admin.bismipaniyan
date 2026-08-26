@@ -8,6 +8,7 @@ import StatusBadge from "../../components/StatusBadge";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
@@ -141,9 +142,9 @@ export default function BankAccountsList() {
                       {table.isColumnVisible("balance") && <td>{inr(a.balance)}</td>}
                       {table.isColumnVisible("is_active") && <td><StatusBadge status={a.is_active ? "active" : "inactive"} /></td>}
                       {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{a.created_by_name || "—"}</td>}
-                      {table.isColumnVisible("created_at") && <td className="bp-td-muted">{a.created_at ? new Date(a.created_at).toLocaleString("en-IN") : "—"}</td>}
+                      {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(a.created_at) || "—"}</td>}
                       {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{a.updated_by_name || "—"}</td>}
-                      {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{a.updated_at ? new Date(a.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                      {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(a.updated_at) || "—"}</td>}
                       <td className="bp-td-actions">
                         <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditAccount(a); }}>Edit</button>
                       </td>
@@ -400,7 +401,7 @@ function BankTransactionTab({ onChanged }) {
                       ) : "—"}
                     </td>
                   )}
-                  {table.isColumnVisible("txn_date") && <td className="bp-td-muted">{t.txn_date}</td>}
+                  {table.isColumnVisible("txn_date") && <td className="bp-td-muted">{formatDate(t.txn_date)}</td>}
                   {table.isColumnVisible("financial_account_name") && <td className="bp-td-strong">{t.financial_account_name}</td>}
                   {table.isColumnVisible("txn_type") && (
                     <td>

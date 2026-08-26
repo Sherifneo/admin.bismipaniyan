@@ -9,6 +9,7 @@ import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 import "./Partners.css";
 
 const LIMIT = 20;
@@ -156,9 +157,9 @@ export default function PartnersList() {
                   {table.isColumnVisible("commission_percent") && <td>{Number(p.commission_percent)}%</td>}
                   {table.isColumnVisible("settlement_frequency") && <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.settlement_frequency}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(p.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{p.updated_at ? new Date(p.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(p.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setSettlementsFor(p); }}>Settlements</button>
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditPartner(p); }}>Edit</button>
@@ -388,12 +389,12 @@ function SettlementsModal({ partner, onClose }) {
               {table.filteredRows.map((s) => (
                 <tr key={s.settlement_id}>
                   <SelectRowCell table={table} row={s} />
-                  {table.isColumnVisible("period") && <td className="bp-td-muted">{s.period_start} → {s.period_end}</td>}
+                  {table.isColumnVisible("period") && <td className="bp-td-muted">{formatDate(s.period_start)} → {formatDate(s.period_end)}</td>}
                   {table.isColumnVisible("sales_value") && <td>{inr(s.sales_value)}</td>}
                   {table.isColumnVisible("net_amount") && <td className="bp-td-strong">{inr(s.net_amount)}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={s.status} /></td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{s.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{s.updated_at ? new Date(s.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(s.updated_at) || "—"}</td>}
                   {table.isColumnVisible("universal_trans_id") && (
                     <td>
                       {s.universal_trans_id ? (

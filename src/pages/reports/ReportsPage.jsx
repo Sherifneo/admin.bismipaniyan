@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { formatDate } from "../../utils/date";
 
 const LIMIT = 30;
 
@@ -147,7 +148,7 @@ function CashbookSummaryTab() {
               table.filteredRows.map((r) => (
                 <tr key={r.entry_date}>
                   <SelectRowCell table={table} row={r} />
-                  <td className="bp-td-muted">{r.entry_date}</td>
+                  <td className="bp-td-muted">{formatDate(r.entry_date)}</td>
                   <td>{inr(r.total_income)}</td>
                   <td>{inr(r.total_expense)}</td>
                   <td className="bp-td-strong">{inr(r.net)}</td>
@@ -272,7 +273,7 @@ function StockMovementsTab() {
               table.filteredRows.map((r) => (
                 <tr key={r.movement_id}>
                   <SelectRowCell table={table} row={r} />
-                  <td className="bp-td-muted">{r.entry_date}</td>
+                  <td className="bp-td-muted">{formatDate(r.entry_date)}</td>
                   <td className="bp-td-strong">{r.product_name}</td>
                   <td className="bp-td-muted">{r.sku}</td>
                   <td>{r.location_name}</td>

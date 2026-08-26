@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 // Moving Bismi's own stock between two of its own locations (Factory to
 // a store, or store to store) — purely operational, never touches Cash
@@ -142,10 +143,10 @@ export default function StockTransfersList() {
                   {table.isColumnVisible("from_location_name") && <td className="bp-td-muted">{t.from_location_name}</td>}
                   {table.isColumnVisible("to_location_name") && <td className="bp-td-muted">{t.to_location_name}</td>}
                   {table.isColumnVisible("quantity") && <td>{t.quantity} {t.uom || ""}</td>}
-                  {table.isColumnVisible("transfer_date") && <td className="bp-td-muted">{t.transfer_date}</td>}
+                  {table.isColumnVisible("transfer_date") && <td className="bp-td-muted">{formatDate(t.transfer_date)}</td>}
                   {table.isColumnVisible("status") && <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{t.status}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{t.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{t.created_at ? new Date(t.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(t.created_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     {t.status === "draft" && hasPermission("inventory.manage", "edit") && (
                       <>

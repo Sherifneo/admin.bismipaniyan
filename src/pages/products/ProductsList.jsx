@@ -9,6 +9,7 @@ import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 
@@ -176,9 +177,9 @@ export default function ProductsList() {
                   {table.isColumnVisible("selling_price") && <td>{inr(p.selling_price)}</td>}
                   {table.isColumnVisible("low_stock_alert") && <td className="bp-td-muted">{p.low_stock_alert}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{p.created_at ? new Date(p.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(p.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{p.updated_at ? new Date(p.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(p.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditProduct(p); }}>Edit</button>
                     {hasPermission("products.manage", "full_control") && (

@@ -8,6 +8,7 @@ import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDate, formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 
@@ -150,13 +151,13 @@ export default function SalesOrdersList() {
                   {table.isColumnVisible("so_number") && <td className="bp-td-strong">{so.so_number}</td>}
                   {table.isColumnVisible("buyer") && <td>{so.customer_name || so.walkin_name || "Walk-in"}</td>}
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{so.location_name}</td>}
-                  {table.isColumnVisible("date") && <td className="bp-td-muted">{so.completed_date || so.order_date}</td>}
+                  {table.isColumnVisible("date") && <td className="bp-td-muted">{formatDate(so.completed_date || so.order_date)}</td>}
                   {table.isColumnVisible("total") && <td className="bp-td-strong">{inr(so.total)}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={so.status} /></td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{so.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{so.created_at ? new Date(so.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(so.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{so.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{so.updated_at ? new Date(so.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(so.updated_at) || "—"}</td>}
                   {table.isColumnVisible("universal_trans_id") && (
                     <td onClick={(e) => e.stopPropagation()}>
                       {so.universal_trans_id ? (
@@ -559,7 +560,7 @@ function SoDetailModal({ soId, onClose, onChanged }) {
           <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
             <div><span className="bp-td-muted">Status: </span><StatusBadge status={so.status} /></div>
             <div><span className="bp-td-muted">Location:</span> {so.location_name}</div>
-            <div><span className="bp-td-muted">Date:</span> {so.completed_date || so.order_date}</div>
+            <div><span className="bp-td-muted">Date:</span> {formatDate(so.completed_date || so.order_date)}</div>
           </div>
 
           <table className="bp-table">

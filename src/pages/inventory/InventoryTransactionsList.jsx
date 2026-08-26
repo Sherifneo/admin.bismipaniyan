@@ -6,6 +6,7 @@ import Pagination from "../../components/Pagination";
 import { formatQty } from "../../lib/uom";
 import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { Link } from "react-router-dom";
+import { formatDate } from "../../utils/date";
 
 const LIMIT = 25;
 
@@ -169,7 +170,7 @@ export default function InventoryTransactionsList() {
                     </td>
                   )}
                   {table.isColumnVisible("trans_id") && <td className="bp-td-muted">{r.trans_id || "—"}</td>}
-                  {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{r.entry_date}</td>}
+                  {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{formatDate(r.entry_date)}</td>}
                   {table.isColumnVisible("product_name") && <td className="bp-td-strong">{r.product_name}{r.sku ? ` (${r.sku})` : ""}</td>}
                   {table.isColumnVisible("location_name") && <td>{r.location_name}</td>}
                   {table.isColumnVisible("movement_type") && (

@@ -3,6 +3,7 @@ import { activityLogApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Pagination from "../../components/Pagination";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
+import { formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 
@@ -76,7 +77,7 @@ export default function ActivityLogPage() {
               table.filteredRows.map((entry) => (
                 <tr key={entry.audit_id}>
                   <SelectRowCell table={table} row={entry} />
-                  <td className="bp-td-muted">{new Date(entry.created_at).toLocaleString("en-IN")}</td>
+                  <td className="bp-td-muted">{formatDateTime(entry.created_at)}</td>
                   <td>{entry.actor_name || "System"}</td>
                   <td style={{ textTransform: "capitalize" }}>{entry.action}</td>
                   <td className="bp-td-muted">{entry.entity_type} · {entry.entity_id}</td>

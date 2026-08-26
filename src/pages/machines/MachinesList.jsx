@@ -6,6 +6,7 @@ import Modal from "../../components/Modal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { formatDateTime } from "../../utils/date";
 
 // Production equipment (ovens, mixers, etc.) — attached to a production
 // run so output can be traced to the machine that made it.
@@ -120,9 +121,9 @@ export default function MachinesList() {
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{m.location_name || "—"}</td>}
                   {table.isColumnVisible("is_active") && <td className="bp-td-muted">{m.is_active ? "Yes" : "No"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{m.created_by_name || "—"}</td>}
-                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{m.created_at ? new Date(m.created_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(m.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{m.updated_by_name || "—"}</td>}
-                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{m.updated_at ? new Date(m.updated_at).toLocaleString("en-IN") : "—"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(m.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditMachine(m); }}>Edit</button>
                     {hasPermission("production.manage", "full_control") && (
