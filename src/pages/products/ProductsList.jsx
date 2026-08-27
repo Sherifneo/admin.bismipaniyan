@@ -21,6 +21,7 @@ const TABS = [
   { key: "products", label: "Products" },
   { key: "uom", label: "UOM" },
   { key: "bom", label: "BOM" },
+  { key: "change-management", label: "Change Management" },
 ];
 
 const CSV_COLUMNS = [
@@ -152,6 +153,8 @@ export default function ProductsList() {
         <UomTab />
       ) : tab === "bom" ? (
         <BomTab />
+      ) : tab === "change-management" ? (
+        <ChangeManagementTab />
       ) : (
         <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
@@ -251,6 +254,7 @@ export default function ProductsList() {
 
 function ProductModal({ product, onClose, onDone }) {
   const isEdit = !!product;
+  const locked = isEdit && !!product.is_locked;
   const [sku, setSku] = useState(product?.sku || "");
   const [name, setName] = useState(product?.name || "");
   const [itemKind, setItemKind] = useState(product?.item_kind || "finished_good");
@@ -273,12 +277,24 @@ function ProductModal({ product, onClose, onDone }) {
 
   async function submit(e) {
     e.preventDefault();
+    if (locked) {
+      setError("This product is locked under Change Management — unlock it first before editing.");
+      return;
+    }
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
     if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
       setError("Enter a product code.");
+      return;
+    }
+    if (costPrice === "" || Number(costPrice) < 0) {
+      setError("Cost price is required.");
+      return;
+    }
+    if (sellingPrice === "" || Number(sellingPrice) < 0) {
+      setError("Selling price is required.");
       return;
     }
     setSubmitting(true);
@@ -312,31 +328,36 @@ function ProductModal({ product, onClose, onDone }) {
     <Modal title={isEdit ? `Edit — ${product.name}` : "Add product"} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
+        {locked && (
+          <div className="bp-inline-error" style={{ background: "var(--bp-warning-bg, #fff4e5)" }}>
+            This product is locked under Change Management. Unlock it from the Change Management tab before editing.
+          </div>
+        )}
 
         <CodeField label="Product code" field={codeField} isEdit={isEdit} />
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pSku">SKU (optional)</label>
-            <input id="pSku" type="text" className="bp-field-input" value={sku} onChange={(e) => setSku(e.target.value)} disabled={isEdit} />
+            <input id="pSku" type="text" className="bp-field-input" value={sku} onChange={(e) => setSku(e.target.value)} disabled={isEdit || locked} />
           </div>
           <div style={{ flex: 2 }}>
             <label className="bp-field-label" htmlFor="pName">Name</label>
-            <input id="pName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+            <input id="pName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus disabled={locked} />
           </div>
         </div>
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pKind">Kind</label>
-            <select id="pKind" className="bp-field-input" value={itemKind} onChange={(e) => setItemKind(e.target.value)}>
+            <select id="pKind" className="bp-field-input" value={itemKind} onChange={(e) => setItemKind(e.target.value)} disabled={locked}>
               <option value="finished_good">Finished good</option>
               <option value="raw_material">Raw material</option>
             </select>
           </div>
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pUom">Unit of measure</label>
-            <select id="pUom" className="bp-field-input" value={uom} onChange={(e) => setUom(e.target.value)}>
+            <select id="pUom" className="bp-field-input" value={uom} onChange={(e) => setUom(e.target.value)} disabled={locked}>
               {uoms.map((u) => <option key={u.uom_id} value={u.code}>{u.label}</option>)}
               {uom && !uoms.some((u) => u.code === uom) && <option value={uom}>{uom}</option>}
             </select>
@@ -346,7 +367,7 @@ function ProductModal({ product, onClose, onDone }) {
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pOwner">Owning partner (optional)</label>
-            <select id="pOwner" className="bp-field-input" value={owningPartnerId} onChange={(e) => setOwningPartnerId(e.target.value)}>
+            <select id="pOwner" className="bp-field-input" value={owningPartnerId} onChange={(e) => setOwningPartnerId(e.target.value)} disabled={locked}>
               <option value="">Bismi-owned</option>
               {supplyingPartners.map((p) => <option key={p.partner_id} value={p.partner_id}>{p.name}</option>)}
             </select>
@@ -357,27 +378,27 @@ function ProductModal({ product, onClose, onDone }) {
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pCost">Cost price (₹)</label>
-            <input id="pCost" type="number" min="0" step="0.01" className="bp-field-input" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} />
+            <input id="pCost" type="number" min="0" step="0.01" className="bp-field-input" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required disabled={locked} />
           </div>
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
-            <input id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} />
+            <input id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required disabled={locked} />
           </div>
         </div>
 
         <label className="bp-field-label" htmlFor="pLowStock">Low stock alert threshold</label>
-        <input id="pLowStock" type="number" min="0" step="0.01" className="bp-field-input" value={lowStockAlert} onChange={(e) => setLowStockAlert(e.target.value)} />
+        <input id="pLowStock" type="number" min="0" step="0.01" className="bp-field-input" value={lowStockAlert} onChange={(e) => setLowStockAlert(e.target.value)} disabled={locked} />
 
         {isEdit && (
           <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} disabled={locked} />
             Active
           </label>
         )}
 
         <div className="bp-form-actions">
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add product"}</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting || locked}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add product"}</button>
         </div>
       </form>
     </Modal>
@@ -672,6 +693,7 @@ function BomTab() {
 
 function BomModal({ bomSummary, onClose, onDone }) {
   const isEdit = !!bomSummary;
+  const locked = isEdit && !!bomSummary.is_locked;
   const [loading, setLoading] = useState(isEdit);
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState(bomSummary?.product_id || "");
@@ -714,6 +736,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
 
   async function submit(e) {
     e.preventDefault();
+    if (locked) return setError("This BOM is locked under Change Management — unlock it first before editing.");
     if (!productId) return setError("Choose the finished good this BOM produces.");
     if (!bomName.trim()) return setError("Enter a name for this BOM.");
     if (!outputQty || Number(outputQty) <= 0) return setError("Output quantity must be greater than zero.");
@@ -755,6 +778,11 @@ function BomModal({ bomSummary, onClose, onDone }) {
       ) : (
         <form onSubmit={submit} className="bp-form">
           {error && <div className="bp-inline-error">{error}</div>}
+          {locked && (
+            <div className="bp-inline-error" style={{ background: "var(--bp-warning-bg, #fff4e5)" }}>
+              This BOM is locked under Change Management. Unlock it from the Change Management tab before editing.
+            </div>
+          )}
           {isEdit && bomSummary.status === "approved" && (
             <p className="bp-td-muted" style={{ fontSize: 12, margin: "0 0 10px" }}>
               This BOM is approved. Changing the name, output quantity, or lines will move it back to Draft for re-approval.
@@ -766,19 +794,19 @@ function BomModal({ bomSummary, onClose, onDone }) {
           <div className="bp-form-row">
             <div style={{ flex: 2 }}>
               <label className="bp-field-label" htmlFor="bomProduct">Finished good</label>
-              <select id="bomProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} disabled={isEdit}>
+              <select id="bomProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} disabled={isEdit || locked}>
                 <option value="">Select a product…</option>
                 {finishedGoods.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
               </select>
             </div>
             <div style={{ flex: 1 }}>
               <label className="bp-field-label" htmlFor="bomOutputQty">Output qty {selectedProduct ? `(${selectedProduct.uom})` : ""}</label>
-              <input id="bomOutputQty" type="number" min="0" step="0.001" className="bp-field-input" value={outputQty} onChange={(e) => setOutputQty(e.target.value)} />
+              <input id="bomOutputQty" type="number" min="0" step="0.001" className="bp-field-input" value={outputQty} onChange={(e) => setOutputQty(e.target.value)} disabled={locked} />
             </div>
           </div>
 
           <label className="bp-field-label" htmlFor="bomName">BOM name</label>
-          <input id="bomName" type="text" className="bp-field-input" value={bomName} onChange={(e) => setBomName(e.target.value)} placeholder="e.g. Standard batch" autoFocus />
+          <input id="bomName" type="text" className="bp-field-input" value={bomName} onChange={(e) => setBomName(e.target.value)} placeholder="e.g. Standard batch" autoFocus disabled={locked} />
 
           <label className="bp-field-label" style={{ marginTop: 10 }}>Raw materials consumed</label>
           {lines.map((line, idx) => (
@@ -788,6 +816,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
                   className="bp-field-input"
                   value={line.raw_material_product_id}
                   onChange={(e) => updateLine(idx, "raw_material_product_id", e.target.value)}
+                  disabled={locked}
                 >
                   <option value="">Select raw material…</option>
                   {rawMaterials.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
@@ -802,19 +831,168 @@ function BomModal({ bomSummary, onClose, onDone }) {
                   placeholder="Qty"
                   value={line.quantity}
                   onChange={(e) => updateLine(idx, "quantity", e.target.value)}
+                  disabled={locked}
                 />
               </div>
-              <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1}>Remove</button>
+              <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1 || locked}>Remove</button>
             </div>
           ))}
-          <button type="button" className="bp-btn-sm" onClick={addLine} style={{ alignSelf: "flex-start" }}>+ Add line</button>
+          <button type="button" className="bp-btn-sm" onClick={addLine} style={{ alignSelf: "flex-start" }} disabled={locked}>+ Add line</button>
 
           <div className="bp-form-actions">
             <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
-            <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add BOM"}</button>
+            <button type="submit" className="bp-btn-primary" disabled={submitting || locked}>{submitting ? "Saving…" : isEdit ? "Save changes" : "Add BOM"}</button>
           </div>
         </form>
       )}
     </Modal>
+  );
+}
+
+// Owner-only lock over an entire product's or BOM's edit form — once
+// locked, PUT /products/:id and PUT /boms/:id both refuse any change
+// except the lock flag itself (toggled only here, via a dedicated
+// route), protecting a finalized price/recipe from accidental edits by
+// anyone with ordinary products.manage access. Not a permission
+// (permissions decide who CAN edit at all) — this is a per-record
+// switch that overrides even a permitted editor.
+function ChangeManagementTab() {
+  const { hasPermission, admin } = useAuth();
+  const canToggle = admin?.role === "owner" && hasPermission("products.manage", "full_control");
+  const [products, setProducts] = useState([]);
+  const [boms, setBoms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(null);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const [productData, bomData] = await Promise.all([
+        productsApi.list({ limit: 500, includeInactive: true }),
+        bomsApi.list({ includeInactive: true }),
+      ]);
+      setProducts(productData.items || []);
+      setBoms(bomData.items || []);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load Change Management data.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function toggleProductLock(p) {
+    setBusy(p.product_id);
+    setError("");
+    try {
+      await productsApi.setLock(p.product_id, !p.is_locked);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update lock status.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function toggleBomLock(b) {
+    setBusy(b.bom_id);
+    setError("");
+    try {
+      await bomsApi.setLock(b.bom_id, !b.is_locked);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not update lock status.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div>
+      <p className="bp-td-muted" style={{ marginTop: 0 }}>
+        Locking a product or BOM here blocks all edits to it everywhere else in the app until it's unlocked again —
+        {canToggle ? " use it to protect a finalized price or recipe." : " only the owner can change lock status."}
+      </p>
+
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      <label className="bp-field-label">Products</label>
+      <div className="bp-table-wrap" style={{ marginBottom: 20 }}>
+        <table className="bp-table">
+          <thead>
+            <tr><th>Code</th><th>Name</th><th>Cost price</th><th>Selling price</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+            ) : products.length === 0 ? (
+              <tr><td colSpan={6} className="bp-table-empty">No products found.</td></tr>
+            ) : (
+              products.map((p) => (
+                <tr key={p.product_id}>
+                  <td className="bp-td-muted">{p.product_code || "—"}</td>
+                  <td className="bp-td-strong">{p.name}</td>
+                  <td>{inr(p.cost_price)}</td>
+                  <td>{inr(p.selling_price)}</td>
+                  <td>
+                    <span className={`bp-badge ${p.is_locked ? "bp-badge-warning" : "bp-badge-success"}`}>
+                      {p.is_locked ? "Locked" : "Unlocked"}
+                    </span>
+                  </td>
+                  <td className="bp-td-actions">
+                    {canToggle && (
+                      <button type="button" className="bp-btn-sm" onClick={() => toggleProductLock(p)} disabled={busy === p.product_id}>
+                        {busy === p.product_id ? "Saving…" : p.is_locked ? "Unlock" : "Lock"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <label className="bp-field-label">BOMs</label>
+      <div className="bp-table-wrap">
+        <table className="bp-table">
+          <thead>
+            <tr><th>Code</th><th>Product</th><th>BOM name</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="bp-table-empty">Loading…</td></tr>
+            ) : boms.length === 0 ? (
+              <tr><td colSpan={5} className="bp-table-empty">No BOMs found.</td></tr>
+            ) : (
+              boms.map((b) => (
+                <tr key={b.bom_id}>
+                  <td className="bp-td-muted">{b.bom_code || "—"}</td>
+                  <td className="bp-td-strong">{b.product_name}</td>
+                  <td>{b.bom_name}</td>
+                  <td>
+                    <span className={`bp-badge ${b.is_locked ? "bp-badge-warning" : "bp-badge-success"}`}>
+                      {b.is_locked ? "Locked" : "Unlocked"}
+                    </span>
+                  </td>
+                  <td className="bp-td-actions">
+                    {canToggle && (
+                      <button type="button" className="bp-btn-sm" onClick={() => toggleBomLock(b)} disabled={busy === b.bom_id}>
+                        {busy === b.bom_id ? "Saving…" : b.is_locked ? "Unlock" : "Lock"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
