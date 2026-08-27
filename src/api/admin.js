@@ -28,7 +28,6 @@ export const productsApi = {
   create: (body) => POST("/api/admin/products", body),
   update: (id, body) => PUT(`/api/admin/products/${id}`, body),
   remove: (id) => DEL(`/api/admin/products/${id}`),
-  setLock: (id, isLocked) => PUT(`/api/admin/products/${id}/lock`, { is_locked: isLocked }),
 };
 
 export const uomsApi = {
@@ -45,7 +44,11 @@ export const bomsApi = {
   update: (id, body) => PUT(`/api/admin/boms/${id}`, body),
   approve: (id) => PUT(`/api/admin/boms/${id}/approve`),
   remove: (id) => DEL(`/api/admin/boms/${id}`),
-  setLock: (id, isLocked) => PUT(`/api/admin/boms/${id}/lock`, { is_locked: isLocked }),
+};
+
+export const changeManagementApi = {
+  list: () => GET("/api/admin/change-management"),
+  setLock: (fieldKey, isLocked) => PUT(`/api/admin/change-management/${fieldKey}`, { is_locked: isLocked }),
 };
 
 export const cashbookApi = {
