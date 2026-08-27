@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { numberSequencesApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
+import { useDataTable, SearchByBar, ColumnHeader, ColumnChooserButton } from "../../components/DataTable";
 
 // Editable version of the nammahearth Number Sequences pattern, scoped to
 // what Bismi actually has today (just purchase_order — no create-new-
@@ -36,6 +37,28 @@ export default function NumberSequencesPage() {
     await load();
   }
 
+  const columns = [
+    { key: "counter_key", label: "Sequence key", accessor: (c) => c.counter_key },
+    { key: "module", label: "Module", accessor: (c) => c.module || "" },
+    { key: "prefix", label: "Prefix", accessor: (c) => c.prefix },
+    { key: "next_preview", label: "Next number", accessor: (c) => (c.mode === "manual" ? "—" : c.next_preview), filter: false },
+    { key: "pad_width", label: "Padding", accessor: (c) => c.pad_width, filter: "number" },
+    {
+      key: "mode", label: "Mode", accessor: (c) => (c.mode === "manual" ? "Manual" : "Automatic"), filter: "select",
+      options: [{ value: "Automatic", label: "Automatic" }, { value: "Manual", label: "Manual" }],
+    },
+    {
+      key: "status", label: "Status", accessor: (c) => (c.is_active === false ? "Inactive" : "Active"), filter: "select",
+      options: [{ value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }],
+    },
+    {
+      key: "fiscal_year_reset", label: "Yearly reset", accessor: (c) => (c.fiscal_year ? "Yes" : "No"), filter: "select",
+      options: [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }],
+    },
+    { key: "updated_at", label: "Last updated", accessor: (c) => c.updated_at || "", filter: "dateRange" },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (c) => c.counter_key });
+
   return (
     <div>
       <h1 className="bp-page-title">Number Sequences</h1>
@@ -45,37 +68,44 @@ export default function NumberSequencesPage() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
+      <SearchByBar table={table} columns={columns} />
+
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
             <tr>
-              <th>Sequence key</th>
-              <th>Prefix</th>
-              <th>Next number</th>
-              <th>Padding</th>
-              <th>Mode</th>
-              <th>Status</th>
-              <th>Yearly reset</th>
-              <th>Last updated</th>
+              {table.isColumnVisible("counter_key") && <ColumnHeader table={table} column={columns[0]} />}
+              {table.isColumnVisible("module") && <ColumnHeader table={table} column={columns[1]} />}
+              {table.isColumnVisible("prefix") && <ColumnHeader table={table} column={columns[2]} />}
+              {table.isColumnVisible("next_preview") && <th>Next number</th>}
+              {table.isColumnVisible("pad_width") && <ColumnHeader table={table} column={columns[4]} />}
+              {table.isColumnVisible("mode") && <ColumnHeader table={table} column={columns[5]} />}
+              {table.isColumnVisible("status") && <ColumnHeader table={table} column={columns[6]} />}
+              {table.isColumnVisible("fiscal_year_reset") && <ColumnHeader table={table} column={columns[7]} />}
+              {table.isColumnVisible("updated_at") && <ColumnHeader table={table} column={columns[8]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="bp-table-empty">Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={9} className="bp-table-empty">No sequences configured yet.</td></tr>
+              <tr><td colSpan={10} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={10} className="bp-table-empty">No sequences found.</td></tr>
             ) : (
-              items.map((c) => (
+              table.filteredRows.map((c) => (
                 <tr key={c.counter_key} style={c.is_active === false ? { opacity: 0.55 } : undefined}>
-                  <td className="bp-td-strong">{c.counter_key}</td>
-                  <td>{c.prefix}</td>
-                  <td className="bp-td-strong">{c.mode === "manual" ? "—" : c.next_preview}</td>
-                  <td className="bp-td-muted">{c.pad_width}</td>
-                  <td className="bp-td-muted">{c.mode === "manual" ? "Manual" : "Automatic"}</td>
-                  <td className="bp-td-muted">{c.is_active === false ? "Inactive" : "Active"}</td>
-                  <td className="bp-td-muted">{c.fiscal_year ? "Yes" : "No"}</td>
-                  <td className="bp-td-muted">{c.updated_at ? new Date(c.updated_at).toLocaleString("en-IN") : "—"}</td>
+                  {table.isColumnVisible("counter_key") && <td className="bp-td-strong">{c.counter_key}</td>}
+                  {table.isColumnVisible("module") && <td className="bp-td-muted">{c.module || "—"}</td>}
+                  {table.isColumnVisible("prefix") && <td>{c.prefix}</td>}
+                  {table.isColumnVisible("next_preview") && <td className="bp-td-strong">{c.mode === "manual" ? "—" : c.next_preview}</td>}
+                  {table.isColumnVisible("pad_width") && <td className="bp-td-muted">{c.pad_width}</td>}
+                  {table.isColumnVisible("mode") && <td className="bp-td-muted">{c.mode === "manual" ? "Manual" : "Automatic"}</td>}
+                  {table.isColumnVisible("status") && <td className="bp-td-muted">{c.is_active === false ? "Inactive" : "Active"}</td>}
+                  {table.isColumnVisible("fiscal_year_reset") && <td className="bp-td-muted">{c.fiscal_year ? "Yes" : "No"}</td>}
+                  {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{c.updated_at ? new Date(c.updated_at).toLocaleString("en-IN") : "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={() => setManageItem(c)}>Manage</button>
                   </td>

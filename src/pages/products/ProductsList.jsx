@@ -697,7 +697,7 @@ function BomTab() {
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><th>Code</th><th>Product</th><th>BOM name</th><th>Output qty</th><th>Status</th><th>Active</th><th></th></tr>
+            <tr><th>BOM ID</th><th>Product</th><th>BOM name</th><th>Output qty</th><th>Status</th><th>Active</th><th></th></tr>
           </thead>
           <tbody>
             {loading ? (
@@ -804,7 +804,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
     if (cleanLines.length === 0) return setError("Add at least one raw material line.");
     if (cleanLines.some((l) => Number(l.quantity) <= 0)) return setError("Every line's quantity must be greater than zero.");
     if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
-      return setError("Enter a BOM code.");
+      return setError("Enter a BOM ID.");
     }
 
     setSubmitting(true);
@@ -849,7 +849,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
             </p>
           )}
 
-          <CodeField label="BOM code" field={codeField} isEdit={isEdit} />
+          <CodeField label="BOM ID" field={codeField} isEdit={isEdit} />
 
           <div className="bp-form-row">
             <div style={{ flex: 2 }}>
@@ -869,34 +869,44 @@ function BomModal({ bomSummary, onClose, onDone }) {
           <input id="bomName" type="text" className="bp-field-input" value={bomName} onChange={(e) => setBomName(e.target.value)} placeholder="e.g. Standard batch" autoFocus disabled={locked} />
 
           <label className="bp-field-label" style={{ marginTop: 10 }}>Raw materials consumed</label>
-          {lines.map((line, idx) => (
-            <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
-              <div style={{ flex: 2 }}>
-                <select
-                  className="bp-field-input"
-                  value={line.raw_material_product_id}
-                  onChange={(e) => updateLine(idx, "raw_material_product_id", e.target.value)}
-                  disabled={locked}
-                >
-                  <option value="">Select raw material…</option>
-                  {rawMaterials.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
-                </select>
+          {lines.map((line, idx) => {
+            const selectedMaterial = rawMaterials.find((p) => p.product_id === line.raw_material_product_id);
+            return (
+              <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+                <div style={{ flex: 2 }}>
+                  <select
+                    className="bp-field-input"
+                    value={line.raw_material_product_id}
+                    onChange={(e) => updateLine(idx, "raw_material_product_id", e.target.value)}
+                    disabled={locked}
+                  >
+                    <option value="">Select raw material…</option>
+                    {rawMaterials.map((p) => (
+                      <option key={p.product_id} value={p.product_id}>
+                        {p.product_code ? `${p.product_code} — ` : ""}{p.name} (Raw material)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    className="bp-field-input"
+                    placeholder="Qty"
+                    value={line.quantity}
+                    onChange={(e) => updateLine(idx, "quantity", e.target.value)}
+                    disabled={locked}
+                  />
+                </div>
+                <div style={{ width: 50, paddingBottom: 9 }} className="bp-td-muted">
+                  {selectedMaterial?.uom || ""}
+                </div>
+                <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1 || locked}>Remove</button>
               </div>
-              <div style={{ flex: 1 }}>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  className="bp-field-input"
-                  placeholder="Qty"
-                  value={line.quantity}
-                  onChange={(e) => updateLine(idx, "quantity", e.target.value)}
-                  disabled={locked}
-                />
-              </div>
-              <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1 || locked}>Remove</button>
-            </div>
-          ))}
+            );
+          })}
           <button type="button" className="bp-btn-sm" onClick={addLine} style={{ alignSelf: "flex-start" }} disabled={locked}>+ Add line</button>
 
           <div className="bp-form-actions">
