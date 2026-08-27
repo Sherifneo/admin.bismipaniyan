@@ -97,8 +97,12 @@
 }
 
 /* ---- Dark theme ---- */
+/* "business" (Standard-mode-only 4th theme, see ThemeContext.jsx) is
+   explicitly excluded here alongside "light" — Glass mode has no
+   business-theme-specific styling, so it must fall through to the plain
+   light branch below rather than accidentally matching dark. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not([data-theme="business"]) {
     --bp-text: #f1ede8;
     --bp-text-muted: #a89f96;
     --bp-border: rgba(255, 255, 255, 0.1);
@@ -205,6 +209,13 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Glass mode has no styling of its own for "business" — falls back to
+   plain light scheme here (matches [data-theme="light"] above) since
+   this theme is Standard-mode-only by design. */
+:root[data-theme="business"] {
   color-scheme: light;
 }
 
@@ -349,6 +360,51 @@
   --bp-standard-accent: #4a4556;
   --bp-standard-accent-dark: #565064;
   --bp-standard-accent-text: #ffffff;
+}
+
+/* ---- Standard + Business: a clean white/light-blue business-tool look,
+   modeled on a reference screenshot (white sidebar, indigo/blue as the
+   one accent color, soft pastel pill status badges, light gray-blue page
+   background). Standard-mode-only — see ThemeContext.jsx's note on why
+   this theme has no Glass-mode equivalent. */
+:root[data-mode="standard"][data-theme="business"] {
+  --bp-text: #1e2432;
+  --bp-text-muted: #6b7280;
+  --bp-border: #e5e9f0;
+
+  --bp-bg: #f4f6fb;
+  --bp-bg-image: none;
+  --bp-surface: #ffffff;
+  --bp-surface-alt: #f7f9fc;
+  --bp-glass-row-hover: #f4f6fb;
+
+  --bp-sidebar-tint: #ffffff;
+  --bp-sidebar-text: #4b5468;
+  --bp-sidebar-text-strong: #1e2432;
+  --bp-sidebar-border: var(--bp-border);
+  --bp-sidebar-hover: #eef1f8;
+  --bp-standard-chrome-btn-bg: var(--bp-surface-alt);
+  --bp-standard-chrome-btn-border: var(--bp-border);
+  --bp-standard-chrome-text: var(--bp-text);
+  --bp-standard-chrome-text-muted: var(--bp-text-muted);
+
+  --bp-standard-accent: #4f6bed;
+  --bp-standard-accent-dark: #3d54c9;
+  --bp-standard-accent-text: #ffffff;
+
+  --bp-success: #1e9e5a;
+  --bp-success-bg: #e4f7ec;
+  --bp-danger: #d1453d;
+  --bp-danger-bg: #fceceb;
+  --bp-warning: #b8720a;
+  --bp-warning-bg: #fdf1de;
+}
+
+/* Fully rounded pill-shaped status badges, matching the reference —
+   Business theme only, other Standard themes keep --bp-radius-sm. */
+:root[data-mode="standard"][data-theme="business"] .bp-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
 }
 
 /* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
