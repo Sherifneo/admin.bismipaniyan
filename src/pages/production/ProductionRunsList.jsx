@@ -72,6 +72,8 @@ export default function ProductionRunsList() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
+  const [q, setQ] = useState("");
+  const [qField, setQField] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -88,7 +90,7 @@ export default function ProductionRunsList() {
     setLoading(true);
     setError("");
     try {
-      const data = await productionApi.listRuns({ page, limit: LIMIT, status });
+      const data = await productionApi.listRuns({ page, limit: LIMIT, status, q, qField });
       setRuns(data.items || []);
       setTotal(data.total);
     } catch (err) {
@@ -101,7 +103,15 @@ export default function ProductionRunsList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, status]);
+  }, [page, status, q, qField]);
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
+    setQ(value);
+  }
 
   async function onSaved() {
     setShowAdd(false);
@@ -160,7 +170,7 @@ export default function ProductionRunsList() {
         <DataTableToolbar table={table} filename="production-runs" totalCount={runs.length} />
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

@@ -58,6 +58,8 @@ export default function InventoryTransactionsList() {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
+  const [q, setQ] = useState("");
+  const [qField, setQField] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -75,6 +77,7 @@ export default function InventoryTransactionsList() {
         movementType: movementType || undefined,
         from: from || undefined,
         to: to || undefined,
+        q, qField,
       });
       setItems(data.items || []);
       setTotal(data.total || 0);
@@ -88,13 +91,21 @@ export default function InventoryTransactionsList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, locationId, movementType, from, to]);
+  }, [page, locationId, movementType, from, to, q, qField]);
 
   function resetPageAnd(setter) {
     return (value) => {
       setPage(1);
       setter(value);
     };
+  }
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
+    setQ(value);
   }
 
   const columns = [
@@ -142,7 +153,7 @@ export default function InventoryTransactionsList() {
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

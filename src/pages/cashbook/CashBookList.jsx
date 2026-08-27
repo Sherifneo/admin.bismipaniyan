@@ -58,6 +58,8 @@ export default function CashBookList() {
   const [locationId, setLocationId] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [ledgerEntryType, setLedgerEntryType] = useState("");
+  const [q, setQ] = useState("");
+  const [qField, setQField] = useState("");
   const [tab, setTab] = useState("cashbook");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -82,7 +84,7 @@ export default function CashBookList() {
         setReversals(data.items || []);
         setTotal(data.total);
       } else {
-        const params = { page, limit: LIMIT, locationId };
+        const params = { page, limit: LIMIT, locationId, q, qField };
         if (tab === "deleted") {
           params.includeDeleted = true;
         } else if (tab === "cashbook") {
@@ -106,11 +108,19 @@ export default function CashBookList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, locationId, tab, statusFilter, ledgerEntryType]);
+  }, [page, locationId, tab, statusFilter, ledgerEntryType, q, qField]);
 
   function changeTab(key) {
     setTab(key);
     setPage(1);
+  }
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
+    setQ(value);
   }
 
   async function onSaved() {
@@ -319,7 +329,7 @@ export default function CashBookList() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <ColumnChooserButton table={table} columns={columns} />
           </div>
-          <SearchByBar table={table} columns={columns} />
+          <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
           <div className="bp-table-wrap">
             <table className="bp-table">

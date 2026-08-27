@@ -535,24 +535,50 @@ function FilterValueInput({ type, operator, column, draft, setDraft }) {
 }
 
 // "Search by <column>" — a dropdown to pick which column, plus a text
-// box that live-filters it (always a case-insensitive "contains" against
-// that column, regardless of the column's own operator-driven filter —
-// this is the broad/fast search; the column header menu is for precise
-// filtering). Sits above/near the table, same page, no navigation.
-export function SearchByBar({ table, columns }) {
+// box that searches it. Two modes:
+//   - Server mode (`onServerSearch` provided): every keystroke calls
+//     onServerSearch(columnKey, value) — the page owns turning that into
+//     a real API call (e.g. `productsApi.list({ q: value, qField: "sku" })`),
+//     so results aren't limited to whatever page of rows is already
+//     loaded in memory. `value`/`column` are then controlled props
+//     (`serverValue`/`serverColumn`) instead of local state, so the
+//     search box reflects the page's actual query state (e.g. after a
+//     URL-seeded search or a page navigation resets it).
+//   - Client mode (no `onServerSearch`, the original behavior): filters
+//     only the rows already in `table.filteredRows` via `table.setFilter`
+//     — still used by pages that haven't been wired to a server search
+//     yet, or that intentionally only ever load their full row set.
+// The column header menu is always client-side precise filtering
+// (starts with/equals/ranges) regardless of which mode this bar is in.
+export function SearchByBar({ table, columns, onServerSearch, serverColumn, serverValue }) {
   const searchable = columns.filter((c) => c.filter !== false && c.filter !== "select" && c.filter !== "dateRange" && c.filter !== "boolean");
-  const [column, setColumn] = useState(searchable[0]?.key || "");
+  const isServer = typeof onServerSearch === "function";
+  const [localColumn, setLocalColumn] = useState(searchable[0]?.key || "");
+  const column = isServer ? (serverColumn ?? searchable[0]?.key ?? "") : localColumn;
   const active = table.filters[column];
-  const value = active?.operator === "contains" ? active.value || "" : "";
+  const value = isServer ? (serverValue || "") : (active?.operator === "contains" ? active.value || "" : "");
 
   if (searchable.length === 0) return null;
 
   function onChange(v) {
+    if (isServer) {
+      onServerSearch(column, v);
+      return;
+    }
     if (!v) {
       table.clearFilter(column);
     } else {
       table.setFilter(column, { operator: "contains", value: v });
     }
+  }
+
+  function onColumnChange(nextColumn) {
+    if (isServer) {
+      onServerSearch(nextColumn, value);
+      return;
+    }
+    if (value) table.clearFilter(column);
+    setLocalColumn(nextColumn);
   }
 
   return (
@@ -569,10 +595,7 @@ export function SearchByBar({ table, columns }) {
       <select
         className="bp-field-input bp-searchby-select"
         value={column}
-        onChange={(e) => {
-          if (value) table.clearFilter(column);
-          setColumn(e.target.value);
-        }}
+        onChange={(e) => onColumnChange(e.target.value)}
       >
         {searchable.map((c) => (
           <option key={c.key} value={c.key}>{c.label}</option>

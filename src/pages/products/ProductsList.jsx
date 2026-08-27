@@ -47,6 +47,7 @@ export default function ProductsList() {
   const [page, setPage] = useState(1);
   const [itemKind, setItemKind] = useState("");
   const [q, setQ] = useState(urlSearch.q);
+  const [qField, setQField] = useState("name");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -57,7 +58,7 @@ export default function ProductsList() {
     setLoading(true);
     setError("");
     try {
-      const data = await productsApi.list({ page, limit: LIMIT, itemKind, q, includeInactive: true });
+      const data = await productsApi.list({ page, limit: LIMIT, itemKind, q, qField, includeInactive: true });
       setProducts(data.items || []);
       setTotal(data.total);
     } catch (err) {
@@ -70,10 +71,21 @@ export default function ProductsList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, itemKind, q, tab]);
+  }, [page, itemKind, q, qField, tab]);
 
   function submitSearch(value) {
     setPage(1);
+    setQField("");
+    setQ(value);
+  }
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded —
+  // fixes results on page 2/3+ being invisible to the old client-only
+  // column search.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
     setQ(value);
   }
 
@@ -169,7 +181,7 @@ export default function ProductsList() {
 
       {error && <div className="bp-inline-error">{error}</div>}
 
-      <SearchByBar table={table} columns={columns} />
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

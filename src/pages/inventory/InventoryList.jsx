@@ -39,6 +39,7 @@ export default function InventoryList() {
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
   const [q, setQ] = useState(urlSearch.q);
+  const [qField, setQField] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showMovement, setShowMovement] = useState(false);
@@ -51,7 +52,7 @@ export default function InventoryList() {
     setLoading(true);
     setError("");
     try {
-      const data = await inventoryApi.list({ page, limit: LIMIT, locationId, q });
+      const data = await inventoryApi.list({ page, limit: LIMIT, locationId, q, qField });
       setRows(data.items || []);
       setTotal(data.total);
       setTotalValue(data.total_value || 0);
@@ -65,10 +66,19 @@ export default function InventoryList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, locationId, q]);
+  }, [page, locationId, q, qField]);
 
   function submitSearch(value) {
     setPage(1);
+    setQField("");
+    setQ(value);
+  }
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
     setQ(value);
   }
 
@@ -124,7 +134,7 @@ export default function InventoryList() {
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

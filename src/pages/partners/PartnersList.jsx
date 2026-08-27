@@ -36,6 +36,7 @@ export default function PartnersList() {
   const [page, setPage] = useState(1);
   const [type, setType] = useState("");
   const [q, setQ] = useState(urlSearch.q);
+  const [qField, setQField] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -47,7 +48,7 @@ export default function PartnersList() {
     setLoading(true);
     setError("");
     try {
-      const data = await partnersApi.list({ page, limit: LIMIT, type, q });
+      const data = await partnersApi.list({ page, limit: LIMIT, type, q, qField });
       setPartners(data.items || []);
       setTotal(data.total);
     } catch (err) {
@@ -60,10 +61,19 @@ export default function PartnersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, type, q]);
+  }, [page, type, q, qField]);
 
   function submitSearch(value) {
     setPage(1);
+    setQField("");
+    setQ(value);
+  }
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
     setQ(value);
   }
 
@@ -120,7 +130,7 @@ export default function PartnersList() {
         <DataTableToolbar table={table} filename="partners" totalCount={partners.length} />
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

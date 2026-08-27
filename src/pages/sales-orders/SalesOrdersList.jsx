@@ -36,6 +36,8 @@ export default function SalesOrdersList() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
+  const [q, setQ] = useState("");
+  const [qField, setQField] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -50,7 +52,7 @@ export default function SalesOrdersList() {
     setLoading(true);
     setError("");
     try {
-      const data = await salesOrdersApi.list({ page, limit: LIMIT, status });
+      const data = await salesOrdersApi.list({ page, limit: LIMIT, status, q, qField });
       setOrders(data.items || []);
       setTotal(data.total);
     } catch (err) {
@@ -63,7 +65,15 @@ export default function SalesOrdersList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, status]);
+  }, [page, status, q, qField]);
+
+  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
+  // instead of only filtering whatever page of rows is already loaded.
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
+    setQ(value);
+  }
 
   async function onSaved() {
     setShowAdd(false);
@@ -118,7 +128,7 @@ export default function SalesOrdersList() {
         <DataTableToolbar table={table} filename="sales-orders" totalCount={orders.length} />
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
