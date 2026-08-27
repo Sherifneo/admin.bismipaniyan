@@ -7,10 +7,48 @@ import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
+import { useAuth } from "../../auth/AuthContext";
 import { formatDate, formatDateTime } from "../../utils/date";
 
 const LIMIT = 20;
 const STAGE_LABELS = { mixing: "Mixing", baking: "Baking", packing: "Packing" };
+
+// Stage hours are stored/costed as true decimal hours (0.75 = 45 min,
+// matches hourly_rate_snapshot math everywhere) but typed/displayed as
+// HH:MM so "45 minutes" doesn't require mental decimal-hour conversion.
+function decimalToHm(decimal) {
+  if (decimal === null || decimal === undefined || decimal === "") return { h: "", m: "" };
+  const totalMinutes = Math.round(Number(decimal) * 60);
+  return { h: String(Math.floor(totalMinutes / 60)), m: String(totalMinutes % 60).padStart(2, "0") };
+}
+function hmToDecimal(h, m) {
+  const hours = Number(h) || 0;
+  const minutes = Number(m) || 0;
+  return Math.round((hours + minutes / 60) * 100) / 100;
+}
+
+// HH:MM stage-hours editor — displays/edits in real time units, converts
+// to/from decimal hours (the value actually stored and used for cost
+// math) internally so nothing downstream needs to change.
+function HoursInput({ decimalValue, onChange, disabled }) {
+  const { h, m } = decimalToHm(decimalValue);
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+      <input
+        type="number" min="0" step="1" className="bp-field-input" style={{ width: 56 }}
+        placeholder="H" value={h} disabled={disabled}
+        onChange={(e) => onChange(hmToDecimal(e.target.value, m))}
+      />
+      <span className="bp-td-muted">h</span>
+      <input
+        type="number" min="0" max="59" step="1" className="bp-field-input" style={{ width: 56 }}
+        placeholder="M" value={m} disabled={disabled}
+        onChange={(e) => onChange(hmToDecimal(h, e.target.value))}
+      />
+      <span className="bp-td-muted">m</span>
+    </div>
+  );
+}
 
 // Only the factory actually produces anything — the retail stores are
 // never a production location. Mirrors SalesOrdersList.jsx's storesOnly()
@@ -576,6 +614,7 @@ function stageBlockReason(stage, run) {
 }
 
 function RunDetailModal({ runId, onClose, onChanged }) {
+  const { hasPermission } = useAuth();
   const [run, setRun] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -584,6 +623,8 @@ function RunDetailModal({ runId, onClose, onChanged }) {
   const [stageBusy, setStageBusy] = useState(null);
   const [stageHoursDraft, setStageHoursDraft] = useState({});
   const [showComplete, setShowComplete] = useState(false);
+  const [fillingLastHours, setFillingLastHours] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -651,6 +692,69 @@ function RunDetailModal({ runId, onClose, onChanged }) {
 
   const allStagesCompleted = run?.stages && run.stages.length > 0 && run.stages.every((s) => s.status === "completed");
 
+  // Prefills each not-yet-completed stage's hours from that product's
+  // last completed run — only when the worker matches this run's
+  // assigned worker for that stage, since a different worker's past
+  // hours aren't a reliable estimate for this run.
+  async function applyLastHours() {
+    setFillingLastHours(true);
+    setError("");
+    try {
+      const { stages: lastStages } = await productionApi.lastHours(run.product_id);
+      const draft = {};
+      for (const s of run.stages) {
+        if (s.status === "completed") continue;
+        const match = lastStages.find((ls) => ls.stage === s.stage && ls.employee_id === s.employee_id);
+        if (match && match.hours_worked != null) draft[s.stage] = Number(match.hours_worked);
+      }
+      if (Object.keys(draft).length === 0) {
+        setError("No matching hours found from this product's last completed run (same worker per stage).");
+      }
+      setStageHoursDraft((prev) => ({ ...prev, ...draft }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not fetch last production hours.");
+    } finally {
+      setFillingLastHours(false);
+    }
+  }
+
+  // Completes every not-yet-completed stage in order, in one click —
+  // owner-only (production.manage full_control), and still requires
+  // every stage to already have a worker and hours filled in (via the
+  // draft or an already-saved value) exactly like completing one stage
+  // individually. Sequential (not parallel) since each stage's
+  // completion is gated on the previous one already being completed.
+  async function markAllStages() {
+    for (const s of run.stages) {
+      if (s.status === "completed") continue;
+      if (!s.employee_id) {
+        setError(`Assign a worker to ${STAGE_LABELS[s.stage]} before marking all complete.`);
+        return;
+      }
+      const hours = stageHoursDraft[s.stage] ?? s.hours_worked ?? "";
+      if (!hours || Number(hours) <= 0) {
+        setError(`Enter hours worked for ${STAGE_LABELS[s.stage]} before marking all complete.`);
+        return;
+      }
+    }
+    setMarkingAll(true);
+    setError("");
+    try {
+      for (const stage of STAGES_ORDER) {
+        const s = run.stages.find((x) => x.stage === stage);
+        if (!s || s.status === "completed") continue;
+        const hours = stageHoursDraft[s.stage] ?? s.hours_worked;
+        await productionApi.updateStage(runId, stage, { status: "completed", hours_worked: Number(hours) });
+      }
+      await load();
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not mark all stages complete.");
+    } finally {
+      setMarkingAll(false);
+    }
+  }
+
   return (
     <Modal title={run ? `${run.product_name} — ${run.location_name}` : "Production run"} onClose={onClose} size="lg">
       {loading ? (
@@ -674,7 +778,21 @@ function RunDetailModal({ runId, onClose, onChanged }) {
 
           {run.stages && run.stages.length > 0 && (
             <>
-              <label className="bp-field-label">Stages</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <label className="bp-field-label" style={{ marginBottom: 0 }}>Stages</label>
+                {!allStagesCompleted && (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" className="bp-btn-sm" onClick={applyLastHours} disabled={fillingLastHours || busy}>
+                      {fillingLastHours ? "Fetching…" : "Last Prod hrs"}
+                    </button>
+                    {hasPermission("production.manage", "full_control") && (
+                      <button type="button" className="bp-btn-sm" onClick={markAllStages} disabled={markingAll || busy}>
+                        {markingAll ? "Marking…" : "Mark all"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
                 <table className="bp-table">
                   <colgroup>
@@ -705,10 +823,9 @@ function RunDetailModal({ runId, onClose, onChanged }) {
                             </select>
                           </td>
                           <td>
-                            <input
-                              type="number" min="0" step="0.25" className="bp-field-input"
-                              value={stageHoursDraft[s.stage] ?? s.hours_worked ?? ""}
-                              onChange={(e) => setStageHoursDraft((prev) => ({ ...prev, [s.stage]: e.target.value }))}
+                            <HoursInput
+                              decimalValue={stageHoursDraft[s.stage] ?? s.hours_worked ?? ""}
+                              onChange={(decimal) => setStageHoursDraft((prev) => ({ ...prev, [s.stage]: decimal }))}
                               disabled={stageBusy === s.stage || s.status === "completed"}
                             />
                           </td>
