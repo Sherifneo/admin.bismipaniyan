@@ -621,16 +621,17 @@ function BomTab() {
       <div className="bp-table-wrap">
         <table className="bp-table">
           <thead>
-            <tr><th>Product</th><th>BOM name</th><th>Output qty</th><th>Status</th><th>Active</th><th></th></tr>
+            <tr><th>Code</th><th>Product</th><th>BOM name</th><th>Output qty</th><th>Status</th><th>Active</th><th></th></tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No BOMs yet.</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">No BOMs yet.</td></tr>
             ) : (
               items.map((b) => (
                 <tr key={b.bom_id} onClick={() => setEditBom(b)} style={{ cursor: "pointer", opacity: b.is_active ? 1 : 0.55 }}>
+                  <td className="bp-td-muted">{b.bom_code || "—"}</td>
                   <td className="bp-td-strong">{b.product_name}</td>
                   <td>{b.bom_name}</td>
                   <td className="bp-td-muted">{b.output_qty} {b.product_uom}</td>
@@ -679,6 +680,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
   const [lines, setLines] = useState([{ raw_material_product_id: "", quantity: "" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const codeField = useCodePreview("bom", isEdit ? bomSummary.bom_code : null);
 
   useEffect(() => {
     productsApi.list({ limit: 500, includeInactive: false }).then((data) => setProducts(data.items || [])).catch(() => {});
@@ -718,6 +720,9 @@ function BomModal({ bomSummary, onClose, onDone }) {
     const cleanLines = lines.filter((l) => l.raw_material_product_id && l.quantity);
     if (cleanLines.length === 0) return setError("Add at least one raw material line.");
     if (cleanLines.some((l) => Number(l.quantity) <= 0)) return setError("Every line's quantity must be greater than zero.");
+    if (codeField.mode === "manual" && !isEdit && !codeField.value.trim()) {
+      return setError("Enter a BOM code.");
+    }
 
     setSubmitting(true);
     setError("");
@@ -727,6 +732,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
         bom_name: bomName.trim(),
         output_qty: Number(outputQty),
         lines: cleanLines.map((l) => ({ raw_material_product_id: l.raw_material_product_id, quantity: Number(l.quantity) })),
+        bom_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
       };
       if (isEdit) {
         await bomsApi.update(bomSummary.bom_id, body);
@@ -754,6 +760,8 @@ function BomModal({ bomSummary, onClose, onDone }) {
               This BOM is approved. Changing the name, output quantity, or lines will move it back to Draft for re-approval.
             </p>
           )}
+
+          <CodeField label="BOM code" field={codeField} isEdit={isEdit} />
 
           <div className="bp-form-row">
             <div style={{ flex: 2 }}>

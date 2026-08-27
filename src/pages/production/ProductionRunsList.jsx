@@ -365,7 +365,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
                 <label className="bp-field-label" htmlFor="runBom">BOM (optional — consumes raw materials on completion)</label>
                 <select id="runBom" className="bp-field-input" value={bomId} onChange={(e) => setBomId(e.target.value)}>
                   <option value="">— None —</option>
-                  {boms.map((b) => <option key={b.bom_id} value={b.bom_id}>{b.bom_name} (makes {b.output_qty} {b.product_uom})</option>)}
+                  {boms.map((b) => <option key={b.bom_id} value={b.bom_id}>{b.bom_code ? `${b.bom_code} — ` : ""}{b.bom_name} (makes {b.output_qty} {b.product_uom})</option>)}
                 </select>
               </>
             )}
