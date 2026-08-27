@@ -266,40 +266,94 @@
   --bp-glass-content-bg-alt: var(--bp-surface-alt);
 }
 
-/* ---- Standard + System: the NammaHearth reference look, exact colors
-   specified by the user (--nh-plum / --nh-amber / --nh-plum-dark from
-   the NammaHearth codebase, not Bismi's own --bp-brand/--bp-amber —
-   close but not identical values, kept exact rather than substituted). */
+/* ---- Standard + System: replaced with the "Liquid Glass Design System
+   (iOS-inspired) - Core Variables" palette the owner supplied — a flat
+   white/light-gray business-tool look with iOS blue as the one accent
+   color, mapped onto Bismi's existing --bp-* token names (--ink->text,
+   --accent->standard-accent, --glass*->surface, etc). System now has a
+   genuine light/dark split (it previously didn't — one fixed purple
+   look) via prefers-color-scheme, EXCEPT dark deliberately does NOT use
+   the source file's slate-blue dark palette — per explicit instruction,
+   dark uses pure black (#000) backgrounds with bold white text instead,
+   overridden further down in the dedicated System-dark block below. */
 :root[data-mode="standard"][data-theme="system"] {
-  --bp-text: #211a16;
-  --bp-text-muted: #6a625c;
-  --bp-border: #e7e0d8;
+  --bp-text: #1c1c2e;
+  --bp-text-muted: rgba(28, 28, 46, 0.66);
+  --bp-border: #e2e8f0;
 
-  --bp-bg: #faf8f6;
+  --bp-bg: #f8fafc;
   --bp-bg-image: none;
   --bp-surface: #ffffff;
-  --bp-surface-alt: #f7f3ee;
-  --bp-glass-row-hover: #f7f3ee;
+  --bp-surface-alt: #f1f5f9;
+  --bp-glass-row-hover: #f1f5f9;
 
-  --bp-sidebar-tint: #4a154b;
-  --bp-sidebar-text: rgba(255, 255, 255, 0.82);
-  --bp-sidebar-text-strong: #ffffff;
-  --bp-sidebar-border: rgba(255, 255, 255, 0.1);
-  --bp-sidebar-hover: rgba(255, 255, 255, 0.1);
-  /* Chrome (header) is plum, NOT white like the content area in this
-     theme specifically — unlike Light/Dark where chrome and content
-     share one shade, System's header needs its own light text/button
-     colors here rather than inheriting --bp-text (dark), which read as
-     near-invisible dark-on-plum breadcrumb text — the bug the user
-     flagged with a screenshot. */
-  --bp-standard-chrome-btn-bg: rgba(255, 255, 255, 0.12);
-  --bp-standard-chrome-btn-border: rgba(255, 255, 255, 0.18);
-  --bp-standard-chrome-text: #ffffff;
-  --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.7);
+  --bp-sidebar-tint: #ffffff;
+  --bp-sidebar-text: #1c1c2e;
+  --bp-sidebar-text-strong: #0a84ff;
+  --bp-sidebar-border: #e2e8f0;
+  --bp-sidebar-hover: #f1f5f9;
+  --bp-standard-chrome-btn-bg: #f1f5f9;
+  --bp-standard-chrome-btn-border: #e2e8f0;
+  --bp-standard-chrome-text: #1c1c2e;
+  --bp-standard-chrome-text-muted: rgba(28, 28, 46, 0.58);
 
-  --bp-standard-accent: #ffa51f;
-  --bp-standard-accent-dark: #e8940f;
-  --bp-standard-accent-text: #370f38;
+  --bp-standard-accent: #0a84ff;
+  --bp-standard-accent-dark: #0060df;
+  --bp-standard-accent-text: #ffffff;
+
+  --bp-success: #248a3d;
+  --bp-success-bg: #e4f7ec;
+  --bp-danger: #d70015;
+  --bp-danger-bg: #fceceb;
+  --bp-warning: #c77800;
+  --bp-warning-bg: #fdf1de;
+}
+
+/* ---- Standard + System + dark OS preference: pure black, bold white
+   text — explicitly NOT the source file's slate-blue dark palette. Only
+   applies when data-theme="system" is the resolved value (System still
+   always stamps a concrete attribute, see ThemeContext) and the OS
+   itself prefers dark — a manual "Dark" theme choice is the separate
+   :root[data-theme="dark"] block above/below, untouched by this. */
+@media (prefers-color-scheme: dark) {
+  :root[data-mode="standard"][data-theme="system"] {
+    --bp-text: #ffffff;
+    --bp-text-muted: rgba(255, 255, 255, 0.7);
+    --bp-border: #2a2a2a;
+
+    --bp-bg: #000000;
+    --bp-surface: #000000;
+    --bp-surface-alt: #121212;
+    --bp-glass-row-hover: #1a1a1a;
+
+    --bp-sidebar-tint: #000000;
+    --bp-sidebar-text: rgba(255, 255, 255, 0.86);
+    --bp-sidebar-text-strong: #ffffff;
+    --bp-sidebar-border: #2a2a2a;
+    --bp-sidebar-hover: #1a1a1a;
+    --bp-standard-chrome-btn-bg: #121212;
+    --bp-standard-chrome-btn-border: #2a2a2a;
+    --bp-standard-chrome-text: #ffffff;
+    --bp-standard-chrome-text-muted: rgba(255, 255, 255, 0.7);
+
+    --bp-standard-accent: #4aa3ff;
+    --bp-standard-accent-dark: #8ec5ff;
+    --bp-standard-accent-text: #000000;
+
+    --bp-success: #4ecb7a;
+    --bp-success-bg: rgba(78, 203, 122, 0.16);
+    --bp-danger: #ff6b64;
+    --bp-danger-bg: rgba(255, 107, 100, 0.16);
+    --bp-warning: #ffc14d;
+    --bp-warning-bg: rgba(255, 193, 77, 0.16);
+  }
+
+  :root[data-mode="standard"][data-theme="system"] .bp-sidebar-link,
+  :root[data-mode="standard"][data-theme="system"] .bp-header-name,
+  :root[data-mode="standard"][data-theme="system"] .bp-page-title,
+  :root[data-mode="standard"][data-theme="system"] .bp-card-title {
+    font-weight: 700;
+  }
 }
 
 /* ---- Standard + Light: unchanged from the previous pass — white,
