@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import FinancialDimensionsTab from "./FinancialDimensionsTab";
@@ -20,7 +20,15 @@ const TABS = [
 // Transfer / Bank Transaction tabs) plus the Financial Dimensions
 // management list (Dimensions tab) and per-account Reconciliation.
 export default function FinancialControlPage() {
-  const [tab, setTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "overview";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
   const [summary, setSummary] = useState(null);
   const [accountBalances, setAccountBalances] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { bankAccountsApi, bankTransactionsApi, financialControlApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
@@ -29,7 +29,15 @@ const TABS = [
 // form, same tab-switch pattern as ReportsPage.jsx.
 export default function BankAccountsList() {
   const urlSearch = useUrlSearch();
-  const [tab, setTab] = useState("accounts");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "accounts";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

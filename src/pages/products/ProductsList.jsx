@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { productsApi, uomsApi, bomsApi, changeManagementApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -41,7 +42,15 @@ const CSV_COLUMNS = [
 export default function ProductsList() {
   const { hasPermission } = useAuth();
   const urlSearch = useUrlSearch();
-  const [tab, setTab] = useState("products");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "products";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { cashbookApi, cashbookCategoriesApi, locationsApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
@@ -60,7 +60,15 @@ export default function CashBookList() {
   const [ledgerEntryType, setLedgerEntryType] = useState("");
   const [q, setQ] = useState("");
   const [qField, setQField] = useState("");
-  const [tab, setTab] = useState("cashbook");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "cashbook";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);

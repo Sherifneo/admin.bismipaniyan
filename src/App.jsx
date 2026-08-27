@@ -33,6 +33,7 @@ import NumberSequencesPage from "./pages/settings/NumberSequencesPage";
 import ActivityLogPage from "./pages/settings/ActivityLogPage";
 import GlobalSearchPage from "./pages/global-search/GlobalSearchPage";
 import WorkflowsPage from "./pages/workflows/WorkflowsPage";
+import CalendarPage from "./pages/calendar/CalendarPage";
 import { NAV_ITEMS } from "./layout/navConfig";
 
 // Modules with a real page built go here instead of the ComingSoon
@@ -63,12 +64,40 @@ const BUILT_PAGES = {
   security: SecurityRolesList,
   numbersequences: NumberSequencesPage,
   systemerrors: ActivityLogPage,
+  calendar: CalendarPage,
+  // A module's route-generation key is its FIRST child's key (see
+  // flattenRoutes below) — for HR and Settings that first child isn't
+  // the module's own top-level key, so it needs its own alias here too.
+  employees: HRPage,
+  companydetails: SettingsPage,
 };
 
 // Every nav item without a built page renders the shared placeholder.
 // Kept data-driven off the same NAV_ITEMS list the sidebar uses, so a
 // route can never exist without a corresponding nav entry (or vice versa).
-const placeholderRoutes = NAV_ITEMS.filter((item) => item.path !== "/");
+//
+// NAV_ITEMS is now a tree (a top-level entry either has its own `path`,
+// or `children`). Route generation flattens it back to exactly one
+// <Route> per distinct PATHNAME — several children of the same module
+// can share one page at different ?tab= values (e.g. "/products?tab=uom"
+// and "/products?tab=bom" both belong to the single "/products" page),
+// and must never each get their own <Route>, which is why this dedupes
+// on the pathname (ignoring the query string) rather than on nav key.
+function flattenRoutes(items) {
+  const seen = new Map(); // pathname -> nav item (first one wins == the "default" entry for that page)
+  for (const item of items) {
+    if (item.children) {
+      for (const child of item.children) {
+        const pathname = child.path.split("?")[0];
+        if (!seen.has(pathname)) seen.set(pathname, child);
+      }
+    } else if (item.path && item.path !== "/") {
+      seen.set(item.path, item);
+    }
+  }
+  return [...seen.values()];
+}
+const placeholderRoutes = flattenRoutes(NAV_ITEMS);
 
 function GlassOrbs() {
   return (
@@ -111,7 +140,7 @@ export default function App() {
                     ) : (
                       page
                     );
-                    return <Route key={item.key} path={item.path} element={element} />;
+                    return <Route key={item.key} path={item.path.split("?")[0]} element={element} />;
                   })}
                 </Route>
               </Routes>

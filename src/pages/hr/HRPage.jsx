@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import EmployeesList from "./EmployeesList";
 import PositionsList from "./PositionsList";
 import SalaryPaymentsList from "./SalaryPaymentsList";
@@ -16,7 +16,15 @@ const TABS = [
 // always was (own state, own API calls) — this page only owns which one
 // is visible, same shallow wrapper shape as ReportsPage.jsx's TABS switch.
 export default function HRPage() {
-  const [tab, setTab] = useState("employees");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "employees";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
 
   return (
     <div>

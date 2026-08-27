@@ -10,10 +10,13 @@ export default function AppShell() {
   const location = useLocation();
 
   // Close the drawer on every navigation — otherwise it stays open behind
-  // the new page after tapping a nav link on mobile.
+  // the new page after tapping a nav link on mobile. Includes
+  // location.search since a sidebar submodule link (e.g. "/products?tab=uom")
+  // can change only the query string, same pathname — that must still
+  // close the drawer.
   useEffect(() => {
     setMobileNavOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   return (
     <div className="bp-shell">

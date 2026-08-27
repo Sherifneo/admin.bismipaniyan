@@ -7,10 +7,22 @@ import "./Header.css";
 
 // Breadcrumb is derived from the same NAV_ITEMS list the sidebar uses —
 // single source of truth, no separate title-per-page bookkeeping.
+// NAV_ITEMS is a tree: a standalone leaf has its own `path`; a module's
+// pages live in `children`. Look for the matching CHILD's label first
+// (e.g. "Ledger Transaction" for /cashbook?tab=ledger), since that's
+// more specific than the module name — fall back to the module/leaf
+// label if no child path matches.
 function currentModuleLabel(pathname) {
   if (pathname === "/") return "Dashboard";
-  const match = NAV_ITEMS.find((item) => item.path !== "/" && pathname.startsWith(item.path));
-  return match ? match.label : null;
+  for (const item of NAV_ITEMS) {
+    if (item.children) {
+      const child = item.children.find((c) => pathname.startsWith(c.path.split("?")[0]));
+      if (child) return child.label;
+    } else if (item.path && item.path !== "/" && pathname.startsWith(item.path)) {
+      return item.label;
+    }
+  }
+  return null;
 }
 
 export default function Header({ onMenuClick, onRefresh }) {

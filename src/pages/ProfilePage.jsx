@@ -13,8 +13,7 @@ const ROLE_LABELS = { owner: "Owner", super_user: "Super User", staff: "Staff" }
 // see App.jsx's standalone /profile route). Holds identity (who's signed
 // in, change password — moved here from Settings, a personal-account
 // action belongs with the profile, not app-wide settings) and
-// personalization (theme, design mode). Settings keeps sidebar
-// customization, which is an app-behavior preference, not identity.
+// personalization (theme, design mode).
 export default function ProfilePage() {
   const { admin } = useAuth();
   const initial = (admin?.full_name || "?").trim().charAt(0).toUpperCase();

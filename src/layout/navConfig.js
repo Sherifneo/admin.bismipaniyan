@@ -1,40 +1,107 @@
-// Nav tree for Bismi Admin. `ownerOnly` hides an item entirely for
-// non-owners (hidden module, not a greyed-out one). `requiredPermission`
-// gates on the granular Security Roles system — a staff member needs this
-// exact permission key granted to see the item (owners always pass, see
-// AuthContext's hasPermission). Items with neither flag are visible to
-// any signed-in employee.
+// Nav tree for Bismi Admin. A top-level entry is either a standalone
+// leaf (`path`, no `children`) or a module (`children`, no own `path` —
+// its "default" page is `children[0]`). Every leaf/child keeps its own
+// `ownerOnly`/`requiredPermission` exactly as before — there is no
+// module-level permission concept; a module is visible if at least one
+// of its children is visible (see Sidebar.jsx's filtering).
+//
+// A tab-backed child's `path` points at its parent page's own route
+// plus `?tab=<key>` (e.g. "/products?tab=uom") — the page itself reads
+// that query param via useSearchParams (see e.g. ProductsList.jsx) and
+// treats the URL as the source of truth for which tab is showing.
+// App.jsx's route generation dedupes on pathname (ignoring the query
+// string), so every tab-backed child of one page still shares exactly
+// one <Route> — see App.jsx's flattenRoutes().
 //
 // "WhatsApp Orders" is a worklist of order attempts sent from the site's
 // cart-to-WhatsApp flow, not a real order-processing pipeline (see
-// backend wa_orders table) — separate from "Sales Orders" below, which
-// IS the real order/invoice/stock-out pipeline for every sale (walk-in
-// or bulk), replacing Cash Book's old manual "Store sales" entry as the
-// source of truth for revenue.
+// backend wa_orders table) — separate from "Sales Orders", which IS the
+// real order/invoice/stock-out pipeline for every sale.
 export const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "🏠", path: "/" },
-  { key: "globalsearch", label: "Transaction Search", icon: "🔎", path: "/global-search" },
   { key: "waorders", label: "WhatsApp Orders", icon: "💚", path: "/wa-orders", requiredPermission: "orders.manage" },
-  { key: "salesorders", label: "Sales Orders", icon: "🧾", path: "/sales-orders", requiredPermission: "sales.manage" },
-  { key: "stores", label: "Retail Stores", icon: "🏬", path: "/stores", requiredPermission: "stores.manage" },
-  { key: "hr", label: "HR", icon: "🧑‍🍳", path: "/hr", requiredPermission: "hr.manage" },
-  { key: "customers", label: "Customers", icon: "🧑‍🤝‍🧑", path: "/customers", requiredPermission: "sales.manage" },
-  { key: "cashbook", label: "Cash Book", icon: "💰", path: "/cashbook", requiredPermission: "cashbook.manage" },
-  { key: "bankaccounts", label: "Banking", icon: "🏦", path: "/bank-accounts", requiredPermission: "bank.manage" },
-  { key: "products", label: "Products", icon: "🛍️", path: "/products", requiredPermission: "products.manage" },
-  { key: "inventory", label: "Inventory", icon: "📊", path: "/inventory", requiredPermission: "inventory.manage" },
+  {
+    key: "reports", label: "Reports", icon: "📈",
+    children: [
+      { key: "reports", label: "Reports", path: "/reports" },
+      { key: "globalsearch", label: "Transaction Search", path: "/global-search" },
+    ],
+  },
+  {
+    key: "sales", label: "Sales", icon: "🧾",
+    children: [
+      { key: "salesorders", label: "Sales Orders", path: "/sales-orders", requiredPermission: "sales.manage" },
+      { key: "customers", label: "Customers", path: "/customers", requiredPermission: "sales.manage" },
+    ],
+  },
+  {
+    key: "purchasing", label: "Purchasing", icon: "📋",
+    children: [
+      { key: "purchaseorders", label: "Purchase Orders", path: "/purchase-orders", requiredPermission: "purchasing.manage" },
+      { key: "vendors", label: "Vendors", path: "/vendors", requiredPermission: "purchasing.manage" },
+    ],
+  },
+  {
+    key: "inventory", label: "Inventory", icon: "📊",
+    children: [
+      { key: "inventory", label: "Inventory", path: "/inventory?tab=stock", requiredPermission: "inventory.manage" },
+      { key: "stocktransfers", label: "Stock Transfers", path: "/inventory?tab=transfers", requiredPermission: "inventory.manage" },
+      { key: "inventorytransactions", label: "Transactions", path: "/inventory?tab=transactions", requiredPermission: "inventory.manage" },
+      { key: "stores", label: "Retail Stores", path: "/stores", requiredPermission: "stores.manage" },
+    ],
+  },
+  {
+    key: "products", label: "Products", icon: "🛍️",
+    children: [
+      { key: "products", label: "Products", path: "/products?tab=products", requiredPermission: "products.manage" },
+      { key: "uom", label: "UOM", path: "/products?tab=uom", requiredPermission: "products.manage" },
+      { key: "bom", label: "BOM", path: "/products?tab=bom", requiredPermission: "products.manage" },
+      { key: "changemanagement", label: "Change Management", path: "/products?tab=change-management", requiredPermission: "products.manage" },
+    ],
+  },
   { key: "partners", label: "Partners & Shops", icon: "🤝", path: "/partners", requiredPermission: "partners.manage" },
-  { key: "vendors", label: "Vendors", icon: "🏭", path: "/vendors", requiredPermission: "purchasing.manage" },
-  { key: "purchaseorders", label: "Purchase Orders", icon: "📋", path: "/purchase-orders", requiredPermission: "purchasing.manage" },
-  { key: "production", label: "Production", icon: "⚙️", path: "/production", requiredPermission: "production.manage" },
-  { key: "machines", label: "Machines", icon: "🔧", path: "/machines", requiredPermission: "production.manage" },
-  { key: "costparameters", label: "Cost Parameters", icon: "💲", path: "/cost-parameters", requiredPermission: "production.manage" },
-  { key: "reports", label: "Reports", icon: "📈", path: "/reports" },
-  { key: "financialcontrol", label: "Financial Control", icon: "🧮", path: "/financial-control" },
-  { key: "settings", label: "Settings", icon: "⚙️", path: "/settings" },
-  { key: "team", label: "Team", icon: "🔑", path: "/team", ownerOnly: true, divider: true },
-  { key: "security", label: "Security Roles", icon: "🛡️", path: "/security", ownerOnly: true },
-  { key: "numbersequences", label: "Number Sequences", icon: "🔢", path: "/number-sequences", ownerOnly: true },
-  { key: "workflows", label: "Workflow", icon: "🧭", path: "/workflows", ownerOnly: true },
-  { key: "systemerrors", label: "System Errors", icon: "🛠️", path: "/system-errors", ownerOnly: true },
+  {
+    key: "production", label: "Production", icon: "⚙️",
+    children: [
+      { key: "production", label: "Production Runs", path: "/production", requiredPermission: "production.manage" },
+      { key: "costparameters", label: "Cost Parameters", path: "/cost-parameters", requiredPermission: "production.manage" },
+      { key: "machines", label: "Machines", path: "/machines", requiredPermission: "production.manage" },
+    ],
+  },
+  {
+    key: "finance", label: "Finance", icon: "💰",
+    children: [
+      { key: "cashbook", label: "Cash Book", path: "/cashbook?tab=cashbook", requiredPermission: "cashbook.manage" },
+      { key: "ledgertransaction", label: "Ledger Transaction", path: "/cashbook?tab=ledger", requiredPermission: "cashbook.manage" },
+      { key: "reversals", label: "Reversals", path: "/cashbook?tab=reversals", requiredPermission: "cashbook.manage" },
+      { key: "cashbookcategories", label: "Categories", path: "/cashbook?tab=categories", requiredPermission: "cashbook.manage" },
+      { key: "recentlydeleted", label: "Recently Deleted", path: "/cashbook?tab=deleted", requiredPermission: "cashbook.manage" },
+      { key: "bankaccounts", label: "Banking — Accounts", path: "/bank-accounts?tab=accounts", requiredPermission: "bank.manage" },
+      { key: "banktransfer", label: "Banking — Transfer", path: "/bank-accounts?tab=transfer", requiredPermission: "bank.manage" },
+      { key: "banktransaction", label: "Banking — Bank Transaction", path: "/bank-accounts?tab=banktransaction", requiredPermission: "bank.manage" },
+      { key: "financialcontrol", label: "Financial Control — Overview", path: "/financial-control?tab=overview" },
+      { key: "financialdimensions", label: "Financial Control — Dimensions", path: "/financial-control?tab=dimensions" },
+      { key: "reconciliation", label: "Financial Control — Reconciliation", path: "/financial-control?tab=reconciliation" },
+      { key: "calendar", label: "Financial Year", path: "/calendar" },
+    ],
+  },
+  {
+    key: "hr", label: "HR", icon: "🧑‍🍳",
+    children: [
+      { key: "employees", label: "Employees", path: "/hr?tab=employees", requiredPermission: "hr.manage" },
+      { key: "positions", label: "Positions", path: "/hr?tab=positions", requiredPermission: "hr.manage" },
+      { key: "salarypayments", label: "Salary Payments", path: "/hr?tab=salarypayments", requiredPermission: "hr.manage" },
+    ],
+  },
+  {
+    key: "settings", label: "Settings", icon: "⚙️",
+    children: [
+      { key: "companydetails", label: "Company Details", path: "/settings?tab=company" },
+      { key: "team", label: "Team", path: "/team", ownerOnly: true },
+      { key: "security", label: "Security Roles", path: "/security", ownerOnly: true },
+      { key: "numbersequences", label: "Number Sequences", path: "/number-sequences", ownerOnly: true },
+      { key: "workflows", label: "Workflow", path: "/workflows", ownerOnly: true },
+      { key: "systemerrors", label: "System Errors", path: "/system-errors", ownerOnly: true },
+    ],
+  },
 ];

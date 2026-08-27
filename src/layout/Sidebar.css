@@ -126,6 +126,133 @@
   color: var(--bp-brand-dark);
 }
 
+/* ---- Main module / submodule tree ------------------------------------ */
+
+.bp-sidebar-section-label {
+  padding: 10px 16px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bp-sidebar-text);
+  opacity: 0.55;
+}
+
+.bp-sidebar-module {
+  margin: 0 8px;
+}
+
+.bp-sidebar-module-header {
+  display: flex;
+  align-items: center;
+  border-radius: var(--bp-radius-md);
+  transition: background 0.12s ease;
+}
+
+.bp-sidebar-module-header:hover {
+  background: var(--bp-sidebar-hover);
+}
+
+.bp-sidebar-module-header.is-active {
+  background: var(--bp-sidebar-hover);
+}
+
+.bp-sidebar-chevron {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--bp-sidebar-text);
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 9px 4px 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bp-sidebar-chevron-icon {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.bp-sidebar-chevron-icon.is-expanded {
+  transform: rotate(90deg);
+}
+
+.bp-sidebar-module-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  color: var(--bp-sidebar-text);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.bp-sidebar-module-link:hover {
+  color: var(--bp-sidebar-text-strong);
+}
+
+.bp-sidebar-pin {
+  flex: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0.35;
+  padding: 6px 10px 6px 4px;
+  filter: grayscale(1);
+  transition: opacity 0.12s ease, filter 0.12s ease;
+}
+
+.bp-sidebar-pin:hover {
+  opacity: 0.75;
+}
+
+.bp-sidebar-pin.is-pinned {
+  opacity: 1;
+  filter: none;
+}
+
+.bp-sidebar-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px 30px;
+  border-left: 1px solid var(--bp-sidebar-border);
+  margin-left: 19px;
+}
+
+.bp-sidebar-sublink {
+  display: block;
+  padding: 7px 10px;
+  border-radius: var(--bp-radius-sm);
+  color: var(--bp-sidebar-text);
+  opacity: 0.85;
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.bp-sidebar-sublink:hover {
+  background: var(--bp-sidebar-hover);
+  color: var(--bp-sidebar-text-strong);
+  opacity: 1;
+}
+
+.bp-sidebar-sublink.is-active {
+  background: var(--bp-amber);
+  color: var(--bp-brand-dark);
+  font-weight: 600;
+  opacity: 1;
+  box-shadow: 0 2px 10px rgba(232, 148, 15, 0.4);
+}
+
 /* Below the shared mobile breakpoint (see theme.css), the sidebar becomes
    an off-canvas drawer: fixed position, translated fully off-screen by
    default, slid in via .is-open. A tap-outside overlay closes it. */

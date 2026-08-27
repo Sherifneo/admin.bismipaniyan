@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import InventoryList from "./InventoryList";
 import StockTransfersList from "./StockTransfersList";
 import InventoryTransactionsList from "./InventoryTransactionsList";
@@ -16,7 +16,15 @@ const TABS = [
 // always was (own state, own API calls) — this page only owns which one
 // is visible.
 export default function InventoryPage() {
-  const [tab, setTab] = useState("stock");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "stock";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
 
   return (
     <div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { reportsApi, locationsApi, productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import ExportMenu from "../../components/ExportMenu";
@@ -23,7 +24,15 @@ const TABS = [
 // each a table + CSV export. No BI tooling, no date-range picker library
 // (plain <input type="date"> pairs, matching the rest of the app).
 export default function ReportsPage() {
-  const [tab, setTab] = useState("cashbook");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "cashbook";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
 
   return (
     <div>
