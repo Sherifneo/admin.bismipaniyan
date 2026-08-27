@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { locationsApi } from "../../api/admin";
+import { locationsApi, employeesApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
@@ -57,6 +57,7 @@ export default function StoresList() {
       options: [{ value: "store", label: "Store" }, { value: "factory", label: "Factory" }],
     },
     { key: "address", label: "Address", accessor: (s) => s.address || "" },
+    { key: "incharge_name", label: "Incharge", accessor: (s) => s.incharge_name || "" },
     {
       key: "is_active", label: "Active", accessor: (s) => (s.is_active ? "Yes" : "No"), filter: "select",
       options: [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }],
@@ -91,14 +92,15 @@ export default function StoresList() {
               <ColumnHeader table={table} column={columns[2]} />
               <ColumnHeader table={table} column={columns[3]} />
               <ColumnHeader table={table} column={columns[4]} />
+              <ColumnHeader table={table} column={columns[5]} />
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={7} className="bp-table-empty">No stores found.</td></tr>
+              <tr><td colSpan={8} className="bp-table-empty">No stores found.</td></tr>
             ) : (
               table.filteredRows.map((s) => (
                 <tr key={s.location_id} onClick={() => setDrillStore(s)} style={{ cursor: "pointer" }}>
@@ -107,6 +109,7 @@ export default function StoresList() {
                   <td className="bp-td-strong">{s.name}</td>
                   <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{s.kind}</td>
                   <td className="bp-td-muted">{s.address || "—"}</td>
+                  <td className="bp-td-muted">{s.incharge_name || "—"}</td>
                   <td className="bp-td-muted">{s.is_active ? "Yes" : "No"}</td>
                   <td className="bp-td-actions">
                     {canManage && (
@@ -132,10 +135,20 @@ function StoreModal({ store, onClose, onDone }) {
   const [name, setName] = useState(store?.name || "");
   const [kind, setKind] = useState(store?.kind || "store");
   const [address, setAddress] = useState(store?.address || "");
+  const [inchargeId, setInchargeId] = useState(store?.incharge_employee_id || "");
   const [isActive, setIsActive] = useState(store ? !!store.is_active : true);
+  const [employees, setEmployees] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const codeField = useCodePreview(kind === "factory" ? "location_factory" : "location", isEdit ? store.location_code : null);
+  const isStore = kind === "store";
+
+  useEffect(() => {
+    employeesApi
+      .list()
+      .then((data) => setEmployees(data?.items || []))
+      .catch(() => setEmployees([]));
+  }, []);
 
   async function submit(e) {
     e.preventDefault();
@@ -147,17 +160,27 @@ function StoreModal({ store, onClose, onDone }) {
       setError("Enter a store code.");
       return;
     }
+    if (isStore && !inchargeId) {
+      setError("Incharge is required for a store.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       if (isEdit) {
-        await locationsApi.update(store.location_id, { name: name.trim(), address: address || undefined, is_active: isActive });
+        await locationsApi.update(store.location_id, {
+          name: name.trim(),
+          address: address || undefined,
+          is_active: isActive,
+          incharge_employee_id: isStore ? inchargeId : undefined,
+        });
       } else {
         await locationsApi.create({
           name: name.trim(),
           kind,
           address: address || undefined,
           location_code: codeField.mode === "manual" ? codeField.value.trim() : undefined,
+          incharge_employee_id: isStore ? inchargeId : undefined,
         });
       }
       onDone();
@@ -189,6 +212,18 @@ function StoreModal({ store, onClose, onDone }) {
 
         <label className="bp-field-label" htmlFor="sAddress">Address (optional)</label>
         <input id="sAddress" type="text" className="bp-field-input" value={address} onChange={(e) => setAddress(e.target.value)} />
+
+        {isStore && (
+          <>
+            <label className="bp-field-label" htmlFor="sIncharge">Incharge</label>
+            <select id="sIncharge" className="bp-field-input" value={inchargeId} onChange={(e) => setInchargeId(e.target.value)} required>
+              <option value="">Select an employee…</option>
+              {employees.map((emp) => (
+                <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>
+              ))}
+            </select>
+          </>
+        )}
 
         {isEdit && (
           <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
