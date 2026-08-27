@@ -154,6 +154,10 @@ function EmployeeModal({ employee, locations, onClose, onDone, onManagePositions
       setError("Select a base location.");
       return;
     }
+    if (!roleDesignation) {
+      setError("Select a position.");
+      return;
+    }
     const salaryNum = Number(monthlySalary);
     if (!Number.isFinite(salaryNum) || salaryNum <= 0) {
       setError("Enter a valid monthly salary.");
@@ -171,7 +175,7 @@ function EmployeeModal({ employee, locations, onClose, onDone, onManagePositions
         aadhar_number: aadharNumber || undefined,
         mobile: mobile || undefined,
         monthly_salary: salaryNum,
-        role_designation: roleDesignation || undefined,
+        role_designation: roleDesignation,
         location_id: locationId,
         date_of_hire: dateOfHire || undefined,
         end_date: endDate || undefined,
@@ -215,7 +219,7 @@ function EmployeeModal({ employee, locations, onClose, onDone, onManagePositions
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="eRole">Position</label>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-              <select id="eRole" className="bp-field-input" value={roleDesignation} onChange={(ev) => setRoleDesignation(ev.target.value)} style={{ flex: 1 }}>
+              <select id="eRole" className="bp-field-input" value={roleDesignation} onChange={(ev) => setRoleDesignation(ev.target.value)} style={{ flex: 1 }} required>
                 <option value="">Select a position…</option>
                 {positions.map((p) => <option key={p.position_id} value={p.name}>{p.name}</option>)}
                 {roleDesignation && !positions.some((p) => p.name === roleDesignation) && (

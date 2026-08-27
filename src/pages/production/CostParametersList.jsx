@@ -57,7 +57,16 @@ export default function CostParametersList() {
 
   async function remove(param) {
     if (!window.confirm(`Remove ${param.name}?`)) return;
-    await costParametersApi.remove(param.param_id);
+    try {
+      await costParametersApi.remove(param.param_id);
+      await load();
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : "Could not remove this parameter.");
+    }
+  }
+
+  async function toggleActive(param) {
+    await costParametersApi.update(param.param_id, { is_active: !param.is_active });
     await load();
   }
 
@@ -72,8 +81,13 @@ export default function CostParametersList() {
       options: Object.entries(RATE_TYPE_LABELS).map(([value, label]) => ({ value, label })),
     },
     { key: "current_value", label: "Current value", accessor: (p) => Number(p.current_value ?? p.value), filter: "number" },
+    { key: "default_consumption", label: "Default consumption", accessor: (p) => p.default_consumption ?? "", filter: "number" },
     { key: "unit", label: "Unit", accessor: (p) => p.unit || "" },
     { key: "linked_employee_name", label: "Linked employee", accessor: (p) => p.linked_employee_name || "" },
+    {
+      key: "is_active", label: "Active", accessor: (p) => (p.is_active ? "yes" : "no"), filter: "select",
+      options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }],
+    },
     { key: "notes", label: "Notes", accessor: (p) => p.notes || "" },
     { key: "created_by_name", label: "Created by", accessor: (p) => p.created_by_name || "", hiddenByDefault: true },
     { key: "created_at", label: "Created at", accessor: (p) => p.created_at || "", filter: "dateRange", hiddenByDefault: true },
@@ -121,24 +135,28 @@ export default function CostParametersList() {
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+              {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
+              {table.isColumnVisible(columns[12].key) && <ColumnHeader table={table} column={columns[12]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={13} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={15} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={13} className="bp-table-empty">No cost parameters found.</td></tr>
+              <tr><td colSpan={15} className="bp-table-empty">No cost parameters found.</td></tr>
             ) : (
               table.filteredRows.map((p) => (
-                <tr key={p.param_id} onClick={() => setEditParam(p)} style={{ cursor: "pointer" }}>
+                <tr key={p.param_id} onClick={() => setEditParam(p)} style={{ cursor: "pointer", opacity: p.is_active ? 1 : 0.55 }}>
                   <SelectRowCell table={table} row={p} />
                   {table.isColumnVisible("name") && <td className="bp-td-strong">{p.name}</td>}
                   {table.isColumnVisible("category") && <td className="bp-td-muted">{CATEGORY_LABELS[p.category] || p.category}</td>}
                   {table.isColumnVisible("rate_type") && <td className="bp-td-muted">{RATE_TYPE_LABELS[p.rate_type] || p.rate_type}</td>}
                   {table.isColumnVisible("current_value") && <td>{inr(p.current_value ?? p.value)}</td>}
+                  {table.isColumnVisible("default_consumption") && <td className="bp-td-muted">{p.default_consumption ?? "—"}</td>}
                   {table.isColumnVisible("unit") && <td className="bp-td-muted">{p.unit || "—"}</td>}
                   {table.isColumnVisible("linked_employee_name") && <td className="bp-td-muted">{p.linked_employee_name || "—"}</td>}
+                  {table.isColumnVisible("is_active") && <td className="bp-td-muted">{p.is_active ? "Yes" : "No"}</td>}
                   {table.isColumnVisible("notes") && <td className="bp-td-muted">{p.notes || "—"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
                   {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(p.created_at) || "—"}</td>}
@@ -148,7 +166,12 @@ export default function CostParametersList() {
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setHistoryParam(p); }}>History</button>
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditParam(p); }}>Edit</button>
                     {hasPermission("production.manage", "full_control") && (
-                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Remove</button>
+                      <>
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); toggleActive(p); }}>
+                          {p.is_active ? "Deactivate" : "Activate"}
+                        </button>
+                        <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Remove</button>
+                      </>
                     )}
                   </td>
                 </tr>
@@ -172,6 +195,7 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
   const [rateType, setRateType] = useState(param?.rate_type || "per_production");
   const [linkedEmployeeId, setLinkedEmployeeId] = useState(param?.linked_employee_id || "");
   const [unit, setUnit] = useState(param?.unit || "");
+  const [defaultConsumption, setDefaultConsumption] = useState(param?.default_consumption ?? "");
   const [notes, setNotes] = useState(param?.notes || "");
   // "Add a new rate" is deliberately separate from editing metadata —
   // starts blank/unchecked on edit so an ordinary metadata edit never
@@ -205,6 +229,7 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
         rate_type: isLabour ? "per_hour" : rateType,
         linked_employee_id: isLabour ? (linkedEmployeeId || undefined) : undefined,
         unit: unit || undefined,
+        default_consumption: defaultConsumption === "" ? undefined : Number(defaultConsumption),
         notes: notes || undefined,
       };
       if (!isEdit || addingRate) {
@@ -243,6 +268,17 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
             <input id="cpUnit" type="text" className="bp-field-input" placeholder="e.g. per kg, per hr" value={unit} onChange={(e) => setUnit(e.target.value)} />
           </div>
         </div>
+
+        {!isLabour && (
+          <>
+            <label className="bp-field-label" htmlFor="cpDefaultConsumption">Default consumption (optional)</label>
+            <input
+              id="cpDefaultConsumption" type="number" step="0.0001" className="bp-field-input"
+              placeholder="Normal expected amount for one production run"
+              value={defaultConsumption} onChange={(e) => setDefaultConsumption(e.target.value)}
+            />
+          </>
+        )}
 
         {isLabour ? (
           <>
