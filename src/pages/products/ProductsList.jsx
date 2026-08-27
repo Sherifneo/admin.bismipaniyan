@@ -298,6 +298,10 @@ function ProductModal({ product, onClose, onDone }) {
     const percent = ((price - Number(costPrice)) / Number(costPrice)) * 100;
     setMarkupPercent(String(Math.round(percent * 100) / 100));
   }
+  // Raw materials are never sold directly (Sales Orders only offers
+  // finished_good products) — Selling price/% are meaningless for them,
+  // so they're disabled and not required whenever this is the kind.
+  const isRawMaterial = itemKind === "raw_material";
   const [lowStockAlert, setLowStockAlert] = useState(product?.low_stock_alert ?? "0");
   const [isActive, setIsActive] = useState(product ? !!product.is_active : true);
   const [error, setError] = useState("");
@@ -331,7 +335,7 @@ function ProductModal({ product, onClose, onDone }) {
       setError("Cost price is required.");
       return;
     }
-    if (sellingPrice === "" || Number(sellingPrice) < 0) {
+    if (!isRawMaterial && (sellingPrice === "" || Number(sellingPrice) < 0)) {
       setError("Selling price is required.");
       return;
     }
@@ -391,7 +395,15 @@ function ProductModal({ product, onClose, onDone }) {
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pKind">Kind</label>
-            <select id="pKind" className="bp-field-input" value={itemKind} onChange={(e) => setItemKind(e.target.value)} disabled={isEdit && locks.item_kind}>
+            <select
+              id="pKind" className="bp-field-input" value={itemKind}
+              onChange={(e) => {
+                const next = e.target.value;
+                setItemKind(next);
+                if (next === "raw_material") { setSellingPrice(""); setMarkupPercent(""); }
+              }}
+              disabled={isEdit && locks.item_kind}
+            >
               <option value="finished_good">Finished good</option>
               <option value="raw_material">Raw material</option>
             </select>
@@ -422,7 +434,12 @@ function ProductModal({ product, onClose, onDone }) {
           </div>
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
-            <input id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => applySellingPrice(e.target.value)} required disabled={isEdit && locks.selling_price} />
+            <input
+              id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice}
+              onChange={(e) => applySellingPrice(e.target.value)}
+              required={!isRawMaterial}
+              disabled={isRawMaterial || (isEdit && locks.selling_price)}
+            />
           </div>
         </div>
 
@@ -432,7 +449,7 @@ function ProductModal({ product, onClose, onDone }) {
             <input
               id="pMarkup" type="number" step="0.01" className="bp-field-input" placeholder="e.g. 45"
               value={markupPercent} onChange={(e) => applyMarkup(e.target.value)}
-              disabled={(isEdit && locks.selling_price) || costPrice === ""}
+              disabled={isRawMaterial || (isEdit && locks.selling_price) || costPrice === ""}
             />
           </div>
           <div style={{ flex: 1 }} />
