@@ -197,8 +197,14 @@ export default function ProductionRunsList() {
   );
 }
 
+const NEW_RUN_STEPS = ["Setup", "Details", "Review"];
+
+// 3-step wizard: Setup (machine/date/product/planned qty) -> Details
+// (BOM/workers/notes, now that the product is known) -> Review
+// (everything read-only) before actually creating the run.
 function NewRunModal({ products, locations, machines, employees, onClose, onDone }) {
   const factoryLocations = factoryOnly(locations);
+  const [step, setStep] = useState(0);
   const [productId, setProductId] = useState("");
   const [locationId, setLocationId] = useState(factoryLocations[0]?.location_id || "");
   const [machineId, setMachineId] = useState("");
@@ -241,20 +247,33 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
     setStageEditedManually((prev) => new Set(prev).add(stage));
   }
 
-  async function submit(e) {
-    e.preventDefault();
-    if (!productId || !locationId) {
-      setError("Select a product and a location.");
-      return;
+  function goNext() {
+    setError("");
+    if (step === 0) {
+      if (!productId || !locationId) {
+        setError("Select a product and a location.");
+        return;
+      }
+      if (!quantity || Number(quantity) <= 0) {
+        setError("Planned quantity must be greater than zero.");
+        return;
+      }
     }
-    if (!quantity || Number(quantity) <= 0) {
-      setError("Planned quantity must be greater than zero.");
-      return;
+    if (step === 1) {
+      if (!defaultEmployeeId) {
+        setError("Select a default worker.");
+        return;
+      }
     }
-    if (!defaultEmployeeId) {
-      setError("Select a default worker.");
-      return;
-    }
+    setStep((s) => Math.min(s + 1, NEW_RUN_STEPS.length - 1));
+  }
+
+  function goBack() {
+    setError("");
+    setStep((s) => Math.max(s - 1, 0));
+  }
+
+  async function submit() {
     setSubmitting(true);
     setError("");
     try {
@@ -280,89 +299,153 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
     }
   }
 
+  const selectedProduct = products.find((p) => p.product_id === productId);
+  const selectedMachine = machines.find((m) => m.machine_id === machineId);
+  const selectedBom = boms.find((b) => b.bom_id === bomId);
+  const employeeName = (id) => employees.find((emp) => emp.employee_id === id)?.full_name || "—";
+
   return (
     <Modal title="New production run" onClose={onClose}>
-      <form onSubmit={submit} className="bp-form">
+      <div className="bp-tabs" style={{ marginBottom: 14 }}>
+        {NEW_RUN_STEPS.map((label, i) => (
+          <div
+            key={label}
+            className={`bp-tab${i === step ? " is-active" : ""}`}
+            style={{ cursor: "default", opacity: i > step ? 0.5 : 1 }}
+          >
+            {i + 1}. {label}
+          </div>
+        ))}
+      </div>
+
+      <div className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="runProduct">Product</label>
-            <select id="runProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required>
-              <option value="">Select product…</option>
-              {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
+        {step === 0 && (
+          <>
+            <div className="bp-form-row">
+              <div style={{ flex: 1 }}>
+                <label className="bp-field-label" htmlFor="runMachine">Machine (optional)</label>
+                <select id="runMachine" className="bp-field-input" value={machineId} onChange={(e) => setMachineId(e.target.value)}>
+                  <option value="">— None —</option>
+                  {machines.map((m) => <option key={m.machine_id} value={m.machine_id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="bp-field-label" htmlFor="runDate">Run date (optional)</label>
+                <input id="runDate" type="date" className="bp-field-input" value={runDate} onChange={(e) => setRunDate(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="bp-form-row">
+              <div style={{ flex: 1 }}>
+                <label className="bp-field-label" htmlFor="runProduct">Product</label>
+                <select id="runProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required>
+                  <option value="">Select product…</option>
+                  {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="bp-field-label" htmlFor="runQty">Planned quantity</label>
+                <input id="runQty" type="number" min="0" step="0.01" className="bp-field-input" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+              </div>
+            </div>
+
             <label className="bp-field-label" htmlFor="runLocation">Location</label>
             <select id="runLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
               {factoryLocations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
             </select>
-          </div>
-        </div>
-
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="runMachine">Machine (optional)</label>
-            <select id="runMachine" className="bp-field-input" value={machineId} onChange={(e) => setMachineId(e.target.value)}>
-              <option value="">— None —</option>
-              {machines.map((m) => <option key={m.machine_id} value={m.machine_id}>{m.name}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="runQty">Planned quantity</label>
-            <input id="runQty" type="number" min="0" step="0.01" className="bp-field-input" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
-          </div>
-        </div>
-
-        {boms.length > 0 && (
-          <>
-            <label className="bp-field-label" htmlFor="runBom">BOM (optional — consumes raw materials on completion)</label>
-            <select id="runBom" className="bp-field-input" value={bomId} onChange={(e) => setBomId(e.target.value)}>
-              <option value="">— None —</option>
-              {boms.map((b) => <option key={b.bom_id} value={b.bom_id}>{b.bom_name} (makes {b.output_qty} {b.product_uom})</option>)}
-            </select>
           </>
         )}
 
-        <label className="bp-field-label" htmlFor="runDate">Run date (optional)</label>
-        <input id="runDate" type="date" className="bp-field-input" value={runDate} onChange={(e) => setRunDate(e.target.value)} />
+        {step === 1 && (
+          <>
+            {boms.length > 0 && (
+              <>
+                <label className="bp-field-label" htmlFor="runBom">BOM (optional — consumes raw materials on completion)</label>
+                <select id="runBom" className="bp-field-input" value={bomId} onChange={(e) => setBomId(e.target.value)}>
+                  <option value="">— None —</option>
+                  {boms.map((b) => <option key={b.bom_id} value={b.bom_id}>{b.bom_name} (makes {b.output_qty} {b.product_uom})</option>)}
+                </select>
+              </>
+            )}
 
-        <label className="bp-field-label" htmlFor="runDefaultWorker">Default worker</label>
-        <select id="runDefaultWorker" className="bp-field-input" value={defaultEmployeeId} onChange={(e) => changeDefaultEmployee(e.target.value)} required>
-          <option value="">Select a worker…</option>
-          {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
-        </select>
-        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 10 }}>
-          Auto-fills Mixing, Baking, and Packing below — change any stage individually if a different worker is doing that step.
-        </p>
+            <label className="bp-field-label" htmlFor="runDefaultWorker">Default worker</label>
+            <select id="runDefaultWorker" className="bp-field-input" value={defaultEmployeeId} onChange={(e) => changeDefaultEmployee(e.target.value)} required>
+              <option value="">Select a worker…</option>
+              {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
+            </select>
+            <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 10 }}>
+              Auto-fills Mixing, Baking, and Packing below — change any stage individually if a different worker is doing that step.
+            </p>
 
-        <label className="bp-field-label">Stage workers</label>
-        <div className="bp-form-row">
-          {Object.entries(STAGE_LABELS).map(([stage, label]) => (
-            <div key={stage} style={{ flex: 1 }}>
-              <label className="bp-field-label" htmlFor={`runStage-${stage}`} style={{ fontWeight: 400, fontSize: 11.5 }}>{label}</label>
-              <select
-                id={`runStage-${stage}`}
-                className="bp-field-input"
-                value={stageEmployees[stage]}
-                onChange={(e) => changeStageEmployee(stage, e.target.value)}
-              >
-                <option value="">— None —</option>
-                {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
-              </select>
+            <label className="bp-field-label">Stage workers</label>
+            <div className="bp-form-row">
+              {Object.entries(STAGE_LABELS).map(([stage, label]) => (
+                <div key={stage} style={{ flex: 1 }}>
+                  <label className="bp-field-label" htmlFor={`runStage-${stage}`} style={{ fontWeight: 400, fontSize: 11.5 }}>{label}</label>
+                  <select
+                    id={`runStage-${stage}`}
+                    className="bp-field-input"
+                    value={stageEmployees[stage]}
+                    onChange={(e) => changeStageEmployee(stage, e.target.value)}
+                  >
+                    <option value="">— None —</option>
+                    {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
+                  </select>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <label className="bp-field-label" htmlFor="runNotes">Notes (optional)</label>
-        <textarea id="runNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <label className="bp-field-label" htmlFor="runNotes">Notes (optional)</label>
+            <textarea id="runNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <label className="bp-field-label">Review</label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px 20px", marginBottom: 14 }}>
+              <div><span className="bp-td-muted">Product</span><br /><strong>{selectedProduct?.name || "—"}</strong></div>
+              <div><span className="bp-td-muted">Planned quantity</span><br /><strong>{quantity || "—"}</strong></div>
+              <div><span className="bp-td-muted">Location</span><br />{factoryLocations.find((l) => l.location_id === locationId)?.name || "—"}</div>
+              <div><span className="bp-td-muted">Machine</span><br />{selectedMachine?.name || "— None —"}</div>
+              <div><span className="bp-td-muted">Run date</span><br />{runDate || "—"}</div>
+              <div><span className="bp-td-muted">BOM</span><br />{selectedBom?.bom_name || "— None —"}</div>
+            </div>
+
+            <label className="bp-field-label">Stage workers</label>
+            <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
+              <table className="bp-table">
+                <thead><tr><th>Stage</th><th>Worker</th></tr></thead>
+                <tbody>
+                  {Object.entries(STAGE_LABELS).map(([stage, label]) => (
+                    <tr key={stage}>
+                      <td className="bp-td-strong">{label}</td>
+                      <td>{employeeName(stageEmployees[stage] || defaultEmployeeId)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {notes && <p className="bp-td-muted" style={{ marginTop: 0 }}>{notes}</p>}
+          </>
+        )}
 
         <div className="bp-form-actions">
-          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
-          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Create run"}</button>
+          {step === 0 ? (
+            <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          ) : (
+            <button type="button" className="bp-btn-outline" onClick={goBack} disabled={submitting}>Back</button>
+          )}
+          {step < NEW_RUN_STEPS.length - 1 ? (
+            <button type="button" className="bp-btn-primary" onClick={goNext}>Next</button>
+          ) : (
+            <button type="button" className="bp-btn-primary" onClick={submit} disabled={submitting}>{submitting ? "Saving…" : "Create run"}</button>
+          )}
         </div>
-      </form>
+      </div>
     </Modal>
   );
 }
