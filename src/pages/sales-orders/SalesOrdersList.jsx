@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { salesOrdersApi, customersApi, locationsApi, productsApi } from "../../api/admin";
+import { salesOrdersApi, customersApi, locationsApi, productsApi, employeesApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
@@ -32,6 +33,7 @@ export default function SalesOrdersList() {
   const urlSearch = useUrlSearch();
   const [customers, setCustomers] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [orders, setOrders] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -46,6 +48,7 @@ export default function SalesOrdersList() {
   useEffect(() => {
     customersApi.list({}).then((d) => setCustomers(d.items || [])).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
+    employeesApi.list().then((d) => setEmployees(d.items || [])).catch(() => {});
   }, []);
 
   async function load() {
@@ -90,6 +93,7 @@ export default function SalesOrdersList() {
       key: "status", label: "Status", accessor: (so) => so.status, filter: "select",
       options: [{ value: "draft", label: "Draft" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }],
     },
+    { key: "sales_responsible_name", label: "Sales Responsible", accessor: (so) => so.sales_responsible_name || "" },
     { key: "created_by_name", label: "Created by", accessor: (so) => so.created_by_name || "", hiddenByDefault: true },
     { key: "created_at", label: "Created at", accessor: (so) => so.created_at || "", filter: "dateRange", hiddenByDefault: true },
     { key: "updated_by_name", label: "Updated by", accessor: (so) => so.updated_by_name || "", hiddenByDefault: true },
@@ -146,14 +150,15 @@ export default function SalesOrdersList() {
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+              {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={13} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={13} className="bp-table-empty">No sales orders found.</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">No sales orders found.</td></tr>
             ) : (
               table.filteredRows.map((so) => (
                 <tr key={so.so_id} onClick={() => setViewSo(so)} style={{ cursor: "pointer" }}>
@@ -164,6 +169,7 @@ export default function SalesOrdersList() {
                   {table.isColumnVisible("date") && <td className="bp-td-muted">{formatDate(so.completed_date || so.order_date)}</td>}
                   {table.isColumnVisible("total") && <td className="bp-td-strong">{inr(so.total)}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={so.status} /></td>}
+                  {table.isColumnVisible("sales_responsible_name") && <td className="bp-td-muted">{so.sales_responsible_name || "—"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{so.created_by_name || "—"}</td>}
                   {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(so.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{so.updated_by_name || "—"}</td>}
@@ -188,7 +194,7 @@ export default function SalesOrdersList() {
       <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
 
       {showAdd && (
-        <NewSoModal customers={customers} locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />
+        <NewSoModal customers={customers} locations={locations} employees={employees} onClose={() => setShowAdd(false)} onDone={onSaved} />
       )}
       {viewSo && (
         <SoDetailModal soId={viewSo.so_id} onClose={() => setViewSo(null)} onChanged={load} />
@@ -203,7 +209,8 @@ function storesOnly(locations) {
   return locations.filter((l) => l.kind === "store");
 }
 
-function NewSoModal({ customers, locations, onClose, onDone }) {
+function NewSoModal({ customers, locations, employees, onClose, onDone }) {
+  const { admin: me } = useAuth();
   const stores = storesOnly(locations);
   const [locationId, setLocationId] = useState(stores[0]?.location_id || "");
   const [buyerType, setBuyerType] = useState("walkin"); // 'walkin' | 'customer'
@@ -212,6 +219,11 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
   const [walkinLoading, setWalkinLoading] = useState(false);
   const [orderDate, setOrderDate] = useState(todayStr());
   const [notes, setNotes] = useState("");
+  // Defaults to the logged-in user's own linked employee record (Team ->
+  // Employee link, see TeamList.jsx) if they have one — but any active
+  // employee can be picked instead, since the person entering the sale
+  // isn't always the one it should be credited to.
+  const [salesResponsibleId, setSalesResponsibleId] = useState(me?.employee_id || "");
   const [items, setItems] = useState([{ product_id: "", quantity: "", unit_price: "" }]);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
@@ -360,6 +372,10 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
       setError("This store has no walk-in customer set up yet.");
       return;
     }
+    if (!salesResponsibleId) {
+      setError("Select the Sales Responsible employee.");
+      return;
+    }
     const cleanItems = items.filter((it) => it.product_id && it.quantity && it.unit_price !== "");
     if (cleanItems.length === 0) {
       setError("Add at least one complete line item.");
@@ -377,6 +393,7 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
         location_id: locationId,
         order_date: orderDate || undefined,
         notes: notes || undefined,
+        sales_responsible_employee_id: salesResponsibleId,
         items: cleanItems.map((it) => ({ product_id: it.product_id, quantity: Number(it.quantity), unit_price: Number(it.unit_price) })),
         gst_enabled: gstEnabled,
         gst_percent: gstEnabled && gstEditedField === "percent" ? Number(gstPercent) : undefined,
@@ -411,6 +428,14 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
             <input id="soDate" type="date" className="bp-field-input" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} required />
           </div>
         </div>
+
+        <label className="bp-field-label" htmlFor="soResponsible">Sales Responsible</label>
+        <select id="soResponsible" className="bp-field-input" value={salesResponsibleId} onChange={(e) => setSalesResponsibleId(e.target.value)} required>
+          <option value="">Select an employee…</option>
+          {employees.map((emp) => (
+            <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>
+          ))}
+        </select>
 
         <label className="bp-field-label">Buyer</label>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -596,6 +621,9 @@ function SoDetailModal({ soId, onClose, onChanged }) {
             <div><span className="bp-td-muted">Status: </span><StatusBadge status={so.status} /></div>
             <div><span className="bp-td-muted">Location:</span> {so.location_name}</div>
             <div><span className="bp-td-muted">Date:</span> {formatDate(so.completed_date || so.order_date)}</div>
+            {so.sales_responsible_name && (
+              <div><span className="bp-td-muted">Sales Responsible:</span> {so.sales_responsible_name}</div>
+            )}
           </div>
 
           <table className="bp-table">

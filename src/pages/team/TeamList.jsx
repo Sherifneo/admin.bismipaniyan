@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { teamApi } from "../../api/admin";
+import { teamApi, employeesApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
@@ -21,6 +21,7 @@ export default function TeamList() {
   const { admin: me } = useAuth();
   const urlSearch = useUrlSearch();
   const [admins, setAdmins] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -41,6 +42,7 @@ export default function TeamList() {
 
   useEffect(() => {
     load();
+    employeesApi.list().then((d) => setEmployees(d?.items || [])).catch(() => {});
   }, []);
 
   async function onSaved() {
@@ -60,6 +62,7 @@ export default function TeamList() {
       key: "status", label: "Status", accessor: (a) => a.status, filter: "select",
       options: [{ value: "active", label: "Active" }, { value: "suspended", label: "Suspended" }],
     },
+    { key: "employee_name", label: "Employee", accessor: (a) => a.employee_name || "" },
   ];
   const table = useDataTable({ rows: admins, columns, rowKey: (a) => a.admin_id });
 
@@ -95,14 +98,15 @@ export default function TeamList() {
               {table.isColumnVisible(columns[1].key) && <ColumnHeader table={table} column={columns[1]} />}
               {table.isColumnVisible(columns[2].key) && <ColumnHeader table={table} column={columns[2]} />}
               {table.isColumnVisible(columns[3].key) && <ColumnHeader table={table} column={columns[3]} />}
+              {table.isColumnVisible(columns[4].key) && <ColumnHeader table={table} column={columns[4]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={6} className="bp-table-empty">No admins found.</td></tr>
+              <tr><td colSpan={7} className="bp-table-empty">No admins found.</td></tr>
             ) : (
               table.filteredRows.map((a) => (
                 <tr key={a.admin_id}>
@@ -111,6 +115,7 @@ export default function TeamList() {
                   {table.isColumnVisible("email") && <td className="bp-td-muted">{a.email}</td>}
                   {table.isColumnVisible("role") && <td>{ROLE_LABELS[a.role] || a.role}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={a.status} /></td>}
+                  {table.isColumnVisible("employee_name") && <td className="bp-td-muted">{a.employee_name || "—"}</td>}
                   <td className="bp-td-actions">
                     {a.role !== "owner" && (
                       <button type="button" className="bp-btn-sm" onClick={() => setEditAdmin(a)}>Edit</button>
@@ -123,17 +128,18 @@ export default function TeamList() {
         </table>
       </div>
 
-      {showAdd && <AddStaffModal canCreateSuperUser={me?.role === "owner"} onClose={() => setShowAdd(false)} onDone={onSaved} />}
-      {editAdmin && <EditStaffModal admin={editAdmin} onClose={() => setEditAdmin(null)} onDone={onSaved} />}
+      {showAdd && <AddStaffModal canCreateSuperUser={me?.role === "owner"} employees={employees} onClose={() => setShowAdd(false)} onDone={onSaved} />}
+      {editAdmin && <EditStaffModal admin={editAdmin} employees={employees} onClose={() => setEditAdmin(null)} onDone={onSaved} />}
     </div>
   );
 }
 
-function AddStaffModal({ canCreateSuperUser, onClose, onDone }) {
+function AddStaffModal({ canCreateSuperUser, employees, onClose, onDone }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("staff");
+  const [employeeId, setEmployeeId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -155,6 +161,7 @@ function AddStaffModal({ canCreateSuperUser, onClose, onDone }) {
         email: email.trim(),
         password,
         role: canCreateSuperUser ? role : "staff",
+        employee_id: employeeId || undefined,
       });
       onDone();
     } catch (err) {
@@ -187,6 +194,14 @@ function AddStaffModal({ canCreateSuperUser, onClose, onDone }) {
           </>
         )}
 
+        <label className="bp-field-label" htmlFor="tEmployee">Employee (optional)</label>
+        <select id="tEmployee" className="bp-field-input" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+          <option value="">Not linked to an employee</option>
+          {employees.map((emp) => (
+            <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>
+          ))}
+        </select>
+
         <div className="bp-form-actions">
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
           <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Add staff"}</button>
@@ -196,9 +211,10 @@ function AddStaffModal({ canCreateSuperUser, onClose, onDone }) {
   );
 }
 
-function EditStaffModal({ admin, onClose, onDone }) {
+function EditStaffModal({ admin, employees, onClose, onDone }) {
   const [fullName, setFullName] = useState(admin.full_name || "");
   const [status, setStatus] = useState(admin.status || "active");
+  const [employeeId, setEmployeeId] = useState(admin.employee_id || "");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -211,7 +227,7 @@ function EditStaffModal({ admin, onClose, onDone }) {
     setSubmitting(true);
     setError("");
     try {
-      await teamApi.update(admin.admin_id, { full_name: fullName.trim(), status });
+      await teamApi.update(admin.admin_id, { full_name: fullName.trim(), status, employee_id: employeeId || null });
       onDone();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not save this admin.");
@@ -231,6 +247,14 @@ function EditStaffModal({ admin, onClose, onDone }) {
         <select id="teStatus" className="bp-field-input" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
+        </select>
+
+        <label className="bp-field-label" htmlFor="teEmployee">Employee (optional)</label>
+        <select id="teEmployee" className="bp-field-input" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+          <option value="">Not linked to an employee</option>
+          {employees.map((emp) => (
+            <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>
+          ))}
         </select>
 
         <div className="bp-form-actions">
