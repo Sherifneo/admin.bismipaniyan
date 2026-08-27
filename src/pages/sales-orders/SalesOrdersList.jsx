@@ -224,7 +224,7 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
   // employee can be picked instead, since the person entering the sale
   // isn't always the one it should be credited to.
   const [salesResponsibleId, setSalesResponsibleId] = useState(me?.employee_id || "");
-  const [items, setItems] = useState([{ product_id: "", quantity: "", unit_price: "" }]);
+  const [items, setItems] = useState([{ product_id: "", quantity: "", unit_price: "", search: "" }]);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -292,7 +292,7 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
   }
 
   function addRow() {
-    setItems((prev) => [...prev, { product_id: "", quantity: "", unit_price: "" }]);
+    setItems((prev) => [...prev, { product_id: "", quantity: "", unit_price: "", search: "" }]);
   }
 
   // No mixed cart: once any line has a product picked, every other line
@@ -429,14 +429,6 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
           </div>
         </div>
 
-        <label className="bp-field-label" htmlFor="soResponsible">Sales Responsible</label>
-        <select id="soResponsible" className="bp-field-input" value={salesResponsibleId} onChange={(e) => setSalesResponsibleId(e.target.value)} required>
-          <option value="">Select an employee…</option>
-          {employees.map((emp) => (
-            <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>
-          ))}
-        </select>
-
         <label className="bp-field-label">Buyer</label>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button type="button" className={buyerType === "walkin" ? "bp-btn-sm bp-btn-primary" : "bp-btn-sm bp-btn-outline"} onClick={() => setBuyerType("walkin")}>
@@ -469,23 +461,49 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
               : "This order is for Bismi's own products only."}
           </p>
         )}
-        {items.map((it, idx) => (
-          <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
-            <div style={{ flex: 2 }}>
-              <select className="bp-field-input" value={it.product_id} onChange={(e) => updateItem(idx, "product_id", e.target.value)}>
-                <option value="">Select product…</option>
-                {pickableProducts.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
-              </select>
+        {items.map((it, idx) => {
+          const selectedProduct = products.find((p) => p.product_id === it.product_id);
+          const searchText = (it.search || "").trim().toLowerCase();
+          const searchedProducts = searchText
+            ? pickableProducts.filter(
+                (p) =>
+                  p.name.toLowerCase().includes(searchText) ||
+                  (p.product_code || "").toLowerCase().includes(searchText)
+              )
+            : pickableProducts;
+          return (
+            <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+              <div style={{ flex: 2 }}>
+                <input
+                  type="text"
+                  className="bp-field-input"
+                  placeholder="Search by code or name…"
+                  value={it.search}
+                  onChange={(e) => updateItem(idx, "search", e.target.value)}
+                  style={{ marginBottom: 4 }}
+                />
+                <select className="bp-field-input" value={it.product_id} onChange={(e) => updateItem(idx, "product_id", e.target.value)}>
+                  <option value="">Select product…</option>
+                  {searchedProducts.map((p) => (
+                    <option key={p.product_id} value={p.product_id}>
+                      {p.product_code ? `${p.product_code} — ${p.name}` : p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <input type="number" min="0" step="0.01" placeholder="Qty" className="bp-field-input" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
+              </div>
+              <div style={{ flex: "0 0 60px", alignSelf: "center", textAlign: "center" }}>
+                <span className="bp-td-muted">{selectedProduct?.uom || "—"}</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <input type="number" min="0" step="0.01" placeholder="Unit price ₹" className="bp-field-input" value={it.unit_price} onChange={(e) => updateItem(idx, "unit_price", e.target.value)} />
+              </div>
+              <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
             </div>
-            <div style={{ flex: 1 }}>
-              <input type="number" min="0" step="0.01" placeholder="Qty" className="bp-field-input" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <input type="number" min="0" step="0.01" placeholder="Unit price ₹" className="bp-field-input" value={it.unit_price} onChange={(e) => updateItem(idx, "unit_price", e.target.value)} />
-            </div>
-            <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
-          </div>
-        ))}
+          );
+        })}
         <button type="button" className="bp-btn-sm" onClick={addRow} style={{ alignSelf: "flex-start", marginBottom: 10 }}>+ Add line</button>
 
         <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -536,6 +554,14 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
           )}
           <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(liveTotal)}</span></div>
         </div>
+
+        <label className="bp-field-label" htmlFor="soResponsible">Sales Responsible</label>
+        <select id="soResponsible" className="bp-field-input" value={salesResponsibleId} onChange={(e) => setSalesResponsibleId(e.target.value)} required>
+          <option value="">Select an employee…</option>
+          {employees.map((emp) => (
+            <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>
+          ))}
+        </select>
 
         <label className="bp-field-label" htmlFor="soNotes">Notes (optional)</label>
         <textarea id="soNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
