@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { NAV_ITEMS } from "./navConfig";
 import { getPinned, setPinned, getExpanded, setExpanded } from "./sidebarState";
+import { getFavorites, isFavorited, toggleFavorite } from "./favoritesState";
 import "./Sidebar.css";
 
 // On desktop this renders as the usual fixed-width sidebar. Below the
@@ -38,10 +39,15 @@ function isChildActive(child, location) {
   return `${location.pathname}${location.search}` === child.path;
 }
 
-function ModuleGroup({ module, expandedKeys, onToggleExpand, pinnedSet, onTogglePin, location }) {
+function ModuleGroup({ module, expandedKeys, onToggleExpand, pinnedSet, onTogglePin, favorites, onToggleFavorite, location }) {
   const children = module.children;
   const isModuleActive = children.some((child) => location.pathname === pathnameOf(child.path));
-  const isExpanded = isModuleActive || expandedKeys.has(module.key);
+  // expandedKeys tracks "toggled away from this module's default expand
+  // state" — default is expanded when active, collapsed when not. So the
+  // presence of a key means "flip the default," not "force expanded" —
+  // this is what lets an active (auto-expanded) module still be
+  // manually collapsed by the user, then re-expanded again.
+  const isExpanded = isModuleActive !== expandedKeys.has(module.key);
   const defaultChild = children[0];
   const isPinned = pinnedSet.has(module.key);
 
@@ -55,9 +61,28 @@ function ModuleGroup({ module, expandedKeys, onToggleExpand, pinnedSet, onToggle
           aria-label={isExpanded ? `Collapse ${module.label}` : `Expand ${module.label}`}
           aria-expanded={isExpanded}
         >
-          <span className={"bp-sidebar-chevron-icon" + (isExpanded ? " is-expanded" : "")} aria-hidden="true">▸</span>
+          <span className={"bp-sidebar-chevron-icon" + (isExpanded ? " is-expanded" : "")} aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </span>
         </button>
-        <NavLink to={defaultChild.path} className="bp-sidebar-module-link">
+        <NavLink
+          to={defaultChild.path}
+          className="bp-sidebar-module-link"
+          onClick={(e) => {
+            // Clicking the label always navigates to the module's default
+            // page. On top of that: if this module is already the active
+            // one (so the click is a no-op navigation-wise), treat the
+            // click as a toggle instead — first click expands, clicking
+            // again collapses, next click expands again — rather than
+            // silently doing nothing once you're already on that page.
+            if (isModuleActive) {
+              e.preventDefault();
+              onToggleExpand(module.key);
+            }
+          }}
+        >
           <span className="bp-sidebar-icon" aria-hidden="true">{module.icon}</span>
           <span>{module.label}</span>
         </NavLink>
@@ -73,15 +98,28 @@ function ModuleGroup({ module, expandedKeys, onToggleExpand, pinnedSet, onToggle
       </div>
       {isExpanded && (
         <div className="bp-sidebar-submenu">
-          {children.map((child) => (
-            <NavLink
-              key={child.key}
-              to={child.path}
-              className={"bp-sidebar-sublink" + (isChildActive(child, location) ? " is-active" : "")}
-            >
-              {child.label}
-            </NavLink>
-          ))}
+          {children.map((child) => {
+            const favorited = isFavorited(favorites, child.key);
+            return (
+              <div key={child.key} className="bp-sidebar-subrow">
+                <NavLink
+                  to={child.path}
+                  className={"bp-sidebar-sublink" + (isChildActive(child, location) ? " is-active" : "")}
+                >
+                  {child.label}
+                </NavLink>
+                <button
+                  type="button"
+                  className={"bp-sidebar-fav" + (favorited ? " is-favorited" : "")}
+                  onClick={() => onToggleFavorite(child)}
+                  aria-label={favorited ? `Unfavorite ${child.label}` : `Favorite ${child.label}`}
+                  title={favorited ? "Unfavorite" : "Favorite"}
+                >
+                  ★
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -93,6 +131,11 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const location = useLocation();
   const [pinnedKeys, setPinnedKeys] = useState(() => new Set(getPinned()));
   const [expandedKeys, setExpandedKeys] = useState(() => new Set(getExpanded()));
+  const [favorites, setFavoritesState] = useState(() => getFavorites());
+
+  function onToggleFavorite(item) {
+    setFavoritesState((prev) => toggleFavorite(prev, item));
+  }
 
   function onToggleExpand(key) {
     setExpandedKeys((prev) => {
@@ -132,17 +175,30 @@ export default function Sidebar({ mobileOpen, onClose }) {
 
   const pinnedModules = visibleItems.filter((item) => item.children && pinnedKeys.has(item.key));
 
-  function renderLeaf(item) {
+  function renderLeaf(item, favoritable = false) {
+    const favorited = favoritable && isFavorited(favorites, item.key);
     return (
-      <NavLink
-        key={item.key}
-        to={item.path}
-        end={item.path === "/"}
-        className={({ isActive }) => "bp-sidebar-link" + (isActive ? " is-active" : "")}
-      >
-        <span className="bp-sidebar-icon" aria-hidden="true">{item.icon}</span>
-        <span>{item.label}</span>
-      </NavLink>
+      <div key={item.key} className={favoritable ? "bp-sidebar-leafrow" : undefined}>
+        <NavLink
+          to={item.path}
+          end={item.path === "/"}
+          className={({ isActive }) => "bp-sidebar-link" + (isActive ? " is-active" : "")}
+        >
+          <span className="bp-sidebar-icon" aria-hidden="true">{item.icon}</span>
+          <span>{item.label}</span>
+        </NavLink>
+        {favoritable && (
+          <button
+            type="button"
+            className={"bp-sidebar-fav" + (favorited ? " is-favorited" : "")}
+            onClick={() => onToggleFavorite(item)}
+            aria-label={favorited ? `Unfavorite ${item.label}` : `Favorite ${item.label}`}
+            title={favorited ? "Unfavorite" : "Favorite"}
+          >
+            ★
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -172,6 +228,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
                   onToggleExpand={onToggleExpand}
                   pinnedSet={pinnedKeys}
                   onTogglePin={onTogglePin}
+                  favorites={favorites}
+                  onToggleFavorite={onToggleFavorite}
                   location={location}
                 />
               ))}
@@ -188,10 +246,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
                 onToggleExpand={onToggleExpand}
                 pinnedSet={pinnedKeys}
                 onTogglePin={onTogglePin}
+                favorites={favorites}
+                onToggleFavorite={onToggleFavorite}
                 location={location}
               />
             ) : (
-              renderLeaf(item)
+              renderLeaf(item, true)
             )
           )}
         </nav>

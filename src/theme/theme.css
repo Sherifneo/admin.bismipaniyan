@@ -465,7 +465,8 @@
   border-color: var(--bp-standard-chrome-btn-border) !important;
 }
 
-:root[data-mode="standard"] .bp-sidebar-link.is-active {
+:root[data-mode="standard"] .bp-sidebar-link.is-active,
+:root[data-mode="standard"] .bp-sidebar-sublink.is-active {
   background: var(--bp-standard-accent) !important;
   color: var(--bp-standard-accent-text) !important;
   box-shadow: none !important;
@@ -533,7 +534,8 @@
   font-weight: 600;
 }
 
-:root[data-mode="standard"] .bp-sidebar-link.is-active {
+:root[data-mode="standard"] .bp-sidebar-link.is-active,
+:root[data-mode="standard"] .bp-sidebar-sublink.is-active {
   font-weight: 700;
 }
 
