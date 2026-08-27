@@ -207,10 +207,12 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   const [step, setStep] = useState(0);
   const [productId, setProductId] = useState("");
   const [locationId, setLocationId] = useState(factoryLocations[0]?.location_id || "");
-  const [machineId, setMachineId] = useState("");
+  const defaultOven = machines.find((m) => /oven/i.test(m.name));
+  const [machineId, setMachineId] = useState(defaultOven?.machine_id || "");
   const [quantity, setQuantity] = useState("");
   const [boms, setBoms] = useState([]);
   const [bomId, setBomId] = useState("");
+  const [bomDetail, setBomDetail] = useState(null);
   const [runDate, setRunDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [defaultEmployeeId, setDefaultEmployeeId] = useState("");
@@ -218,8 +220,22 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   // following the default worker when it changes.
   const [stageEmployees, setStageEmployees] = useState({ mixing: "", baking: "", packing: "" });
   const [stageEditedManually, setStageEditedManually] = useState(() => new Set());
+  // Only used when no BOM is picked — a run must consume raw material
+  // one way or the other, never neither.
+  const [rawMaterialLines, setRawMaterialLines] = useState([{ raw_material_product_id: "", quantity: "" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const rawMaterials = products.filter((p) => p.item_kind === "raw_material");
+
+  function addMaterialLine() {
+    setRawMaterialLines((prev) => [...prev, { raw_material_product_id: "", quantity: "" }]);
+  }
+  function removeMaterialLine(idx) {
+    setRawMaterialLines((prev) => prev.filter((_, i) => i !== idx));
+  }
+  function updateMaterialLine(idx, field, value) {
+    setRawMaterialLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
+  }
 
   useEffect(() => {
     if (!productId) {
@@ -230,6 +246,14 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
     bomsApi.list({ productId }).then((d) => setBoms((d.items || []).filter((b) => b.status === "approved"))).catch(() => setBoms([]));
     setBomId("");
   }, [productId]);
+
+  useEffect(() => {
+    if (!bomId) {
+      setBomDetail(null);
+      return;
+    }
+    bomsApi.get(bomId).then(setBomDetail).catch(() => setBomDetail(null));
+  }, [bomId]);
 
   function changeDefaultEmployee(value) {
     setDefaultEmployeeId(value);
@@ -264,6 +288,13 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
         setError("Select a default worker.");
         return;
       }
+      if (!bomId) {
+        const validLines = rawMaterialLines.filter((l) => l.raw_material_product_id && Number(l.quantity) > 0);
+        if (validLines.length === 0) {
+          setError("Choose a BOM or add at least one raw material for this run.");
+          return;
+        }
+      }
     }
     setStep((s) => Math.min(s + 1, NEW_RUN_STEPS.length - 1));
   }
@@ -285,6 +316,11 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
         run_date: runDate || undefined,
         notes: notes || undefined,
         bom_id: bomId || undefined,
+        raw_materials: bomId
+          ? undefined
+          : rawMaterialLines
+              .filter((l) => l.raw_material_product_id && Number(l.quantity) > 0)
+              .map((l) => ({ raw_material_product_id: l.raw_material_product_id, quantity: Number(l.quantity) })),
         default_employee_id: defaultEmployeeId || undefined,
         stage_employees: {
           mixing: stageEmployees.mixing || undefined,
@@ -362,11 +398,60 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
           <>
             {boms.length > 0 && (
               <>
-                <label className="bp-field-label" htmlFor="runBom">BOM (optional — consumes raw materials on completion)</label>
+                <label className="bp-field-label" htmlFor="runBom">BOM (consumes raw materials on completion)</label>
                 <select id="runBom" className="bp-field-input" value={bomId} onChange={(e) => setBomId(e.target.value)}>
                   <option value="">— None —</option>
                   {boms.map((b) => <option key={b.bom_id} value={b.bom_id}>{b.bom_code ? `${b.bom_code} — ` : ""}{b.bom_name} (makes {b.output_qty} {b.product_uom})</option>)}
                 </select>
+
+                {bomDetail && (
+                  <div className="bp-table-wrap" style={{ marginTop: 8, marginBottom: 10 }}>
+                    <table className="bp-table">
+                      <thead>
+                        <tr><th>Item code</th><th>Raw material</th><th>Category</th><th>Qty</th></tr>
+                      </thead>
+                      <tbody>
+                        {(bomDetail.lines || []).map((l) => (
+                          <tr key={l.bom_line_id}>
+                            <td className="bp-td-muted">{l.raw_material_code || "—"}</td>
+                            <td className="bp-td-strong">{l.raw_material_name}</td>
+                            <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{(l.raw_material_item_kind || "").replace("_", " ") || "—"}</td>
+                            <td className="bp-td-muted">{l.quantity} {l.raw_material_uom}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!bomId && (
+              <>
+                <label className="bp-field-label">Raw materials consumed (required — no BOM selected)</label>
+                {rawMaterialLines.map((line, idx) => (
+                  <div key={idx} className="bp-form-row" style={{ marginBottom: 6, alignItems: "flex-end" }}>
+                    <div style={{ flex: 2 }}>
+                      <select
+                        className="bp-field-input"
+                        value={line.raw_material_product_id}
+                        onChange={(e) => updateMaterialLine(idx, "raw_material_product_id", e.target.value)}
+                      >
+                        <option value="">Select raw material…</option>
+                        {rawMaterials.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input
+                        type="number" min="0" step="0.01" className="bp-field-input" placeholder="Qty"
+                        value={line.quantity}
+                        onChange={(e) => updateMaterialLine(idx, "quantity", e.target.value)}
+                      />
+                    </div>
+                    <button type="button" className="bp-btn-outline" onClick={() => removeMaterialLine(idx)} disabled={rawMaterialLines.length === 1}>Remove</button>
+                  </div>
+                ))}
+                <button type="button" className="bp-btn-sm" onClick={addMaterialLine} style={{ marginBottom: 10 }}>+ Add line</button>
               </>
             )}
 
@@ -413,6 +498,28 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
               <div><span className="bp-td-muted">Run date</span><br />{runDate || "—"}</div>
               <div><span className="bp-td-muted">BOM</span><br />{selectedBom?.bom_name || "— None —"}</div>
             </div>
+
+            {!bomId && (
+              <>
+                <label className="bp-field-label">Raw materials</label>
+                <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
+                  <table className="bp-table">
+                    <thead><tr><th>Raw material</th><th>Qty</th></tr></thead>
+                    <tbody>
+                      {rawMaterialLines.filter((l) => l.raw_material_product_id && Number(l.quantity) > 0).map((l, idx) => {
+                        const p = rawMaterials.find((rm) => rm.product_id === l.raw_material_product_id);
+                        return (
+                          <tr key={idx}>
+                            <td className="bp-td-strong">{p?.name || "—"}</td>
+                            <td className="bp-td-muted">{l.quantity} {p?.uom}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             <label className="bp-field-label">Stage workers</label>
             <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
@@ -708,6 +815,8 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
   const [actualQuantity, setActualQuantity] = useState(run.planned_quantity != null ? String(run.planned_quantity) : "");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     costParametersApi.list().then((d) => {
@@ -726,11 +835,26 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
     }).catch(() => {});
   }, []);
 
-  const overheadCost = params.reduce((sum, p) => {
-    if (!selected[p.param_id]) return sum;
-    const qty = Number(quantities[p.param_id]) || 0;
-    return sum + qty * Number(p.current_value ?? p.value ?? 0);
-  }, 0);
+  // Full server-computed breakdown (material + labour + overhead) for
+  // exactly what completing right now, with these choices, would
+  // produce — refetched whenever actual quantity or the selected
+  // overheads change, so the operator sees the real numbers before
+  // committing, not just the overhead subtotal.
+  useEffect(() => {
+    if (!actualQuantity || Number(actualQuantity) <= 0) {
+      setPreview(null);
+      return;
+    }
+    const overhead_entries = params
+      .filter((p) => selected[p.param_id] && quantities[p.param_id] !== undefined && quantities[p.param_id] !== "")
+      .map((p) => ({ param_id: p.param_id, quantity: Number(quantities[p.param_id]) }));
+    setPreviewLoading(true);
+    productionApi.costPreview(runId, { actual_quantity: Number(actualQuantity), overhead_entries: JSON.stringify(overhead_entries) })
+      .then(setPreview)
+      .catch(() => setPreview(null))
+      .finally(() => setPreviewLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId, actualQuantity, JSON.stringify(selected), JSON.stringify(quantities)]);
 
   async function submit(e) {
     e.preventDefault();
@@ -833,13 +957,38 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
           </>
         )}
 
-        <div className="bp-settlement-calc">
-          <div className="bp-settlement-calc-row"><span>Applicable overhead (this screen)</span><span>{inr(overheadCost)}</span></div>
-        </div>
+        <label className="bp-field-label">Cost summary (preview — this is exactly what completing now will record)</label>
+        {previewLoading && !preview ? (
+          <p className="bp-td-muted">Calculating…</p>
+        ) : preview && preview.lines.length > 0 ? (
+          <div className="bp-table-wrap" style={{ marginBottom: 10 }}>
+            <table className="bp-table">
+              <thead><tr><th>Type</th><th>Item</th><th>Amount</th></tr></thead>
+              <tbody>
+                {preview.lines.map((l, idx) => (
+                  <tr key={idx}>
+                    <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{l.line_type}</td>
+                    <td>{l.label}</td>
+                    <td className="bp-td-strong">{inr(l.amount)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={2} className="bp-td-strong" style={{ textAlign: "right" }}>Total production cost</td>
+                  <td className="bp-td-strong">{inr(preview.total_cost)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={2} className="bp-td-strong" style={{ textAlign: "right" }}>Cost per unit</td>
+                  <td className="bp-td-strong">{inr(preview.cost_per_unit)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="bp-td-muted">Enter actual quantity to see the cost preview.</p>
+        )}
         <p className="bp-td-muted" style={{ fontSize: 11.5 }}>
-          Material cost (from the BOM) and labour cost (from the stage hours above) are computed automatically when you
-          complete this run, based on the actual quantity above — adjusting it changes the material cost calculated on
-          submit. The full breakdown, including this overhead total, will be shown on the run afterward.
+          This preview recalculates live as you change actual quantity or the applicable costs below — it's exactly
+          what will be recorded if you complete now.
         </p>
 
         <div className="bp-form-actions">
