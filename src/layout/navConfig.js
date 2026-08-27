@@ -17,57 +17,14 @@
 // cart-to-WhatsApp flow, not a real order-processing pipeline (see
 // backend wa_orders table) — separate from "Sales Orders", which IS the
 // real order/invoice/stock-out pipeline for every sale.
+//
+// Top-level order is a deliberate business-priority sequence (owner's
+// choice), not alphabetical or grouped by "type": Dashboard, Finance,
+// Sales, Production, Inventory, Purchasing, Products, Partners & Shops,
+// Workforce (formerly labeled "HR" — same key/routes, label only),
+// WhatsApp Orders, Reports, Settings.
 export const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "🏠", path: "/" },
-  { key: "waorders", label: "WhatsApp Orders", icon: "💚", path: "/wa-orders", requiredPermission: "orders.manage" },
-  {
-    key: "reports", label: "Reports", icon: "📈",
-    children: [
-      { key: "reports", label: "Reports", path: "/reports" },
-      { key: "globalsearch", label: "Transaction Search", path: "/global-search" },
-    ],
-  },
-  {
-    key: "sales", label: "Sales", icon: "🧾",
-    children: [
-      { key: "salesorders", label: "Sales Orders", path: "/sales-orders", requiredPermission: "sales.manage" },
-      { key: "customers", label: "Customers", path: "/customers", requiredPermission: "sales.manage" },
-    ],
-  },
-  {
-    key: "purchasing", label: "Purchasing", icon: "📋",
-    children: [
-      { key: "purchaseorders", label: "Purchase Orders", path: "/purchase-orders", requiredPermission: "purchasing.manage" },
-      { key: "vendors", label: "Vendors", path: "/vendors", requiredPermission: "purchasing.manage" },
-    ],
-  },
-  {
-    key: "inventory", label: "Inventory", icon: "📊",
-    children: [
-      { key: "inventory", label: "Inventory", path: "/inventory?tab=stock", requiredPermission: "inventory.manage" },
-      { key: "stocktransfers", label: "Stock Transfers", path: "/inventory?tab=transfers", requiredPermission: "inventory.manage" },
-      { key: "inventorytransactions", label: "Transactions", path: "/inventory?tab=transactions", requiredPermission: "inventory.manage" },
-      { key: "stores", label: "Retail Stores", path: "/stores", requiredPermission: "stores.manage" },
-    ],
-  },
-  {
-    key: "products", label: "Products", icon: "🛍️",
-    children: [
-      { key: "products", label: "Products", path: "/products?tab=products", requiredPermission: "products.manage" },
-      { key: "uom", label: "UOM", path: "/products?tab=uom", requiredPermission: "products.manage" },
-      { key: "bom", label: "BOM", path: "/products?tab=bom", requiredPermission: "products.manage" },
-      { key: "changemanagement", label: "Change Management", path: "/products?tab=change-management", requiredPermission: "products.manage" },
-    ],
-  },
-  { key: "partners", label: "Partners & Shops", icon: "🤝", path: "/partners", requiredPermission: "partners.manage" },
-  {
-    key: "production", label: "Production", icon: "⚙️",
-    children: [
-      { key: "production", label: "Production Runs", path: "/production", requiredPermission: "production.manage" },
-      { key: "costparameters", label: "Cost Parameters", path: "/cost-parameters", requiredPermission: "production.manage" },
-      { key: "machines", label: "Machines", path: "/machines", requiredPermission: "production.manage" },
-    ],
-  },
   {
     key: "finance", label: "Finance", icon: "💰",
     children: [
@@ -86,11 +43,60 @@ export const NAV_ITEMS = [
     ],
   },
   {
-    key: "hr", label: "HR", icon: "🧑‍🍳",
+    key: "sales", label: "Sales", icon: "🧾",
+    children: [
+      { key: "salesorders", label: "Sales Orders", path: "/sales-orders", requiredPermission: "sales.manage" },
+      { key: "customers", label: "Customers", path: "/customers", requiredPermission: "sales.manage" },
+    ],
+  },
+  {
+    key: "production", label: "Production", icon: "⚙️",
+    children: [
+      { key: "production", label: "Production Runs", path: "/production", requiredPermission: "production.manage" },
+      { key: "costparameters", label: "Cost Parameters", path: "/cost-parameters", requiredPermission: "production.manage" },
+      { key: "machines", label: "Machines", path: "/machines", requiredPermission: "production.manage" },
+    ],
+  },
+  {
+    key: "inventory", label: "Inventory", icon: "📊",
+    children: [
+      { key: "inventory", label: "Inventory", path: "/inventory?tab=stock", requiredPermission: "inventory.manage" },
+      { key: "stocktransfers", label: "Stock Transfers", path: "/inventory?tab=transfers", requiredPermission: "inventory.manage" },
+      { key: "inventorytransactions", label: "Transactions", path: "/inventory?tab=transactions", requiredPermission: "inventory.manage" },
+      { key: "stores", label: "Retail Stores", path: "/stores", requiredPermission: "stores.manage" },
+    ],
+  },
+  {
+    key: "purchasing", label: "Purchasing", icon: "📋",
+    children: [
+      { key: "purchaseorders", label: "Purchase Orders", path: "/purchase-orders", requiredPermission: "purchasing.manage" },
+      { key: "vendors", label: "Vendors", path: "/vendors", requiredPermission: "purchasing.manage" },
+    ],
+  },
+  {
+    key: "products", label: "Products", icon: "🛍️",
+    children: [
+      { key: "products", label: "Products", path: "/products?tab=products", requiredPermission: "products.manage" },
+      { key: "uom", label: "UOM", path: "/products?tab=uom", requiredPermission: "products.manage" },
+      { key: "bom", label: "BOM", path: "/products?tab=bom", requiredPermission: "products.manage" },
+      { key: "changemanagement", label: "Change Management", path: "/products?tab=change-management", requiredPermission: "products.manage" },
+    ],
+  },
+  { key: "partners", label: "Partners & Shops", icon: "🤝", path: "/partners", requiredPermission: "partners.manage" },
+  {
+    key: "hr", label: "Workforce", icon: "🧑‍🍳",
     children: [
       { key: "employees", label: "Employees", path: "/hr?tab=employees", requiredPermission: "hr.manage" },
       { key: "positions", label: "Positions", path: "/hr?tab=positions", requiredPermission: "hr.manage" },
       { key: "salarypayments", label: "Salary Payments", path: "/hr?tab=salarypayments", requiredPermission: "hr.manage" },
+    ],
+  },
+  { key: "waorders", label: "WhatsApp Orders", icon: "💚", path: "/wa-orders", requiredPermission: "orders.manage" },
+  {
+    key: "reports", label: "Reports", icon: "📈",
+    children: [
+      { key: "reports", label: "Reports", path: "/reports" },
+      { key: "globalsearch", label: "Transaction Search", path: "/global-search" },
     ],
   },
   {

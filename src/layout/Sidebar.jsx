@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { NAV_ITEMS } from "./navConfig";
@@ -42,12 +42,13 @@ function isChildActive(child, location) {
 function ModuleGroup({ module, expandedKeys, onToggleExpand, pinnedSet, onTogglePin, favorites, onToggleFavorite, location }) {
   const children = module.children;
   const isModuleActive = children.some((child) => location.pathname === pathnameOf(child.path));
-  // expandedKeys tracks "toggled away from this module's default expand
-  // state" — default is expanded when active, collapsed when not. So the
-  // presence of a key means "flip the default," not "force expanded" —
-  // this is what lets an active (auto-expanded) module still be
-  // manually collapsed by the user, then re-expanded again.
-  const isExpanded = isModuleActive !== expandedKeys.has(module.key);
+  // isExpanded is now driven entirely by explicit membership in
+  // expandedKeys (accordion mode — see onToggleExpand — collapses every
+  // other module when one is opened, so at most one module's submenu is
+  // ever visible at a time). The active module is auto-added to
+  // expandedKeys on route change (see Sidebar's useEffect), which is
+  // what makes it show expanded on first load without a click.
+  const isExpanded = expandedKeys.has(module.key);
   const defaultChild = children[0];
   const isPinned = pinnedSet.has(module.key);
 
@@ -137,15 +138,34 @@ export default function Sidebar({ mobileOpen, onClose }) {
     setFavoritesState((prev) => toggleFavorite(prev, item));
   }
 
+  // Accordion mode: opening a module closes every other one, so it's
+  // never ambiguous which module's submenu is showing (fixes a reported
+  // bug where an unrelated module — e.g. Workforce — appeared expanded
+  // at the same time as the one just clicked — e.g. Settings — which
+  // could happen when both keys were already present in stored expanded
+  // state from earlier browsing).
   function onToggleExpand(key) {
     setExpandedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      const next = prev.has(key) ? new Set() : new Set([key]);
       setExpanded([...next]);
       return next;
     });
   }
+
+  // Auto-expand whichever module owns the current route, and — per
+  // accordion mode above — nothing else, so navigating (e.g. via a
+  // favorite or a direct link) always leaves exactly the right module
+  // open rather than layering on top of whatever was open before.
+  useEffect(() => {
+    const activeModule = NAV_ITEMS.find(
+      (item) => item.children && item.children.some((child) => location.pathname === pathnameOf(child.path))
+    );
+    if (activeModule) {
+      setExpandedKeys(new Set([activeModule.key]));
+      setExpanded([activeModule.key]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   function onTogglePin(key) {
     setPinnedKeys((prev) => {
