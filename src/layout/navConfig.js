@@ -23,22 +23,30 @@
 // Sales, Production, Inventory, Purchasing, Products, Partners & Shops,
 // Workforce (formerly labeled "HR" — same key/routes, label only),
 // WhatsApp Orders, Reports, Settings.
+//
+// An optional `group` on a child is a purely cosmetic section-header
+// string shown by SubmodulePanel.jsx (e.g. Finance's children are split
+// into "Cash & Bank" / "Banking" / "Financial Year" is ungrouped) — it
+// has zero effect on routing/flattening/permissions. Where a child has a
+// `group`, its own `label` intentionally omits the group name as a
+// prefix (e.g. "Accounts" not "Banking — Accounts") since the panel's
+// section heading already supplies that context.
 export const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "🏠", path: "/" },
   {
     key: "finance", label: "Finance", icon: "💰",
     children: [
-      { key: "cashbook", label: "Cash Book", path: "/cashbook?tab=cashbook", requiredPermission: "cashbook.manage" },
-      { key: "ledgertransaction", label: "Ledger Transaction", path: "/cashbook?tab=ledger", requiredPermission: "cashbook.manage" },
-      { key: "reversals", label: "Reversals", path: "/cashbook?tab=reversals", requiredPermission: "cashbook.manage" },
-      { key: "cashbookcategories", label: "Categories", path: "/cashbook?tab=categories", requiredPermission: "cashbook.manage" },
-      { key: "recentlydeleted", label: "Recently Deleted", path: "/cashbook?tab=deleted", requiredPermission: "cashbook.manage" },
-      { key: "bankaccounts", label: "Banking — Accounts", path: "/bank-accounts?tab=accounts", requiredPermission: "bank.manage" },
-      { key: "banktransfer", label: "Banking — Transfer", path: "/bank-accounts?tab=transfer", requiredPermission: "bank.manage" },
-      { key: "banktransaction", label: "Banking — Bank Transaction", path: "/bank-accounts?tab=banktransaction", requiredPermission: "bank.manage" },
-      { key: "financialcontrol", label: "Financial Control — Overview", path: "/financial-control?tab=overview" },
-      { key: "financialdimensions", label: "Financial Control — Dimensions", path: "/financial-control?tab=dimensions" },
-      { key: "reconciliation", label: "Financial Control — Reconciliation", path: "/financial-control?tab=reconciliation" },
+      { key: "cashbook", label: "Cash Book", path: "/cashbook?tab=cashbook", requiredPermission: "cashbook.manage", group: "Cash & Bank" },
+      { key: "ledgertransaction", label: "Ledger Transaction", path: "/cashbook?tab=ledger", requiredPermission: "cashbook.manage", group: "Cash & Bank" },
+      { key: "reversals", label: "Reversals", path: "/cashbook?tab=reversals", requiredPermission: "cashbook.manage", group: "Cash & Bank" },
+      { key: "cashbookcategories", label: "Categories", path: "/cashbook?tab=categories", requiredPermission: "cashbook.manage", group: "Cash & Bank" },
+      { key: "recentlydeleted", label: "Recently Deleted", path: "/cashbook?tab=deleted", requiredPermission: "cashbook.manage", group: "Cash & Bank" },
+      { key: "bankaccounts", label: "Accounts", path: "/bank-accounts?tab=accounts", requiredPermission: "bank.manage", group: "Banking" },
+      { key: "banktransfer", label: "Transfer", path: "/bank-accounts?tab=transfer", requiredPermission: "bank.manage", group: "Banking" },
+      { key: "banktransaction", label: "Bank Transaction", path: "/bank-accounts?tab=banktransaction", requiredPermission: "bank.manage", group: "Banking" },
+      { key: "financialcontrol", label: "Overview", path: "/financial-control?tab=overview", group: "Financial Control" },
+      { key: "financialdimensions", label: "Dimensions", path: "/financial-control?tab=dimensions", group: "Financial Control" },
+      { key: "reconciliation", label: "Reconciliation", path: "/financial-control?tab=reconciliation", group: "Financial Control" },
       { key: "calendar", label: "Financial Year", path: "/calendar" },
     ],
   },
@@ -76,10 +84,10 @@ export const NAV_ITEMS = [
   {
     key: "products", label: "Products", icon: "🛍️",
     children: [
-      { key: "products", label: "Products", path: "/products?tab=products", requiredPermission: "products.manage" },
-      { key: "uom", label: "UOM", path: "/products?tab=uom", requiredPermission: "products.manage" },
-      { key: "bom", label: "BOM", path: "/products?tab=bom", requiredPermission: "products.manage" },
-      { key: "changemanagement", label: "Change Management", path: "/products?tab=change-management", requiredPermission: "products.manage" },
+      { key: "products", label: "Products", path: "/products?tab=products", requiredPermission: "products.manage", group: "Product Catalog" },
+      { key: "uom", label: "UOM", path: "/products?tab=uom", requiredPermission: "products.manage", group: "Product Setup" },
+      { key: "bom", label: "BOM", path: "/products?tab=bom", requiredPermission: "products.manage", group: "Product Setup" },
+      { key: "changemanagement", label: "Change Management", path: "/products?tab=change-management", requiredPermission: "products.manage", group: "Governance" },
     ],
   },
   { key: "partners", label: "Partners & Shops", icon: "🤝", path: "/partners", requiredPermission: "partners.manage" },

@@ -93,6 +93,16 @@
   --bp-shadow-md: 0 2px 8px rgba(20, 20, 24, 0.08);
   --bp-shadow-lg: 0 8px 24px rgba(20, 20, 24, 0.12);
 
+  /* Two-panel nav accent (Sidebar.jsx/SubmodulePanel.jsx) — always warm
+     amber/gold, deliberately independent of --bp-standard-accent (which
+     is blue in 2 of the 4 Standard themes). Every theme block below
+     redefines these three to a warm tone, never blue, per explicit
+     "no blue in the nav" requirement. -soft is a translucent version
+     for hover/active row backgrounds. */
+  --bp-nav-accent: var(--bp-amber);
+  --bp-nav-accent-text: var(--bp-brand-dark);
+  --bp-nav-accent-soft: rgba(232, 148, 15, 0.16);
+
   color-scheme: light;
 }
 
@@ -151,6 +161,10 @@
 
     --bp-brand-text: #c9a6f5;
 
+    --bp-nav-accent: var(--bp-amber);
+    --bp-nav-accent-text: #2a1500;
+    --bp-nav-accent-soft: rgba(232, 148, 15, 0.22);
+
     color-scheme: dark;
   }
 }
@@ -204,6 +218,10 @@
   --bp-warning-bg: rgba(251, 191, 36, 0.14);
 
   --bp-brand-text: #c9a6f5;
+
+  --bp-nav-accent: var(--bp-amber);
+  --bp-nav-accent-text: #2a1500;
+  --bp-nav-accent-soft: rgba(232, 148, 15, 0.22);
 
   color-scheme: dark;
 }
@@ -307,6 +325,13 @@
   --bp-danger-bg: #fceceb;
   --bp-warning: #c77800;
   --bp-warning-bg: #fdf1de;
+
+  /* Nav accent stays warm amber/gold even though this theme's general
+     --bp-standard-accent is iOS blue — the two-panel nav never uses
+     --bp-standard-accent, only this dedicated token. */
+  --bp-nav-accent: #c97e0b;
+  --bp-nav-accent-text: #3a2400;
+  --bp-nav-accent-soft: rgba(201, 126, 11, 0.14);
 }
 
 /* ---- Standard + System + dark OS preference: pure black, bold white
@@ -346,9 +371,14 @@
     --bp-danger-bg: rgba(255, 107, 100, 0.16);
     --bp-warning: #ffc14d;
     --bp-warning-bg: rgba(255, 193, 77, 0.16);
+
+    --bp-nav-accent: #d99123;
+    --bp-nav-accent-text: #1a1200;
+    --bp-nav-accent-soft: rgba(217, 145, 35, 0.2);
   }
 
-  :root[data-mode="standard"][data-theme="system"] .bp-sidebar-link,
+  :root[data-mode="standard"][data-theme="system"] .bp-rail-link,
+  :root[data-mode="standard"][data-theme="system"] .bp-rail-module-main,
   :root[data-mode="standard"][data-theme="system"] .bp-header-name,
   :root[data-mode="standard"][data-theme="system"] .bp-page-title,
   :root[data-mode="standard"][data-theme="system"] .bp-card-title {
@@ -382,6 +412,10 @@
   --bp-standard-accent: #46505c;
   --bp-standard-accent-dark: #333b45;
   --bp-standard-accent-text: #ffffff;
+
+  --bp-nav-accent: #c97e0b;
+  --bp-nav-accent-text: #3a2400;
+  --bp-nav-accent-soft: rgba(201, 126, 11, 0.14);
 }
 
 /* ---- Standard + Dark: Copilot-inspired, with exact colors specified by
@@ -414,6 +448,10 @@
   --bp-standard-accent: #4a4556;
   --bp-standard-accent-dark: #565064;
   --bp-standard-accent-text: #ffffff;
+
+  --bp-nav-accent: #d99123;
+  --bp-nav-accent-text: #1a1200;
+  --bp-nav-accent-soft: rgba(217, 145, 35, 0.18);
 }
 
 /* ---- Standard + Business: a clean white/light-blue business-tool look,
@@ -452,6 +490,14 @@
   --bp-danger-bg: #fceceb;
   --bp-warning: #b8720a;
   --bp-warning-bg: #fdf1de;
+
+  /* Business's general accent is indigo/blue (buttons, tabs, etc.) —
+     the two-panel nav gets its own warm amber accent instead, per the
+     explicit "no blue anywhere in the nav" requirement, even though
+     Business is otherwise a blue-accented theme. */
+  --bp-nav-accent: #c97e0b;
+  --bp-nav-accent-text: #3a2400;
+  --bp-nav-accent-soft: rgba(201, 126, 11, 0.12);
 }
 
 /* Fully rounded pill-shaped status badges, matching the reference —
@@ -464,9 +510,17 @@
 /* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
    mode's brand-tinted glass) — Standard mode needs that gone in every
    theme, it's a flat solid fill here. */
-:root[data-mode="standard"] .bp-sidebar {
+:root[data-mode="standard"] .bp-sidebar-rail {
   background: var(--bp-sidebar-tint) !important;
   border-right: 1px solid var(--bp-sidebar-border);
+}
+
+/* SubmodulePanel is a Glass-shell surface by default (blur/translucent
+   tint) — Standard mode needs it flat/opaque like every other Standard
+   surface, matching --bp-surface + a crisp border instead of blur. */
+:root[data-mode="standard"] .bp-submodule-panel {
+  background: var(--bp-surface) !important;
+  border-color: var(--bp-border) !important;
 }
 
 :root[data-mode="standard"] .bp-header {
@@ -519,11 +573,26 @@
   border-color: var(--bp-standard-chrome-btn-border) !important;
 }
 
-:root[data-mode="standard"] .bp-sidebar-link.is-active,
-:root[data-mode="standard"] .bp-sidebar-sublink.is-active {
-  background: var(--bp-standard-accent) !important;
-  color: var(--bp-standard-accent-text) !important;
+/* Nav active states use --bp-nav-accent (always warm), never
+   --bp-standard-accent (blue in System/Business) — see the per-theme
+   --bp-nav-* definitions above. */
+:root[data-mode="standard"] .bp-rail-link.is-active {
+  background: var(--bp-nav-accent) !important;
+  color: var(--bp-nav-accent-text) !important;
   box-shadow: none !important;
+}
+
+:root[data-mode="standard"] .bp-rail-module.is-selected {
+  box-shadow: inset 3px 0 0 var(--bp-nav-accent) !important;
+}
+
+:root[data-mode="standard"] .bp-rail-module.is-selected .bp-rail-module-main {
+  color: var(--bp-nav-accent) !important;
+}
+
+:root[data-mode="standard"] .bp-submodule-link.is-active {
+  background: var(--bp-nav-accent-soft) !important;
+  box-shadow: inset 3px 0 0 var(--bp-nav-accent) !important;
 }
 
 :root[data-mode="standard"] .bp-btn-primary,
@@ -555,13 +624,13 @@
   border-bottom-color: var(--bp-standard-accent) !important;
 }
 
-/* Excludes .bp-sidebar-link — a NavLink renders as an <a>, and this
-   generic "plain inline link" color was winning over the sidebar's own
-   --bp-sidebar-text token, turning every nav label the accent color
+/* Excludes .bp-rail-link/.bp-submodule-link — a NavLink renders as an
+   <a>, and this generic "plain inline link" color was winning over the
+   nav's own text tokens, turning every nav label the accent color
    (visible as all-orange nav text in Standard + Dark) instead of just
    genuine inline text links elsewhere in the app. */
 :root[data-mode="standard"] .bp-header-refresh-btn.is-spinning,
-:root[data-mode="standard"] a:not(.bp-sidebar-link) {
+:root[data-mode="standard"] a:not(.bp-rail-link):not(.bp-submodule-link) {
   color: var(--bp-standard-accent);
 }
 
@@ -584,12 +653,14 @@
   font-weight: 700;
 }
 
-:root[data-mode="standard"] .bp-sidebar-link {
+:root[data-mode="standard"] .bp-rail-link,
+:root[data-mode="standard"] .bp-rail-module-main {
   font-weight: 600;
 }
 
-:root[data-mode="standard"] .bp-sidebar-link.is-active,
-:root[data-mode="standard"] .bp-sidebar-sublink.is-active {
+:root[data-mode="standard"] .bp-rail-link.is-active,
+:root[data-mode="standard"] .bp-rail-module.is-selected .bp-rail-module-main,
+:root[data-mode="standard"] .bp-submodule-link.is-active {
   font-weight: 700;
 }
 

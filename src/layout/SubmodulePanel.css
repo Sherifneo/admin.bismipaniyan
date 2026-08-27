@@ -1,0 +1,118 @@
+/* Desktop: a floating flyout beside the rail — fixed width, its own
+   glass/solid shell (depending on mode), internal scroll so a long
+   module (Finance's 12 children) never grows the panel past the
+   viewport or wider than its fixed width. Positioned by Sidebar.css
+   (.bp-sidebar-rail + this panel are siblings inside .bp-sidebar). */
+.bp-submodule-panel {
+  width: 300px;
+  flex: none;
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bp-glass-tint-strong);
+  -webkit-backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  backdrop-filter: blur(var(--bp-glass-blur)) saturate(var(--bp-glass-saturate));
+  border: 1px solid var(--bp-glass-border-soft);
+  border-radius: var(--bp-radius-lg);
+  box-shadow: var(--bp-glass-shadow-lg);
+  overflow: hidden;
+}
+
+.bp-submodule-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--bp-glass-border-soft);
+  flex: none;
+}
+
+.bp-submodule-panel-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bp-submodule-panel-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bp-text);
+  letter-spacing: 0;
+}
+
+.bp-submodule-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bp-submodule-group + .bp-submodule-group {
+  margin-top: 10px;
+}
+
+.bp-submodule-group-label {
+  padding: 6px 10px 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bp-text-muted);
+}
+
+.bp-submodule-link {
+  display: block;
+  padding: 9px 12px;
+  border-radius: var(--bp-radius-md);
+  color: var(--bp-text);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 600;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bp-submodule-link:hover {
+  background: var(--bp-nav-accent-soft);
+}
+
+.bp-submodule-link.is-active {
+  background: var(--bp-nav-accent-soft);
+  color: var(--bp-text);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--bp-nav-accent);
+}
+
+.bp-submodule-link:focus-visible {
+  outline: 2px solid var(--bp-nav-accent);
+  outline-offset: 2px;
+}
+
+/* Mobile: the same panel content, but as a full-width in-flow view
+   (swapped in place of the rail's Main Modules list inside the drawer)
+   rather than a floating sibling — no fixed width, no shadow/border of
+   its own since the drawer itself already provides that shell. */
+.bp-submodule-panel.is-mobile {
+  width: 100%;
+  max-height: none;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.bp-submodule-panel.is-mobile .bp-submodule-panel-header {
+  padding: 4px 4px 12px;
+}
+
+.bp-submodule-panel.is-mobile .bp-submodule-panel-body {
+  padding: 0 2px;
+  overflow-y: visible;
+}
+
+.bp-submodule-panel.is-mobile .bp-submodule-link {
+  padding: 12px 14px;
+  font-size: 15px;
+}

@@ -1,6 +1,29 @@
+/* Two-panel nav shell: .bp-sidebar is a fixed-width positioning context
+   holding the rail (.bp-sidebar-rail, the Main Modules column, fills
+   it) and the flyout submodule panel, ABSOLUTELY positioned just past
+   its right edge so it overlays the page as a floating sibling rather
+   than taking part in .bp-shell's flex layout — opening it must never
+   shift or shrink the page content. On mobile the flyout is never
+   rendered this way — the rail's own drawer swaps between a "modules"
+   and "submenu" view internally instead (see Sidebar.jsx's mobileView
+   state and the .bp-sidebar-nav-mobile / .bp-sidebar-nav-desktop split
+   below). */
 .bp-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+  /* Establishes the positioning context for .bp-sidebar-flyout below —
+     the flyout is absolutely positioned against THIS element, not the
+     rail, so it overlays beside the rail without taking part in
+     .bp-shell's flex layout (page content must never shift/shrink when
+     the panel opens). */
   width: var(--bp-sidebar-width);
-  flex: none;
+}
+
+.bp-sidebar-rail {
+  width: 100%;
+  height: 100%;
   background:
     linear-gradient(165deg, rgba(91, 31, 151, 0.32), rgba(67, 22, 113, 0.22)),
     var(--bp-sidebar-tint);
@@ -9,15 +32,13 @@
   color: var(--bp-sidebar-text);
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
+  height: 100%;
   border-right: 1px solid var(--bp-sidebar-border);
   box-shadow: var(--bp-glass-shadow);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .bp-sidebar {
+  .bp-sidebar-rail {
     background: var(--bp-brand);
   }
 }
@@ -28,6 +49,7 @@
   gap: 10px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--bp-sidebar-border);
+  flex: none;
 }
 
 .bp-sidebar-close {
@@ -76,88 +98,142 @@
   gap: 2px;
 }
 
+/* Mobile drawer content is hidden on desktop, and vice versa — a single
+   Sidebar.jsx renders both, CSS picks which one is visible per
+   viewport, so there's exactly one component/state tree to keep in
+   sync rather than two parallel implementations. */
+.bp-sidebar-nav-mobile {
+  display: none;
+}
+
 .bp-sidebar-divider {
   height: 1px;
   background: var(--bp-sidebar-border);
   margin: 8px 16px;
 }
 
-.bp-sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 8px;
-  padding: 9px 12px;
-  border-radius: var(--bp-radius-md);
-  color: var(--bp-sidebar-text);
-  text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-
-.bp-sidebar-link:hover {
-  background: var(--bp-sidebar-hover);
-  color: var(--bp-sidebar-text-strong);
-}
-
-.bp-sidebar-link.is-active {
-  background: var(--bp-amber);
-  color: var(--bp-brand-dark);
-  font-weight: 600;
-  box-shadow: 0 2px 10px rgba(232, 148, 15, 0.4);
-}
-
-.bp-sidebar-icon {
-  font-size: 14px;
-  width: 18px;
-  text-align: center;
-  flex: none;
-}
-
-.bp-sidebar-star {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--bp-amber);
-  flex: none;
-}
-
-.bp-sidebar-link.is-active .bp-sidebar-star {
-  color: var(--bp-brand-dark);
-}
-
-/* ---- Main module / submodule tree ------------------------------------ */
-
 .bp-sidebar-section-label {
   padding: 10px 16px 4px;
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--bp-sidebar-text);
   opacity: 0.55;
 }
 
-.bp-sidebar-module {
-  margin: 0 8px;
-}
-
-.bp-sidebar-module-header {
+/* ---- Standalone leaves (Dashboard, Partners & Shops, WhatsApp Orders):
+   no chevron, no panel — a direct link, same row style as a module. ---- */
+.bp-rail-link {
   display: flex;
   align-items: center;
+  gap: 10px;
+  margin: 0 8px;
+  padding: 10px 12px;
+  border-radius: var(--bp-radius-md);
+  color: var(--bp-sidebar-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bp-rail-link:hover {
+  background: var(--bp-sidebar-hover);
+  color: var(--bp-sidebar-text-strong);
+}
+
+.bp-rail-link.is-active {
+  background: var(--bp-nav-accent);
+  color: var(--bp-nav-accent-text);
+  box-shadow: 0 2px 10px rgba(232, 148, 15, 0.35);
+}
+
+.bp-rail-icon {
+  font-size: 15px;
+  width: 18px;
+  text-align: center;
+  flex: none;
+}
+
+.bp-rail-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Main Module row: a flex row of [main button][pin][chevron]. The
+   main button selects the module (opens the flyout + navigates); the
+   chevron independently toggles the flyout only (see Sidebar.jsx). ---- */
+.bp-rail-module {
+  display: flex;
+  align-items: center;
+  margin: 0 8px;
   border-radius: var(--bp-radius-md);
   transition: background 0.12s ease;
 }
 
-.bp-sidebar-module-header:hover {
+.bp-rail-module:hover {
   background: var(--bp-sidebar-hover);
 }
 
-.bp-sidebar-module-header.is-active {
+.bp-rail-module.is-active {
   background: var(--bp-sidebar-hover);
 }
 
-.bp-sidebar-chevron {
+.bp-rail-module.is-selected {
+  box-shadow: inset 3px 0 0 var(--bp-nav-accent);
+}
+
+.bp-rail-module-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 10px 4px 10px 12px;
+  color: var(--bp-sidebar-text);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bp-rail-module.is-active .bp-rail-module-main {
+  color: var(--bp-sidebar-text-strong);
+}
+
+.bp-rail-module.is-selected .bp-rail-module-main {
+  color: var(--bp-nav-accent);
+  font-weight: 700;
+}
+
+.bp-rail-pin {
+  flex: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0.35;
+  padding: 6px 2px;
+  filter: grayscale(1);
+  transition: opacity 0.12s ease, filter 0.12s ease;
+}
+
+.bp-rail-pin:hover {
+  opacity: 0.75;
+}
+
+.bp-rail-pin.is-pinned {
+  opacity: 1;
+  filter: none;
+}
+
+.bp-rail-chevron {
   flex: none;
   border: none;
   background: none;
@@ -166,7 +242,7 @@
   cursor: pointer;
   width: 26px;
   height: 26px;
-  margin: 0 2px 0 6px;
+  margin: 0 6px 0 2px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -174,163 +250,66 @@
   transition: opacity 0.14s ease, background 0.14s ease, color 0.14s ease;
 }
 
-.bp-sidebar-chevron:hover {
+.bp-rail-chevron:hover {
   opacity: 1;
   background: var(--bp-sidebar-hover);
   color: var(--bp-sidebar-text-strong);
 }
 
-.bp-sidebar-chevron-icon {
+.bp-rail-chevron-icon {
   display: inline-flex;
   width: 15px;
   height: 15px;
   transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.bp-sidebar-chevron-icon svg {
+.bp-rail-chevron-icon svg {
   width: 100%;
   height: 100%;
 }
 
-.bp-sidebar-chevron-icon.is-expanded {
+.bp-rail-chevron-icon.is-expanded {
   transform: rotate(90deg);
 }
 
-.bp-sidebar-module-link {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 8px;
-  color: var(--bp-sidebar-text);
-  text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
-  min-width: 0;
+/* ---- Desktop flyout panel: SubmodulePanel.jsx's own root carries the
+   width/shell styling (SubmodulePanel.css) — this positions it as an
+   OVERLAY fixed to the right edge of the rail, absolutely positioned
+   against .bp-sidebar (not part of .bp-shell's flex flow), so opening
+   it never shifts or shrinks the page content beside it. ---- */
+.bp-sidebar-flyout {
+  position: absolute;
+  left: 100%;
+  top: 12px;
+  margin-left: 10px;
+  z-index: 25;
 }
 
-.bp-sidebar-module-link:hover {
-  color: var(--bp-sidebar-text-strong);
-}
-
-.bp-sidebar-pin {
-  flex: none;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 11px;
-  opacity: 0.35;
-  padding: 6px 10px 6px 4px;
-  filter: grayscale(1);
-  transition: opacity 0.12s ease, filter 0.12s ease;
-}
-
-.bp-sidebar-pin:hover {
-  opacity: 0.75;
-}
-
-.bp-sidebar-pin.is-pinned {
-  opacity: 1;
-  filter: none;
-}
-
-.bp-sidebar-submenu {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 2px 0 4px 30px;
-  border-left: 1px solid var(--bp-sidebar-border);
-  margin-left: 19px;
-}
-
-.bp-sidebar-subrow {
-  display: flex;
-  align-items: center;
-}
-
-.bp-sidebar-sublink {
-  display: block;
-  flex: 1;
-  min-width: 0;
-  padding: 7px 10px;
-  border-radius: var(--bp-radius-sm);
-  color: var(--bp-sidebar-text);
-  opacity: 0.85;
-  text-decoration: none;
-  font-size: 12.5px;
-  font-weight: 500;
-  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
-}
-
-.bp-sidebar-sublink:hover {
-  background: var(--bp-sidebar-hover);
-  color: var(--bp-sidebar-text-strong);
-  opacity: 1;
-}
-
-.bp-sidebar-leafrow {
-  display: flex;
-  align-items: center;
-}
-
-.bp-sidebar-leafrow .bp-sidebar-link {
-  flex: 1;
-  min-width: 0;
-}
-
-.bp-sidebar-fav {
-  flex: none;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--bp-sidebar-text);
-  opacity: 0;
-  padding: 6px 10px 6px 4px;
-  filter: grayscale(1);
-  transition: opacity 0.12s ease, filter 0.12s ease, color 0.12s ease;
-}
-
-.bp-sidebar-subrow:hover .bp-sidebar-fav,
-.bp-sidebar-leafrow:hover .bp-sidebar-fav,
-.bp-sidebar-fav.is-favorited {
-  opacity: 0.5;
-}
-
-.bp-sidebar-fav:hover {
-  opacity: 1 !important;
-}
-
-.bp-sidebar-fav.is-favorited {
-  color: var(--bp-amber);
-  filter: none;
-  opacity: 1;
-}
-
-.bp-sidebar-sublink.is-active {
-  background: var(--bp-amber);
-  color: var(--bp-brand-dark);
-  font-weight: 600;
-  opacity: 1;
-  box-shadow: 0 2px 10px rgba(232, 148, 15, 0.4);
-}
-
-/* Below the shared mobile breakpoint (see theme.css), the sidebar becomes
-   an off-canvas drawer: fixed position, translated fully off-screen by
-   default, slid in via .is-open. A tap-outside overlay closes it. */
+/* Below the shared mobile breakpoint (see theme.css), the sidebar
+   becomes an off-canvas drawer: fixed position, translated fully
+   off-screen by default, slid in via .is-open. A tap-outside overlay
+   closes it. The flyout panel is never shown here — mobile swaps
+   between "modules" and "submenu" views inside the rail itself. */
 @media (max-width: 860px) {
   .bp-sidebar {
     position: fixed;
     left: 0;
     top: 0;
+    height: 100vh;
+  }
+
+  .bp-sidebar-rail {
+    position: fixed;
+    left: 0;
+    top: 0;
     z-index: 200;
-    width: min(82vw, 300px);
+    width: min(86vw, 320px);
     transform: translateX(-100%);
     transition: transform 0.22s ease;
     box-shadow: var(--bp-shadow-lg);
   }
 
-  .bp-sidebar.is-open {
+  .bp-sidebar.is-open .bp-sidebar-rail {
     transform: translateX(0);
   }
 
@@ -346,5 +325,53 @@
     background: rgba(20, 10, 22, 0.45);
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
+  }
+
+  .bp-sidebar-flyout {
+    display: none;
+  }
+
+  .bp-sidebar-nav-desktop {
+    display: none;
+  }
+
+  .bp-sidebar-nav-mobile {
+    display: flex;
+  }
+
+  .bp-rail-mobile-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 8px 8px;
+    padding: 10px 12px;
+    border: none;
+    background: none;
+    color: var(--bp-sidebar-text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--bp-radius-md);
+  }
+
+  .bp-rail-mobile-back:hover {
+    background: var(--bp-sidebar-hover);
+  }
+
+  .bp-rail-mobile-row {
+    margin: 0 8px;
+    border-radius: var(--bp-radius-md);
+    padding: 12px;
+  }
+
+  .bp-rail-mobile-row:hover,
+  .bp-rail-mobile-row.is-active {
+    background: var(--bp-sidebar-hover);
+  }
+
+  .bp-rail-mobile-arrow {
+    flex: none;
+    font-size: 18px;
+    opacity: 0.6;
   }
 }

@@ -1,11 +1,13 @@
 // Sidebar module-level UI state: which main modules are pinned, and
-// which are manually expanded/collapsed. Per-browser (localStorage),
-// same try/catch-wrapped pattern as ThemeContext.jsx and the sidebar
-// customization this replaces. Only main-module keys are ever stored
-// here — individual leaf/submodule items are never pinnable, matching
-// the confirmed "pin main modules only" scope.
+// which submodule each module was last visited on. Per-browser
+// (localStorage), same try/catch-wrapped pattern as ThemeContext.jsx.
+// Only main-module keys are ever pinned — individual leaf/submodule
+// items are never pinnable, matching the confirmed "pin main modules
+// only" scope. Which module's flyout panel is currently OPEN is
+// deliberately NOT persisted here — that's plain in-memory state in
+// Sidebar.jsx, recomputed from the current route on every load.
 const PINNED_KEY = "bp_admin_sidebar_pinned";
-const EXPANDED_KEY = "bp_admin_sidebar_expanded";
+const LAST_CHILD_KEY = "bp_admin_sidebar_lastchild";
 
 function getKeys(storageKey) {
   try {
@@ -33,10 +35,29 @@ export function setPinned(keys) {
   setKeys(PINNED_KEY, keys);
 }
 
-export function getExpanded() {
-  return getKeys(EXPANDED_KEY);
+// { [moduleKey]: childKey } — the last submodule the user navigated to
+// within each module, so re-opening that module later goes straight
+// back there instead of always the default (children[0]).
+function getLastChildMap() {
+  try {
+    const raw = localStorage.getItem(LAST_CHILD_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
-export function setExpanded(keys) {
-  setKeys(EXPANDED_KEY, keys);
+export function getLastChild(moduleKey) {
+  return getLastChildMap()[moduleKey] || null;
+}
+
+export function setLastChild(moduleKey, childKey) {
+  const map = getLastChildMap();
+  map[moduleKey] = childKey;
+  try {
+    localStorage.setItem(LAST_CHILD_KEY, JSON.stringify(map));
+  } catch {
+    // Best-effort persistence only.
+  }
 }

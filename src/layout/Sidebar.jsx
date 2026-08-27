@@ -1,24 +1,26 @@
-import { useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { NAV_ITEMS } from "./navConfig";
-import { getPinned, setPinned, getExpanded, setExpanded } from "./sidebarState";
-import { getFavorites, isFavorited, toggleFavorite } from "./favoritesState";
+import { getPinned, setPinned, getLastChild, setLastChild } from "./sidebarState";
+import SubmodulePanel from "./SubmodulePanel";
 import "./Sidebar.css";
 
-// On desktop this renders as the usual fixed-width sidebar. Below the
-// mobile breakpoint (see Sidebar.css) it's an off-canvas drawer — hidden
-// by default, slid in via the "is-open" class when the header's hamburger
-// toggles `mobileOpen`, with a tap-outside overlay to close it.
+// Two-panel ERP-style navigation: a narrow "rail" of Main Modules
+// (this file) plus a separate flyout SubmodulePanel that opens beside
+// it when a module with children is selected. On desktop the two are
+// siblings positioned side by side; on mobile the drawer shows one view
+// at a time (Main Modules, or the selected module's submenu) and swaps
+// between them in place — see the mobileView state below.
 //
 // NAV_ITEMS is a tree: a top-level entry either has its own `path`
 // (standalone leaf, e.g. Dashboard/WhatsApp Orders/Partners) or
-// `children` (a collapsible module, e.g. Finance/Products). A module is
-// visible if at least one child passes the existing ownerOnly/
-// requiredPermission check — same gating rules as before, just applied
-// per-child instead of per-flat-item. App.jsx still generates routes
-// off the same NAV_ITEMS source (flattened, see App.jsx) — this
-// component never mutates that source, only decides what/how to render.
+// `children` (a module, e.g. Finance/Products). A module is visible if
+// at least one child passes the existing ownerOnly/requiredPermission
+// check — same gating rules as before, just applied per-child instead
+// of per-flat-item. App.jsx still generates routes off the same
+// NAV_ITEMS source (flattened, see App.jsx) — this component never
+// mutates that source, only decides what/how to render.
 function isVisible(item, admin, hasPermission) {
   if (item.ownerOnly && admin?.role !== "owner") return false;
   if (item.requiredPermission && !hasPermission(item.requiredPermission)) return false;
@@ -29,143 +31,82 @@ function pathnameOf(path) {
   return path.split("?")[0];
 }
 
-// A child's own link is "active" when the full pathname+search matches
-// (so, for a tab-backed child, only ITS OWN tab lights up) — falling
-// back to a pathname-only match for a plain (non-tab) child that has no
-// query string of its own.
-function isChildActive(child, location) {
-  if (location.pathname !== pathnameOf(child.path)) return false;
-  if (!child.path.includes("?")) return true;
-  return `${location.pathname}${location.search}` === child.path;
+function isModuleActive(module, location) {
+  return module.children.some((child) => location.pathname === pathnameOf(child.path));
 }
 
-function ModuleGroup({ module, expandedKeys, onToggleExpand, pinnedSet, onTogglePin, favorites, onToggleFavorite, location }) {
-  const children = module.children;
-  const isModuleActive = children.some((child) => location.pathname === pathnameOf(child.path));
-  // isExpanded is now driven entirely by explicit membership in
-  // expandedKeys (accordion mode — see onToggleExpand — collapses every
-  // other module when one is opened, so at most one module's submenu is
-  // ever visible at a time). The active module is auto-added to
-  // expandedKeys on route change (see Sidebar's useEffect), which is
-  // what makes it show expanded on first load without a click.
-  const isExpanded = expandedKeys.has(module.key);
-  const defaultChild = children[0];
-  const isPinned = pinnedSet.has(module.key);
-
-  return (
-    <div className="bp-sidebar-module">
-      <div className={"bp-sidebar-module-header" + (isModuleActive ? " is-active" : "")}>
-        <button
-          type="button"
-          className="bp-sidebar-chevron"
-          onClick={() => onToggleExpand(module.key)}
-          aria-label={isExpanded ? `Collapse ${module.label}` : `Expand ${module.label}`}
-          aria-expanded={isExpanded}
-        >
-          <span className={"bp-sidebar-chevron-icon" + (isExpanded ? " is-expanded" : "")} aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </span>
-        </button>
-        <NavLink
-          to={defaultChild.path}
-          className="bp-sidebar-module-link"
-          onClick={(e) => {
-            // Clicking the label always navigates to the module's default
-            // page. On top of that: if this module is already the active
-            // one (so the click is a no-op navigation-wise), treat the
-            // click as a toggle instead — first click expands, clicking
-            // again collapses, next click expands again — rather than
-            // silently doing nothing once you're already on that page.
-            if (isModuleActive) {
-              e.preventDefault();
-              onToggleExpand(module.key);
-            }
-          }}
-        >
-          <span className="bp-sidebar-icon" aria-hidden="true">{module.icon}</span>
-          <span>{module.label}</span>
-        </NavLink>
-        <button
-          type="button"
-          className={"bp-sidebar-pin" + (isPinned ? " is-pinned" : "")}
-          onClick={() => onTogglePin(module.key)}
-          aria-label={isPinned ? `Unpin ${module.label}` : `Pin ${module.label}`}
-          title={isPinned ? "Unpin" : "Pin"}
-        >
-          📌
-        </button>
-      </div>
-      {isExpanded && (
-        <div className="bp-sidebar-submenu">
-          {children.map((child) => {
-            const favorited = isFavorited(favorites, child.key);
-            return (
-              <div key={child.key} className="bp-sidebar-subrow">
-                <NavLink
-                  to={child.path}
-                  className={"bp-sidebar-sublink" + (isChildActive(child, location) ? " is-active" : "")}
-                >
-                  {child.label}
-                </NavLink>
-                <button
-                  type="button"
-                  className={"bp-sidebar-fav" + (favorited ? " is-favorited" : "")}
-                  onClick={() => onToggleFavorite(child)}
-                  aria-label={favorited ? `Unfavorite ${child.label}` : `Favorite ${child.label}`}
-                  title={favorited ? "Unfavorite" : "Favorite"}
-                >
-                  ★
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+// Resolves which child path to navigate to when a module is selected:
+// the last-visited child for that module (if still present among its
+// currently-visible children), else its first/default child.
+function resolveTargetChild(module, lastChildKey) {
+  if (lastChildKey) {
+    const remembered = module.children.find((c) => c.key === lastChildKey);
+    if (remembered) return remembered;
+  }
+  return module.children[0];
 }
 
 export default function Sidebar({ mobileOpen, onClose }) {
   const { admin, hasPermission } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [pinnedKeys, setPinnedKeys] = useState(() => new Set(getPinned()));
-  const [expandedKeys, setExpandedKeys] = useState(() => new Set(getExpanded()));
-  const [favorites, setFavoritesState] = useState(() => getFavorites());
 
-  function onToggleFavorite(item) {
-    setFavoritesState((prev) => toggleFavorite(prev, item));
-  }
+  // Which module's flyout panel is open — plain in-memory state, never
+  // persisted (owner requirement). Initialized from whichever module
+  // owns the current route so a hard reload lands with the right module
+  // selected on the rail; the panel itself still starts CLOSED (see
+  // panelOpen below) rather than auto-opening.
+  const initialActiveModule = NAV_ITEMS.find((item) => item.children && isModuleActive(item, location));
+  const [selectedModuleKey, setSelectedModuleKey] = useState(initialActiveModule?.key || null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  // Accordion mode: opening a module closes every other one, so it's
-  // never ambiguous which module's submenu is showing (fixes a reported
-  // bug where an unrelated module — e.g. Workforce — appeared expanded
-  // at the same time as the one just clicked — e.g. Settings — which
-  // could happen when both keys were already present in stored expanded
-  // state from earlier browsing).
-  function onToggleExpand(key) {
-    setExpandedKeys((prev) => {
-      const next = prev.has(key) ? new Set() : new Set([key]);
-      setExpanded([...next]);
-      return next;
-    });
-  }
-
-  // Auto-expand whichever module owns the current route, and — per
-  // accordion mode above — nothing else, so navigating (e.g. via a
-  // favorite or a direct link) always leaves exactly the right module
-  // open rather than layering on top of whatever was open before.
+  // Mobile drawer has its own two-view state, independent of the
+  // desktop panel above. Always resets to the Main Modules view every
+  // time the drawer opens (owner requirement) — see the effect below.
+  const [mobileView, setMobileView] = useState("modules");
+  const [mobileActiveModule, setMobileActiveModule] = useState(null);
+  const wasMobileOpen = useRef(mobileOpen);
   useEffect(() => {
-    const activeModule = NAV_ITEMS.find(
-      (item) => item.children && item.children.some((child) => location.pathname === pathnameOf(child.path))
-    );
-    if (activeModule) {
-      setExpandedKeys(new Set([activeModule.key]));
-      setExpanded([activeModule.key]);
+    if (mobileOpen && !wasMobileOpen.current) {
+      setMobileView("modules");
+      setMobileActiveModule(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    wasMobileOpen.current = mobileOpen;
+  }, [mobileOpen]);
+
+  // Keep the rail's selected module in sync with the current route
+  // (e.g. after navigating via a direct link, browser back/forward, or
+  // a deep link) without forcing the panel open — only the highlight
+  // follows the route; open/closed is a separate, purely-click-driven
+  // state (see onSelectModule/onToggleChevron below).
+  useEffect(() => {
+    const activeModule = NAV_ITEMS.find((item) => item.children && isModuleActive(item, location));
+    if (activeModule) setSelectedModuleKey(activeModule.key);
   }, [location.pathname]);
+
+  const panelRef = useRef(null);
+  const railRef = useRef(null);
+
+  // Click-away-to-close (desktop only — mobile has its own Back
+  // control instead). Same idiom as the former Header FavoritesMenu.
+  useEffect(() => {
+    if (!panelOpen) return;
+    function onOutside(e) {
+      if (panelRef.current?.contains(e.target)) return;
+      if (railRef.current?.contains(e.target)) return;
+      setPanelOpen(false);
+    }
+    function onEscape(e) {
+      if (e.key === "Escape") setPanelOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [panelOpen]);
 
   function onTogglePin(key) {
     setPinnedKeys((prev) => {
@@ -177,8 +118,59 @@ export default function Sidebar({ mobileOpen, onClose }) {
     });
   }
 
-  // Dashboard stays first, fixed, never a module/pinnable — matches the
-  // old customization scheme's precedent of excluding it from that set.
+  // Clicking a module's row (label/icon/anywhere but the chevron):
+  //  - unselected module -> select it, open the panel, navigate to its
+  //    remembered-or-default child.
+  //  - already-selected module -> close the panel only, page unchanged.
+  function onSelectModule(module) {
+    if (selectedModuleKey === module.key && panelOpen) {
+      setPanelOpen(false);
+      return;
+    }
+    setSelectedModuleKey(module.key);
+    setPanelOpen(true);
+    const target = resolveTargetChild(module, getLastChild(module.key));
+    navigate(target.path);
+  }
+
+  // Chevron: toggles the panel open/closed only, never navigates. If it
+  // opens a module that wasn't already selected, it selects it too (so
+  // the panel shows the right content) but still doesn't touch the URL.
+  function onToggleChevron(module) {
+    if (selectedModuleKey === module.key) {
+      setPanelOpen((v) => !v);
+    } else {
+      setSelectedModuleKey(module.key);
+      setPanelOpen(true);
+    }
+  }
+
+  function onPanelNavigate(child) {
+    if (selectedModule) setLastChild(selectedModule.key, child.key);
+    setPanelOpen(false);
+  }
+
+  // Mobile: tapping a module navigates to its remembered/default child
+  // (same target-resolution as desktop) and switches to the submenu
+  // view within the same drawer session.
+  function onSelectModuleMobile(module) {
+    setMobileActiveModule(module);
+    setMobileView("submenu");
+    const target = resolveTargetChild(module, getLastChild(module.key));
+    navigate(target.path);
+  }
+
+  function onMobileBack() {
+    setMobileView("modules");
+    setMobileActiveModule(null);
+  }
+
+  function onMobilePanelNavigate(child) {
+    if (mobileActiveModule) setLastChild(mobileActiveModule.key, child.key);
+    onClose();
+  }
+
+  // Dashboard stays first, fixed, never a module/pinnable.
   const dashboardItem = NAV_ITEMS.find((item) => item.key === "dashboard");
 
   const visibleItems = NAV_ITEMS.filter((item) => {
@@ -194,88 +186,148 @@ export default function Sidebar({ mobileOpen, onClose }) {
   });
 
   const pinnedModules = visibleItems.filter((item) => item.children && pinnedKeys.has(item.key));
+  const selectedModule = visibleItems.find((item) => item.children && item.key === selectedModuleKey);
 
-  function renderLeaf(item, favoritable = false) {
-    const favorited = favoritable && isFavorited(favorites, item.key);
+  function renderLeaf(item) {
     return (
-      <div key={item.key} className={favoritable ? "bp-sidebar-leafrow" : undefined}>
-        <NavLink
-          to={item.path}
-          end={item.path === "/"}
-          className={({ isActive }) => "bp-sidebar-link" + (isActive ? " is-active" : "")}
+      <NavLink
+        key={item.key}
+        to={item.path}
+        end={item.path === "/"}
+        className={({ isActive }) => "bp-rail-link" + (isActive ? " is-active" : "")}
+      >
+        <span className="bp-rail-icon" aria-hidden="true">{item.icon}</span>
+        <span className="bp-rail-label">{item.label}</span>
+      </NavLink>
+    );
+  }
+
+  function renderModuleRow(module, { pinnedRow = false } = {}) {
+    const active = isModuleActive(module, location);
+    const selected = selectedModuleKey === module.key && panelOpen;
+    const isPinned = pinnedKeys.has(module.key);
+    return (
+      <div
+        key={pinnedRow ? `pinned-${module.key}` : module.key}
+        className={"bp-rail-module" + (active ? " is-active" : "") + (selected ? " is-selected" : "")}
+      >
+        <button type="button" className="bp-rail-module-main" onClick={() => onSelectModule(module)}>
+          <span className="bp-rail-icon" aria-hidden="true">{module.icon}</span>
+          <span className="bp-rail-label">{module.label}</span>
+        </button>
+        <button
+          type="button"
+          className={"bp-rail-pin" + (isPinned ? " is-pinned" : "")}
+          onClick={() => onTogglePin(module.key)}
+          aria-label={isPinned ? `Unpin ${module.label}` : `Pin ${module.label}`}
+          title={isPinned ? "Unpin" : "Pin"}
         >
-          <span className="bp-sidebar-icon" aria-hidden="true">{item.icon}</span>
-          <span>{item.label}</span>
-        </NavLink>
-        {favoritable && (
-          <button
-            type="button"
-            className={"bp-sidebar-fav" + (favorited ? " is-favorited" : "")}
-            onClick={() => onToggleFavorite(item)}
-            aria-label={favorited ? `Unfavorite ${item.label}` : `Favorite ${item.label}`}
-            title={favorited ? "Unfavorite" : "Favorite"}
-          >
-            ★
-          </button>
-        )}
+          📌
+        </button>
+        <button
+          type="button"
+          className="bp-rail-chevron"
+          onClick={() => onToggleChevron(module)}
+          aria-label={selected ? `Collapse ${module.label}` : `Expand ${module.label}`}
+          aria-expanded={selected}
+        >
+          <span className={"bp-rail-chevron-icon" + (selected ? " is-expanded" : "")} aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </span>
+        </button>
       </div>
+    );
+  }
+
+  function renderMobileModuleRow(module) {
+    const active = isModuleActive(module, location);
+    return (
+      <button
+        key={module.key}
+        type="button"
+        className={"bp-rail-module-main bp-rail-mobile-row" + (active ? " is-active" : "")}
+        onClick={() => onSelectModuleMobile(module)}
+      >
+        <span className="bp-rail-icon" aria-hidden="true">{module.icon}</span>
+        <span className="bp-rail-label">{module.label}</span>
+        <span className="bp-rail-mobile-arrow" aria-hidden="true">›</span>
+      </button>
     );
   }
 
   return (
     <>
       {mobileOpen && <div className="bp-sidebar-overlay" onClick={onClose} aria-hidden="true" />}
-      <aside className={"bp-sidebar" + (mobileOpen ? " is-open" : "")}>
-        <div className="bp-sidebar-brand">
-          <span className="bp-sidebar-mark">BP</span>
-          <span className="bp-sidebar-title">Bismipaniyan</span>
-          <button type="button" className="bp-sidebar-close" onClick={onClose} aria-label="Close menu">
-            ✕
-          </button>
-        </div>
+      <div className={"bp-sidebar" + (mobileOpen ? " is-open" : "")}>
+        <aside className="bp-sidebar-rail" ref={railRef}>
+          <div className="bp-sidebar-brand">
+            <span className="bp-sidebar-mark">BP</span>
+            <span className="bp-sidebar-title">Bismipaniyan</span>
+            <button type="button" className="bp-sidebar-close" onClick={onClose} aria-label="Close menu">
+              ✕
+            </button>
+          </div>
 
-        <nav className="bp-sidebar-nav">
-          {dashboardItem && renderLeaf(dashboardItem)}
-
-          {pinnedModules.length > 0 && (
-            <>
-              <div className="bp-sidebar-section-label">Pinned</div>
-              {pinnedModules.map((module) => (
-                <ModuleGroup
-                  key={`pinned-${module.key}`}
-                  module={module}
-                  expandedKeys={expandedKeys}
-                  onToggleExpand={onToggleExpand}
-                  pinnedSet={pinnedKeys}
-                  onTogglePin={onTogglePin}
-                  favorites={favorites}
-                  onToggleFavorite={onToggleFavorite}
-                  location={location}
-                />
-              ))}
-              <div className="bp-sidebar-divider" />
-            </>
-          )}
-
-          {visibleItems.map((item) =>
-            item.children ? (
-              <ModuleGroup
-                key={item.key}
-                module={item}
-                expandedKeys={expandedKeys}
-                onToggleExpand={onToggleExpand}
-                pinnedSet={pinnedKeys}
-                onTogglePin={onTogglePin}
-                favorites={favorites}
-                onToggleFavorite={onToggleFavorite}
-                location={location}
-              />
+          {/* ---- Mobile: single-view drawer, swaps between Main Modules
+              and the selected module's submenu (rendered via SubmodulePanel
+              variant="mobile"). Hidden on desktop via CSS. ---- */}
+          <nav className="bp-sidebar-nav bp-sidebar-nav-mobile">
+            {mobileView === "modules" ? (
+              <>
+                {dashboardItem && renderLeaf(dashboardItem)}
+                <div className="bp-sidebar-section-label">Modules</div>
+                {visibleItems.map((item) =>
+                  item.children ? renderMobileModuleRow(item) : renderLeaf(item)
+                )}
+              </>
             ) : (
-              renderLeaf(item, true)
-            )
-          )}
-        </nav>
-      </aside>
+              mobileActiveModule && (
+                <>
+                  <button type="button" className="bp-rail-mobile-back" onClick={onMobileBack}>
+                    ‹ Back
+                  </button>
+                  <SubmodulePanel
+                    module={mobileActiveModule}
+                    location={location}
+                    variant="mobile"
+                    onNavigate={onMobilePanelNavigate}
+                  />
+                </>
+              )
+            )}
+          </nav>
+
+          {/* ---- Desktop: Main Modules rail only — the flyout panel is a
+              separate sibling element below, not nested in this nav. ---- */}
+          <nav className="bp-sidebar-nav bp-sidebar-nav-desktop">
+            {dashboardItem && renderLeaf(dashboardItem)}
+
+            {pinnedModules.length > 0 && (
+              <>
+                <div className="bp-sidebar-section-label">Pinned</div>
+                {pinnedModules.map((module) => renderModuleRow(module, { pinnedRow: true }))}
+                <div className="bp-sidebar-divider" />
+              </>
+            )}
+
+            <div className="bp-sidebar-section-label">Modules</div>
+            {visibleItems.map((item) => (item.children ? renderModuleRow(item) : renderLeaf(item)))}
+          </nav>
+        </aside>
+
+        {panelOpen && selectedModule && (
+          <div ref={panelRef} className="bp-sidebar-flyout">
+            <SubmodulePanel
+              module={selectedModule}
+              location={location}
+              variant="flyout"
+              onNavigate={onPanelNavigate}
+            />
+          </div>
+        )}
+      </div>
     </>
   );
 }

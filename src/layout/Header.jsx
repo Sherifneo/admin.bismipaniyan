@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { NAV_ITEMS } from "./navConfig";
-import { getFavorites, FAVORITES_EVENT } from "./favoritesState";
 import "./Header.css";
 
 // Breadcrumb is derived from the same NAV_ITEMS list the sidebar uses —
@@ -24,64 +23,6 @@ function currentModuleLabel(pathname) {
     }
   }
   return null;
-}
-
-// Dropdown listing favorited pages (starred from the sidebar — see
-// Sidebar.jsx/favoritesState.js). Kept in sync with stars toggled there
-// via the FAVORITES_EVENT document event, same pattern as AuthContext's
-// AUTH_EVENT — avoids prop-drilling shared state through AppShell.
-function FavoritesMenu() {
-  const [favorites, setFavoritesState] = useState(() => getFavorites());
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-
-  useEffect(() => {
-    function onChange() {
-      setFavoritesState(getFavorites());
-    }
-    document.addEventListener(FAVORITES_EVENT, onChange);
-    return () => document.removeEventListener(FAVORITES_EVENT, onChange);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    function onOutside(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
-  }, [open]);
-
-  return (
-    <div className="bp-header-favorites" ref={wrapRef}>
-      <button
-        type="button"
-        className={"bp-header-fav-btn" + (favorites.length > 0 ? " has-favorites" : "")}
-        onClick={() => setOpen((v) => !v)}
-        title="Favorite pages"
-        aria-label="Favorite pages"
-        aria-expanded={open}
-      >
-        ★
-      </button>
-      {open && (
-        <div className="bp-header-fav-menu">
-          <div className="bp-header-fav-menu-title">Favorites</div>
-          {favorites.length === 0 ? (
-            <p className="bp-header-fav-empty">
-              Star a page in the sidebar to pin it here for quick access.
-            </p>
-          ) : (
-            favorites.map((f) => (
-              <Link key={f.key} to={f.path} className="bp-header-fav-item" onClick={() => setOpen(false)}>
-                {f.label}
-              </Link>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function Header({ onMenuClick, onRefresh }) {
@@ -135,7 +76,6 @@ export default function Header({ onMenuClick, onRefresh }) {
         ↻
       </button>
       <div className="bp-header-spacer" />
-      <FavoritesMenu />
       <button
         type="button"
         className="bp-header-theme-btn"
