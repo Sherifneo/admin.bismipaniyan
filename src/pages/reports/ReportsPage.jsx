@@ -6,7 +6,7 @@ import Pagination from "../../components/Pagination";
 import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { formatDate } from "../../utils/date";
 
-const LIMIT = 30;
+const LIMIT = 100;
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });

@@ -10,7 +10,7 @@ import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHea
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDate, formatDateTime } from "../../utils/date";
 
-const LIMIT = 20;
+const LIMIT = 100;
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");

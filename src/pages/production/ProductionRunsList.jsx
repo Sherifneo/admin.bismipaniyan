@@ -10,7 +10,7 @@ import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { useAuth } from "../../auth/AuthContext";
 import { formatDate, formatDateTime } from "../../utils/date";
 
-const LIMIT = 20;
+const LIMIT = 100;
 const STAGE_LABELS = { mixing: "Mixing", baking: "Baking", packing: "Packing" };
 
 // Stage hours are stored/costed as true decimal hours (0.75 = 45 min,

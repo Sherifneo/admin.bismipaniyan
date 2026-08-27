@@ -11,7 +11,7 @@ import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRow
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDateTime } from "../../utils/date";
 
-const LIMIT = 20;
+const LIMIT = 100;
 
 function inr(n) {
   return n === null || n === undefined || n === "" ? "—" : "₹" + Number(n).toLocaleString("en-IN");

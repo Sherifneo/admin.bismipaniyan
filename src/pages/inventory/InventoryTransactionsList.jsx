@@ -8,7 +8,7 @@ import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRow
 import { Link } from "react-router-dom";
 import { formatDate } from "../../utils/date";
 
-const LIMIT = 25;
+const LIMIT = 100;
 
 const MOVEMENT_TYPE_LABELS = {
   production_in: "Production received",

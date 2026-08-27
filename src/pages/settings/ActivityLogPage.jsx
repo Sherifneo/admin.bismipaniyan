@@ -5,7 +5,7 @@ import Pagination from "../../components/Pagination";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 import { formatDateTime } from "../../utils/date";
 
-const LIMIT = 20;
+const LIMIT = 100;
 
 // Nav label is "System Errors" (navConfig.js) but this is the honest
 // version: a read-only view of admin_audit_log — actions admins took

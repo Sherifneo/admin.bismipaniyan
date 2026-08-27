@@ -12,7 +12,7 @@ import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDate, formatDateTime } from "../../utils/date";
 import "./Partners.css";
 
-const LIMIT = 20;
+const LIMIT = 100;
 
 function inr(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN");
