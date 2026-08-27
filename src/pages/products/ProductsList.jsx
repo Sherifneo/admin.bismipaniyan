@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { productsApi, uomsApi, bomsApi } from "../../api/admin";
+import { productsApi, uomsApi, bomsApi, partnersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
@@ -30,6 +30,7 @@ const CSV_COLUMNS = [
   { label: "UOM", accessor: (p) => p.uom },
   { label: "Cost price", accessor: (p) => p.cost_price },
   { label: "Selling price", accessor: (p) => p.selling_price },
+  { label: "Owning partner", accessor: (p) => p.owning_partner_name || "" },
 ];
 
 // The product master — every finished good and raw material Bismi tracks.
@@ -108,6 +109,7 @@ export default function ProductsList() {
     { key: "cost_price", label: "Cost price", accessor: (p) => p.cost_price ?? "", filter: "number" },
     { key: "selling_price", label: "Selling price", accessor: (p) => p.selling_price ?? "", filter: "number" },
     { key: "low_stock_alert", label: "Low stock alert", accessor: (p) => p.low_stock_alert, filter: "number" },
+    { key: "owning_partner_name", label: "Owner", accessor: (p) => p.owning_partner_name || "Bismi", hiddenByDefault: true },
     { key: "created_by_name", label: "Created by", accessor: (p) => p.created_by_name || "", hiddenByDefault: true },
     { key: "created_at", label: "Created at", accessor: (p) => p.created_at || "", filter: "dateRange", hiddenByDefault: true },
     { key: "updated_by_name", label: "Updated by", accessor: (p) => p.updated_by_name || "", hiddenByDefault: true },
@@ -184,27 +186,38 @@ export default function ProductsList() {
               {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
               {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
               {table.isColumnVisible(columns[12].key) && <ColumnHeader table={table} column={columns[12]} />}
+              {table.isColumnVisible(columns[13].key) && <ColumnHeader table={table} column={columns[13]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={15} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={16} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={15} className="bp-table-empty">No products found.</td></tr>
+              <tr><td colSpan={16} className="bp-table-empty">No products found.</td></tr>
             ) : (
               table.filteredRows.map((p) => (
                 <tr key={p.product_id} onClick={() => setEditProduct(p)} style={{ cursor: "pointer", opacity: p.is_active ? 1 : 0.55 }}>
                   <SelectRowCell table={table} row={p} />
                   {table.isColumnVisible("product_code") && <td className="bp-td-muted">{p.product_code || "—"}</td>}
                   {table.isColumnVisible("sku") && <td className="bp-td-muted">{p.sku || "—"}</td>}
-                  {table.isColumnVisible("name") && <td className="bp-td-strong">{p.name}</td>}
+                  {table.isColumnVisible("name") && (
+                    <td className="bp-td-strong">
+                      {p.name}
+                      {p.owning_partner_name && (
+                        <span className="bp-partner-type-badge bp-partner-type-supplying_partner" style={{ marginLeft: 8, fontSize: 11 }}>
+                          {p.owning_partner_name}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   {table.isColumnVisible("item_kind") && <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{p.item_kind.replace("_", " ")}</td>}
                   {table.isColumnVisible("uom") && <td className="bp-td-muted">{p.uom}</td>}
                   {table.isColumnVisible("is_active") && <td className="bp-td-muted">{p.is_active ? "Yes" : "No"}</td>}
                   {table.isColumnVisible("cost_price") && <td>{inr(p.cost_price)}</td>}
                   {table.isColumnVisible("selling_price") && <td>{inr(p.selling_price)}</td>}
                   {table.isColumnVisible("low_stock_alert") && <td className="bp-td-muted">{p.low_stock_alert}</td>}
+                  {table.isColumnVisible("owning_partner_name") && <td className="bp-td-muted">{p.owning_partner_name || "Bismi"}</td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{p.created_by_name || "—"}</td>}
                   {table.isColumnVisible("created_at") && <td className="bp-td-muted">{formatDateTime(p.created_at) || "—"}</td>}
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
@@ -249,10 +262,13 @@ function ProductModal({ product, onClose, onDone }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uoms, setUoms] = useState([]);
+  const [supplyingPartners, setSupplyingPartners] = useState([]);
+  const [owningPartnerId, setOwningPartnerId] = useState(product?.owning_partner_id || "");
   const codeField = useCodePreview("product", isEdit ? product.product_code : null);
 
   useEffect(() => {
     uomsApi.list({}).then((data) => setUoms(data.items || [])).catch(() => {});
+    partnersApi.list({ type: "supplying_partner", limit: 200 }).then((data) => setSupplyingPartners(data.items || [])).catch(() => {});
   }, []);
 
   async function submit(e) {
@@ -278,6 +294,7 @@ function ProductModal({ product, onClose, onDone }) {
         low_stock_alert: lowStockAlert === "" ? 0 : Number(lowStockAlert),
         product_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
         is_active: isEdit ? isActive : undefined,
+        owning_partner_id: owningPartnerId || null,
       };
       if (isEdit) {
         await productsApi.update(product.product_id, body);
@@ -324,6 +341,17 @@ function ProductModal({ product, onClose, onDone }) {
               {uom && !uoms.some((u) => u.code === uom) && <option value={uom}>{uom}</option>}
             </select>
           </div>
+        </div>
+
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="pOwner">Owning partner (optional)</label>
+            <select id="pOwner" className="bp-field-input" value={owningPartnerId} onChange={(e) => setOwningPartnerId(e.target.value)}>
+              <option value="">Bismi-owned</option>
+              {supplyingPartners.map((p) => <option key={p.partner_id} value={p.partner_id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1 }} />
         </div>
 
         <div className="bp-form-row">

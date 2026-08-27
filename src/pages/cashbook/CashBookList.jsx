@@ -161,7 +161,7 @@ export default function CashBookList() {
     { key: "financial_account_name", label: "Financial Account", accessor: (e) => e.financial_account_name || "" },
     {
       key: "entry_type", label: "Type", accessor: (e) => e.entry_type, filter: "select",
-      options: [{ value: "income", label: "Income" }, { value: "expense", label: "Expense" }, { value: "transfer", label: "Transfer" }, { value: "equity", label: "Equity" }, { value: "advance", label: "Advance" }],
+      options: [{ value: "income", label: "Income" }, { value: "expense", label: "Expense" }, { value: "transfer", label: "Transfer" }, { value: "equity", label: "Equity" }, { value: "advance", label: "Advance" }, { value: "partner_payable", label: "Partner Payable" }],
     },
     { key: "category", label: "Category", accessor: (e) => e.category },
     {
@@ -371,6 +371,10 @@ export default function CashBookList() {
                           ) : e.entry_type === "advance" ? (
                             <span className="bp-badge bp-badge-neutral">
                               {e.direction === "subtract" ? "Advance — Given" : "Advance — Recovered"}
+                            </span>
+                          ) : e.entry_type === "partner_payable" ? (
+                            <span className="bp-badge bp-badge-neutral">
+                              {e.direction === "subtract" ? "Partner Payable — Paid out" : "Partner Payable — Received"}
                             </span>
                           ) : (
                             <span className={`bp-badge ${e.entry_type === "income" ? "bp-badge-success" : "bp-badge-danger"}`}>

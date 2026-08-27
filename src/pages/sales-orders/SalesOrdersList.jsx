@@ -273,6 +273,24 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
     setItems((prev) => [...prev, { product_id: "", quantity: "", unit_price: "" }]);
   }
 
+  // No mixed cart: once any line has a product picked, every other line
+  // is filtered to that same owning partner (or, if it's a Bismi-owned
+  // product, to Bismi-owned products only) — undefined means the cart is
+  // still empty and unlocked. The backend re-checks this at create time
+  // regardless (sales-orders.js's POST /), this is UX convenience only.
+  let lockedOwnerId;
+  for (const it of items) {
+    if (!it.product_id) continue;
+    const product = products.find((p) => p.product_id === it.product_id);
+    if (product) {
+      lockedOwnerId = product.owning_partner_id || null;
+      break;
+    }
+  }
+  const pickableProducts = lockedOwnerId === undefined
+    ? products
+    : products.filter((p) => (p.owning_partner_id || null) === lockedOwnerId);
+
   function removeRow(idx) {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -409,12 +427,19 @@ function NewSoModal({ customers, locations, onClose, onDone }) {
         )}
 
         <label className="bp-field-label">Items</label>
+        {lockedOwnerId !== undefined && (
+          <p className="bp-td-muted" style={{ marginTop: -4, marginBottom: 6, fontSize: 12 }}>
+            {lockedOwnerId
+              ? `This order is for ${products.find((p) => p.owning_partner_id === lockedOwnerId)?.owning_partner_name}'s products only.`
+              : "This order is for Bismi's own products only."}
+          </p>
+        )}
         {items.map((it, idx) => (
           <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
             <div style={{ flex: 2 }}>
               <select className="bp-field-input" value={it.product_id} onChange={(e) => updateItem(idx, "product_id", e.target.value)}>
                 <option value="">Select product…</option>
-                {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+                {pickableProducts.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
               </select>
             </div>
             <div style={{ flex: 1 }}>

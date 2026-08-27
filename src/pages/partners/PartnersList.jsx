@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { partnersApi } from "../../api/admin";
+import { partnersApi, productsApi, locationsApi, inventoryApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
@@ -41,6 +41,7 @@ export default function PartnersList() {
   const [showAdd, setShowAdd] = useState(false);
   const [editPartner, setEditPartner] = useState(null);
   const [settlementsFor, setSettlementsFor] = useState(null);
+  const [stockFor, setStockFor] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -161,6 +162,9 @@ export default function PartnersList() {
                   {table.isColumnVisible("updated_by_name") && <td className="bp-td-muted">{p.updated_by_name || "—"}</td>}
                   {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(p.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
+                    {p.type === "supplying_partner" && (
+                      <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setStockFor(p); }}>Stock</button>
+                    )}
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setSettlementsFor(p); }}>Settlements</button>
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditPartner(p); }}>Edit</button>
                   </td>
@@ -176,6 +180,7 @@ export default function PartnersList() {
       {showAdd && <PartnerModal onClose={() => setShowAdd(false)} onDone={onSaved} />}
       {editPartner && <PartnerModal partner={editPartner} onClose={() => setEditPartner(null)} onDone={onSaved} />}
       {settlementsFor && <SettlementsModal partner={settlementsFor} onClose={() => setSettlementsFor(null)} />}
+      {stockFor && <PartnerStockModal partner={stockFor} onClose={() => setStockFor(null)} />}
     </div>
   );
 }
@@ -300,6 +305,137 @@ function PartnerModal({ partner, onClose, onDone }) {
   );
 }
 
+function PartnerStockModal({ partner, onClose }) {
+  const [stock, setStock] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showReceive, setShowReceive] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await inventoryApi.list({ partnerId: partner.partner_id, limit: 100 });
+      setStock(data.items || []);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load stock.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <Modal title={`Stock — ${partner.name}`} onClose={onClose}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+        <button type="button" className="bp-btn-primary" onClick={() => setShowReceive(true)}>+ Receive stock</button>
+      </div>
+      {error && <div className="bp-inline-error">{error}</div>}
+      {loading ? (
+        <div className="bp-td-muted">Loading…</div>
+      ) : stock.length === 0 ? (
+        <div className="bp-td-muted">No consigned stock recorded yet.</div>
+      ) : (
+        <table className="bp-table">
+          <thead><tr><th>Product</th><th>Location</th><th>Qty on hand</th></tr></thead>
+          <tbody>
+            {stock.map((s) => (
+              <tr key={`${s.product_id}-${s.location_id}`}>
+                <td className="bp-td-strong">{s.name}</td>
+                <td className="bp-td-muted">{s.location_name}</td>
+                <td>{s.consignment_stock_qty} {s.uom}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {showReceive && (
+        <ReceiveStockForm partner={partner} onClose={() => setShowReceive(false)} onDone={async () => { setShowReceive(false); await load(); }} />
+      )}
+    </Modal>
+  );
+}
+
+function ReceiveStockForm({ partner, onClose, onDone }) {
+  const [products, setProducts] = useState([]);
+  const [productId, setProductId] = useState("");
+  const [locations, setLocations] = useState([]);
+  const [locationId, setLocationId] = useState("");
+  const [qty, setQty] = useState("");
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    productsApi.list({ ownerId: partner.partner_id, limit: 200 }).then((d) => setProducts(d.items || [])).catch(() => {});
+    locationsApi.list().then(setLocations).catch(() => {});
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!productId || !locationId || !qty) {
+      setError("Product, location, and quantity are required.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await partnersApi.receiveStock(partner.partner_id, {
+        product_id: productId, location_id: locationId, qty: Number(qty),
+        entry_date: entryDate || undefined, note: note || undefined,
+      });
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not record this stock.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Receive stock — ${partner.name}`} onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        {products.length === 0 && (
+          <p className="bp-td-muted" style={{ fontSize: 12 }}>
+            This partner has no products yet — add one from Products first, with this partner set as the owning partner.
+          </p>
+        )}
+        <label className="bp-field-label" htmlFor="rsProduct">Product</label>
+        <select id="rsProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required autoFocus>
+          <option value="">Select product…</option>
+          {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+        </select>
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="rsLocation">Location</label>
+            <select id="rsLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>
+              <option value="">Select location…</option>
+              {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="rsQty">Quantity</label>
+            <input id="rsQty" type="number" min="0.001" step="0.001" className="bp-field-input" value={qty} onChange={(e) => setQty(e.target.value)} required />
+          </div>
+        </div>
+        <label className="bp-field-label" htmlFor="rsDate">Date</label>
+        <input id="rsDate" type="date" className="bp-field-input" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
+        <label className="bp-field-label" htmlFor="rsNote">Note (optional)</label>
+        <textarea id="rsNote" className="bp-field-input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Receive stock"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function SettlementsModal({ partner, onClose }) {
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -358,7 +494,9 @@ function SettlementsModal({ partner, onClose }) {
             Export all
           </button>
         )}
-        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New settlement</button>
+        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>
+          {partner.type === "supplying_partner" ? "+ Pay out" : "+ New settlement"}
+        </button>
         <ColumnChooserButton table={table} columns={columns} />
       </div>
 
@@ -414,13 +552,78 @@ function SettlementsModal({ partner, onClose }) {
         </>
       )}
 
-      {showAdd && (
+      {showAdd && partner.type === "supplying_partner" && (
+        <PayOutForm
+          partner={partner}
+          onClose={() => setShowAdd(false)}
+          onDone={async () => { setShowAdd(false); await load(); }}
+        />
+      )}
+      {showAdd && partner.type !== "supplying_partner" && (
         <NewSettlementForm
           partner={partner}
           onClose={() => setShowAdd(false)}
           onDone={async () => { setShowAdd(false); await load(); }}
         />
       )}
+    </Modal>
+  );
+}
+
+// Supplying partners take their commission at each sale now (see
+// backend/src/routes/sales-orders.js's POST /:id/complete), so there's
+// no period/sales-value math left to enter by hand — this just shows
+// the current running balance owed and pays it out in one action.
+function PayOutForm({ partner, onClose, onDone }) {
+  const [balance, setBalance] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    partnersApi.payableBalance(partner.partner_id)
+      .then((d) => setBalance(d.payable_balance))
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load the balance owed."))
+      .finally(() => setLoading(false));
+  }, [partner.partner_id]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      await partnersApi.payOut(partner.partner_id, {});
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not record this payout.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Pay out — ${partner.name}`} onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        {loading ? (
+          <div className="bp-td-muted">Loading…</div>
+        ) : (
+          <div className="bp-settlement-calc">
+            <div className="bp-settlement-calc-row bp-settlement-calc-total">
+              <span>Amount owed to {partner.name}</span><span>{inr(balance)}</span>
+            </div>
+          </div>
+        )}
+        <p className="bp-td-muted" style={{ fontSize: 12 }}>
+          Commission is already taken from each sale — this pays out the full balance above. Cash/Bank decreases by
+          this amount and the balance owed clears to zero; no additional income or expense is created.
+        </p>
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting || loading || !balance}>
+            {submitting ? "Saving…" : "Pay out"}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }

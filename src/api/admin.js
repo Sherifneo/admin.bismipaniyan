@@ -90,6 +90,9 @@ export const partnersApi = {
   listSettlements: (partnerId, params = {}) => GET(`/api/admin/partners/${partnerId}/settlements?${new URLSearchParams(cleanParams(params))}`),
   createSettlement: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/settlements`, body),
   updateSettlementStatus: (settlementId, status) => PUT(`/api/admin/partners/settlements/${settlementId}/status`, { status }),
+  receiveStock: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/receive-stock`, body),
+  payableBalance: (partnerId) => GET(`/api/admin/partners/${partnerId}/payable-balance`),
+  payOut: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/pay-out`, body),
 };
 
 export const vendorsApi = {
