@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { productsApi, uomsApi, bomsApi, partnersApi, changeManagementApi } from "../../api/admin";
+import { productsApi, uomsApi, bomsApi, changeManagementApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
@@ -260,11 +260,16 @@ function ProductModal({ product, onClose, onDone }) {
   const [uom, setUom] = useState(product?.uom || "each");
   const [costPrice, setCostPrice] = useState(product?.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(product?.selling_price ?? "");
-  // Selling % markup is a convenience input, not a stored field — typing
-  // a percentage here computes Selling price = Cost + that % of Cost;
-  // typing Selling price directly still works independently and doesn't
-  // update this field back (one-way convenience, not a locked ratio).
-  const [markupPercent, setMarkupPercent] = useState("");
+  // Selling % markup is a convenience input, not a stored field — it
+  // stays in sync with Selling price both ways: typing a % computes
+  // Selling price = Cost + that % of Cost, and typing Selling price
+  // directly recomputes the % from Cost/Selling. Initialized from the
+  // existing cost/selling price on edit so an already-priced product
+  // shows its current markup immediately, not blank.
+  const initialMarkup = product?.cost_price > 0 && product?.selling_price != null
+    ? String(Math.round(((product.selling_price - product.cost_price) / product.cost_price) * 10000) / 100)
+    : "";
+  const [markupPercent, setMarkupPercent] = useState(initialMarkup);
 
   function applyMarkup(percentStr) {
     setMarkupPercent(percentStr);
@@ -273,19 +278,24 @@ function ProductModal({ product, onClose, onDone }) {
     const computed = Number(costPrice) * (1 + percent / 100);
     setSellingPrice(String(Math.round(computed * 100) / 100));
   }
+
+  function applySellingPrice(priceStr) {
+    setSellingPrice(priceStr);
+    const price = Number(priceStr);
+    if (priceStr === "" || !Number.isFinite(price) || costPrice === "" || Number(costPrice) <= 0) return;
+    const percent = ((price - Number(costPrice)) / Number(costPrice)) * 100;
+    setMarkupPercent(String(Math.round(percent * 100) / 100));
+  }
   const [lowStockAlert, setLowStockAlert] = useState(product?.low_stock_alert ?? "0");
   const [isActive, setIsActive] = useState(product ? !!product.is_active : true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uoms, setUoms] = useState([]);
-  const [supplyingPartners, setSupplyingPartners] = useState([]);
-  const [owningPartnerId, setOwningPartnerId] = useState(product?.owning_partner_id || "");
   const [locks, setLocks] = useState({});
   const codeField = useCodePreview("product", isEdit ? product.product_code : null);
 
   useEffect(() => {
     uomsApi.list({}).then((data) => setUoms(data.items || [])).catch(() => {});
-    partnersApi.list({ type: "supplying_partner", limit: 200 }).then((data) => setSupplyingPartners(data.items || [])).catch(() => {});
     changeManagementApi.list().then((data) => {
       const map = {};
       for (const item of data.items || []) map[item.field_key] = item.is_locked;
@@ -330,7 +340,6 @@ function ProductModal({ product, onClose, onDone }) {
         low_stock_alert: isEdit && locks.low_stock_alert ? undefined : (lowStockAlert === "" ? 0 : Number(lowStockAlert)),
         product_code: codeField.mode === "manual" && !isEdit ? codeField.value.trim() : undefined,
         is_active: isEdit ? isActive : undefined,
-        owning_partner_id: isEdit && locks.owning_partner_id ? undefined : (owningPartnerId || null),
       };
       if (isEdit) {
         await productsApi.update(product.product_id, body);
@@ -386,11 +395,10 @@ function ProductModal({ product, onClose, onDone }) {
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pOwner">Owning partner (optional)</label>
-            <select id="pOwner" className="bp-field-input" value={owningPartnerId} onChange={(e) => setOwningPartnerId(e.target.value)} disabled={isEdit && locks.owning_partner_id}>
-              <option value="">Bismi-owned</option>
-              {supplyingPartners.map((p) => <option key={p.partner_id} value={p.partner_id}>{p.name}</option>)}
-            </select>
+            <label className="bp-field-label">Owner</label>
+            <div className="bp-field-input" style={{ display: "flex", alignItems: "center", background: "var(--bp-input-disabled-bg, #f3f3f3)", color: "var(--bp-td-muted, #666)" }}>
+              Bismi
+            </div>
           </div>
           <div style={{ flex: 1 }} />
         </div>
@@ -401,20 +409,24 @@ function ProductModal({ product, onClose, onDone }) {
             <input id="pCost" type="number" min="0" step="0.01" className="bp-field-input" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required disabled={isEdit && locks.cost_price} />
           </div>
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pMarkup">Selling % (optional)</label>
+            <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
+            <input id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => applySellingPrice(e.target.value)} required disabled={isEdit && locks.selling_price} />
+          </div>
+        </div>
+
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="pMarkup">Selling %</label>
             <input
-              id="pMarkup" type="number" min="0" step="0.01" className="bp-field-input" placeholder="e.g. 45"
+              id="pMarkup" type="number" step="0.01" className="bp-field-input" placeholder="e.g. 45"
               value={markupPercent} onChange={(e) => applyMarkup(e.target.value)}
               disabled={(isEdit && locks.selling_price) || costPrice === ""}
             />
           </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
-            <input id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required disabled={isEdit && locks.selling_price} />
-          </div>
+          <div style={{ flex: 1 }} />
         </div>
         <p className="bp-td-muted" style={{ fontSize: 11.5, marginTop: -6 }}>
-          Selling % fills in Selling price as Cost + that % of Cost — Selling price still updates it directly if you'd rather type it.
+          Selling % and Selling price stay in sync both ways — change either one and the other updates automatically. This field is optional; you can just type Selling price directly.
         </p>
 
         <label className="bp-field-label" htmlFor="pLowStock">Low stock alert threshold</label>
