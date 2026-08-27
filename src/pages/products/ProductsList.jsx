@@ -260,6 +260,19 @@ function ProductModal({ product, onClose, onDone }) {
   const [uom, setUom] = useState(product?.uom || "each");
   const [costPrice, setCostPrice] = useState(product?.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(product?.selling_price ?? "");
+  // Selling % markup is a convenience input, not a stored field — typing
+  // a percentage here computes Selling price = Cost + that % of Cost;
+  // typing Selling price directly still works independently and doesn't
+  // update this field back (one-way convenience, not a locked ratio).
+  const [markupPercent, setMarkupPercent] = useState("");
+
+  function applyMarkup(percentStr) {
+    setMarkupPercent(percentStr);
+    const percent = Number(percentStr);
+    if (percentStr === "" || !Number.isFinite(percent) || costPrice === "" || Number(costPrice) < 0) return;
+    const computed = Number(costPrice) * (1 + percent / 100);
+    setSellingPrice(String(Math.round(computed * 100) / 100));
+  }
   const [lowStockAlert, setLowStockAlert] = useState(product?.low_stock_alert ?? "0");
   const [isActive, setIsActive] = useState(product ? !!product.is_active : true);
   const [error, setError] = useState("");
@@ -388,10 +401,21 @@ function ProductModal({ product, onClose, onDone }) {
             <input id="pCost" type="number" min="0" step="0.01" className="bp-field-input" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required disabled={isEdit && locks.cost_price} />
           </div>
           <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="pMarkup">Selling % (optional)</label>
+            <input
+              id="pMarkup" type="number" min="0" step="0.01" className="bp-field-input" placeholder="e.g. 45"
+              value={markupPercent} onChange={(e) => applyMarkup(e.target.value)}
+              disabled={(isEdit && locks.selling_price) || costPrice === ""}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
             <input id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required disabled={isEdit && locks.selling_price} />
           </div>
         </div>
+        <p className="bp-td-muted" style={{ fontSize: 11.5, marginTop: -6 }}>
+          Selling % fills in Selling price as Cost + that % of Cost — Selling price still updates it directly if you'd rather type it.
+        </p>
 
         <label className="bp-field-label" htmlFor="pLowStock">Low stock alert threshold</label>
         <input id="pLowStock" type="number" min="0" step="0.01" className="bp-field-input" value={lowStockAlert} onChange={(e) => setLowStockAlert(e.target.value)} disabled={isEdit && locks.low_stock_alert} />

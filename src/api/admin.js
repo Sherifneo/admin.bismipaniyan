@@ -96,6 +96,7 @@ export const partnersApi = {
   createSettlement: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/settlements`, body),
   updateSettlementStatus: (settlementId, status) => PUT(`/api/admin/partners/settlements/${settlementId}/status`, { status }),
   receiveStock: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/receive-stock`, body),
+  createProduct: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/products`, body),
   payableBalance: (partnerId) => GET(`/api/admin/partners/${partnerId}/payable-balance`),
   payOut: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/pay-out`, body),
 };

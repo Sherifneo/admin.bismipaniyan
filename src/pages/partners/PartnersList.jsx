@@ -310,6 +310,8 @@ function PartnerStockModal({ partner, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showReceive, setShowReceive] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [productsRefreshKey, setProductsRefreshKey] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -331,7 +333,8 @@ function PartnerStockModal({ partner, onClose }) {
 
   return (
     <Modal title={`Stock — ${partner.name}`} onClose={onClose}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 10 }}>
+        <button type="button" className="bp-btn-outline" onClick={() => setShowAddProduct(true)}>+ Add product</button>
         <button type="button" className="bp-btn-primary" onClick={() => setShowReceive(true)}>+ Receive stock</button>
       </div>
       {error && <div className="bp-inline-error">{error}</div>}
@@ -354,13 +357,79 @@ function PartnerStockModal({ partner, onClose }) {
         </table>
       )}
       {showReceive && (
-        <ReceiveStockForm partner={partner} onClose={() => setShowReceive(false)} onDone={async () => { setShowReceive(false); await load(); }} />
+        <ReceiveStockForm
+          partner={partner}
+          refreshKey={productsRefreshKey}
+          onClose={() => setShowReceive(false)}
+          onDone={async () => { setShowReceive(false); await load(); }}
+        />
+      )}
+      {showAddProduct && (
+        <AddPartnerProductForm
+          partner={partner}
+          onClose={() => setShowAddProduct(false)}
+          onDone={() => { setShowAddProduct(false); setProductsRefreshKey((k) => k + 1); }}
+        />
       )}
     </Modal>
   );
 }
 
-function ReceiveStockForm({ partner, onClose, onDone }) {
+// Deliberately minimal — a supplying partner's product isn't Bismi's
+// own stock to cost, so this is just Name + Selling price. Commission
+// is always that partner's own commission_percent (set once on the
+// partner, Model C is never per-product) — never asked here. Gets its
+// own P-EXT-0001 style code (routes/partners.js's POST /:id/products,
+// counter_key 'partner_product') so these are visually distinct from
+// Bismi's own P-00001 products everywhere they appear.
+function AddPartnerProductForm({ partner, onClose, onDone }) {
+  const [name, setName] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (!sellingPrice || Number(sellingPrice) <= 0) {
+      setError("Selling price must be greater than zero.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await partnersApi.createProduct(partner.partner_id, { name: name.trim(), selling_price: Number(sellingPrice) });
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add this product.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Add product — ${partner.name}`} onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: 0 }}>
+          Commission is this partner's own rate ({partner.commission_percent}%), applied automatically when this item sells — no need to set it per product.
+        </p>
+        <label className="bp-field-label" htmlFor="appName">Name</label>
+        <input id="appName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+        <label className="bp-field-label" htmlFor="appPrice">Selling price (₹)</label>
+        <input id="appPrice" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} required />
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Add product"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ReceiveStockForm({ partner, refreshKey, onClose, onDone }) {
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState("");
   const [locations, setLocations] = useState([]);
@@ -374,7 +443,8 @@ function ReceiveStockForm({ partner, onClose, onDone }) {
   useEffect(() => {
     productsApi.list({ ownerId: partner.partner_id, limit: 200 }).then((d) => setProducts(d.items || [])).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   async function submit(e) {
     e.preventDefault();
