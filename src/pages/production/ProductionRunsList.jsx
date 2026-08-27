@@ -75,7 +75,11 @@ export default function ProductionRunsList() {
     { key: "product_name", label: "Product", accessor: (run) => run.product_name },
     { key: "location_name", label: "Location", accessor: (run) => run.location_name },
     { key: "machine_name", label: "Machine", accessor: (run) => run.machine_name || "" },
-    { key: "quantity_produced", label: "Qty", accessor: (run) => run.quantity_produced, filter: "number" },
+    {
+      key: "quantity", label: "Qty",
+      accessor: (run) => run.actual_quantity != null && run.actual_quantity !== run.planned_quantity
+        ? `${run.planned_quantity} → ${run.actual_quantity}` : run.planned_quantity,
+    },
     { key: "run_date", label: "Run date", accessor: (run) => run.run_date, filter: "dateRange" },
     {
       key: "status", label: "Status", accessor: (run) => run.status, filter: "select",
@@ -152,7 +156,12 @@ export default function ProductionRunsList() {
                   {table.isColumnVisible("product_name") && <td className="bp-td-strong">{run.product_name}</td>}
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{run.location_name}</td>}
                   {table.isColumnVisible("machine_name") && <td className="bp-td-muted">{run.machine_name || "—"}</td>}
-                  {table.isColumnVisible("quantity_produced") && <td className="bp-td-muted">{run.quantity_produced} {run.uom}</td>}
+                  {table.isColumnVisible("quantity") && (
+                    <td className="bp-td-muted">
+                      {run.planned_quantity} {run.uom}
+                      {run.actual_quantity != null && run.actual_quantity !== run.planned_quantity ? ` → ${run.actual_quantity} ${run.uom}` : ""}
+                    </td>
+                  )}
                   {table.isColumnVisible("run_date") && <td className="bp-td-muted">{formatDate(run.run_date)}</td>}
                   {table.isColumnVisible("status") && <td><StatusBadge status={run.status} /></td>}
                   {table.isColumnVisible("created_by_name") && <td className="bp-td-muted">{run.created_by_name || "—"}</td>}
@@ -239,7 +248,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
       return;
     }
     if (!quantity || Number(quantity) <= 0) {
-      setError("Quantity produced must be greater than zero.");
+      setError("Planned quantity must be greater than zero.");
       return;
     }
     if (!defaultEmployeeId) {
@@ -253,7 +262,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
         product_id: productId,
         location_id: locationId,
         machine_id: machineId || undefined,
-        quantity_produced: Number(quantity),
+        planned_quantity: Number(quantity),
         run_date: runDate || undefined,
         notes: notes || undefined,
         bom_id: bomId || undefined,
@@ -301,7 +310,7 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="runQty">Quantity produced</label>
+            <label className="bp-field-label" htmlFor="runQty">Planned quantity</label>
             <input id="runQty" type="number" min="0" step="0.01" className="bp-field-input" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
           </div>
         </div>
@@ -453,20 +462,22 @@ function RunDetailModal({ runId, onClose, onChanged }) {
   const allStagesCompleted = run?.stages && run.stages.length > 0 && run.stages.every((s) => s.status === "completed");
 
   return (
-    <Modal title={run ? `${run.product_name} — ${run.location_name}` : "Production run"} onClose={onClose}>
+    <Modal title={run ? `${run.product_name} — ${run.location_name}` : "Production run"} onClose={onClose} size="lg">
       {loading ? (
         <div className="bp-td-muted">Loading…</div>
       ) : (
         <>
           {error && <div className="bp-inline-error">{error}</div>}
 
-          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <div><span className="bp-td-muted">Status: </span><StatusBadge status={run.status} /></div>
-            <div><span className="bp-td-muted">Quantity:</span> {run.quantity_produced} {run.uom}</div>
-            <div><span className="bp-td-muted">Run date:</span> {formatDate(run.run_date)}</div>
-            {run.machine_name && <div><span className="bp-td-muted">Machine:</span> {run.machine_name}</div>}
-            {run.bom_name && <div><span className="bp-td-muted">BOM:</span> {run.bom_name}</div>}
-            {run.total_cost != null && <div><span className="bp-td-muted">Total production cost:</span> {inr(run.total_cost)}</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px 20px", marginBottom: 14 }}>
+            <div><span className="bp-td-muted">Status</span><br /><StatusBadge status={run.status} /></div>
+            <div><span className="bp-td-muted">Planned qty</span><br /><strong>{run.planned_quantity} {run.uom}</strong></div>
+            <div><span className="bp-td-muted">Actual qty</span><br /><strong>{run.actual_quantity != null ? `${run.actual_quantity} ${run.uom}` : "—"}</strong></div>
+            <div><span className="bp-td-muted">Run date</span><br />{formatDate(run.run_date)}</div>
+            <div><span className="bp-td-muted">Machine</span><br />{run.machine_name || "—"}</div>
+            <div><span className="bp-td-muted">BOM</span><br />{run.bom_name || "—"}</div>
+            {run.total_cost != null && <div><span className="bp-td-muted">Total production cost</span><br /><strong>{inr(run.total_cost)}</strong></div>}
+            {run.cost_per_unit != null && <div><span className="bp-td-muted">Cost per unit</span><br /><strong>{inr(run.cost_per_unit)}</strong></div>}
           </div>
 
           {run.notes && <p className="bp-td-muted" style={{ marginTop: 0, marginBottom: 12 }}>{run.notes}</p>}
@@ -476,6 +487,13 @@ function RunDetailModal({ runId, onClose, onChanged }) {
               <label className="bp-field-label">Stages</label>
               <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
                 <table className="bp-table">
+                  <colgroup>
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "30%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "18%" }} />
+                    <col style={{ width: "24%" }} />
+                  </colgroup>
                   <thead>
                     <tr><th>Stage</th><th>Worker</th><th>Hours</th><th>Status</th><th></th></tr>
                   </thead>
@@ -496,7 +514,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
                               {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
                             </select>
                           </td>
-                          <td style={{ width: 90 }}>
+                          <td>
                             <input
                               type="number" min="0" step="0.25" className="bp-field-input"
                               value={stageHoursDraft[s.stage] ?? s.hours_worked ?? ""}
@@ -560,13 +578,16 @@ function RunDetailModal({ runId, onClose, onChanged }) {
               <button type="button" className="bp-btn-outline" onClick={() => setStatus("in_progress")} disabled={busy}>Start</button>
             )}
             {(run.status === "planned" || run.status === "in_progress") && (
-              <button
-                type="button" className="bp-btn-primary"
-                onClick={() => (allStagesCompleted ? setShowComplete(true) : setError("Complete Mixing, Baking, and Packing before completing the run."))}
-                disabled={busy}
-              >
-                Complete production
-              </button>
+              <div>
+                <button
+                  type="button" className="bp-btn-primary"
+                  onClick={() => setShowComplete(true)}
+                  disabled={busy || !allStagesCompleted}
+                >
+                  Complete production
+                </button>
+                {!allStagesCompleted && <div className="bp-td-muted" style={{ fontSize: 11.5, marginTop: 4 }}>Complete all 3 stages first</div>}
+              </div>
             )}
             {run.status !== "completed" && run.status !== "cancelled" && (
               <button type="button" className="bp-btn-outline" onClick={() => setStatus("cancelled")} disabled={busy}>Cancel</button>
@@ -601,6 +622,7 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
   const [params, setParams] = useState([]);
   const [selected, setSelected] = useState({}); // param_id -> true/false
   const [quantities, setQuantities] = useState({}); // param_id -> quantity
+  const [actualQuantity, setActualQuantity] = useState(run.planned_quantity != null ? String(run.planned_quantity) : "");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -629,6 +651,10 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
 
   async function submit(e) {
     e.preventDefault();
+    if (!actualQuantity || Number(actualQuantity) <= 0) {
+      setError("Actual quantity produced must be greater than zero.");
+      return;
+    }
     for (const p of params) {
       if (!selected[p.param_id]) continue;
       const qty = quantities[p.param_id];
@@ -643,7 +669,7 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
       const overhead_entries = params
         .filter((p) => selected[p.param_id])
         .map((p) => ({ param_id: p.param_id, quantity: Number(quantities[p.param_id]) }));
-      await productionApi.updateRun(runId, { status: "completed", overhead_entries });
+      await productionApi.updateRun(runId, { status: "completed", actual_quantity: Number(actualQuantity), overhead_entries });
       onDone();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not complete this production run.");
@@ -652,14 +678,25 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
   }
 
   return (
-    <Modal title="Complete Production Run" onClose={onClose}>
+    <Modal title="Complete Production Run" onClose={onClose} size="lg">
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
-        <div style={{ display: "flex", gap: 16, marginBottom: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 16, marginBottom: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div><span className="bp-td-muted">Product:</span> <strong>{run.product_name}</strong></div>
-          <div><span className="bp-td-muted">Quantity:</span> {run.quantity_produced} {run.uom}</div>
           <div><span className="bp-td-muted">Location:</span> {run.location_name}</div>
+          <div><span className="bp-td-muted">Planned quantity:</span> {run.planned_quantity} {run.uom}</div>
+        </div>
+
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="actualQty">Actual quantity produced</label>
+            <input
+              id="actualQty" type="number" min="0" step="0.01" className="bp-field-input"
+              value={actualQuantity} onChange={(e) => setActualQuantity(e.target.value)} required
+            />
+          </div>
+          <div style={{ flex: 1 }} />
         </div>
 
         <label className="bp-field-label">Stages</label>
@@ -718,7 +755,8 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
         </div>
         <p className="bp-td-muted" style={{ fontSize: 11.5 }}>
           Material cost (from the BOM) and labour cost (from the stage hours above) are computed automatically when you
-          complete this run — the full breakdown, including this overhead total, will be shown on the run afterward.
+          complete this run, based on the actual quantity above — adjusting it changes the material cost calculated on
+          submit. The full breakdown, including this overhead total, will be shown on the run afterward.
         </p>
 
         <div className="bp-form-actions">

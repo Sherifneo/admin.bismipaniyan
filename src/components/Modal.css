@@ -25,6 +25,10 @@
   overflow: auto;
 }
 
+.bp-modal-lg {
+  max-width: 760px;
+}
+
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .bp-modal {
     background: var(--bp-surface);
