@@ -219,8 +219,8 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
   const [walkinLoading, setWalkinLoading] = useState(false);
   const [orderDate, setOrderDate] = useState(todayStr());
   const [notes, setNotes] = useState("");
-  // Defaults to the logged-in user's own linked employee record (Team ->
-  // Employee link, see TeamList.jsx) if they have one — but any active
+  // Defaults to the logged-in user's own linked employee record (System
+  // User -> Employee link, see SystemUsersList.jsx) if they have one — but any active
   // employee can be picked instead, since the person entering the sale
   // isn't always the one it should be credited to.
   const [salesResponsibleId, setSalesResponsibleId] = useState(me?.employee_id || "");

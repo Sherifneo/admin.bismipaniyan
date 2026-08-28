@@ -61,7 +61,14 @@
   color: var(--bp-text-muted);
 }
 
+.bp-submodule-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .bp-submodule-link {
+  flex: 1;
   display: block;
   padding: 9px 12px;
   border-radius: var(--bp-radius-md);
@@ -70,6 +77,27 @@
   font-size: 14.5px;
   font-weight: 600;
   transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bp-submodule-star {
+  flex: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 6px 8px;
+  opacity: 0.4;
+  color: var(--bp-nav-accent);
+  transition: opacity 0.12s ease;
+}
+
+.bp-submodule-star:hover {
+  opacity: 0.8;
+}
+
+.bp-submodule-star.is-favorited {
+  opacity: 1;
 }
 
 .bp-submodule-link:hover {

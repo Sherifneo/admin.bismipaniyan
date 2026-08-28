@@ -111,7 +111,7 @@ export const NAV_ITEMS = [
     key: "settings", label: "Settings", icon: "⚙️",
     children: [
       { key: "companydetails", label: "Company Details", path: "/settings?tab=company" },
-      { key: "team", label: "Team", path: "/team", ownerOnly: true },
+      { key: "systemUsers", label: "System User", path: "/system-users", ownerOnly: true },
       { key: "security", label: "Security Roles", path: "/security", ownerOnly: true },
       { key: "numbersequences", label: "Number Sequences", path: "/number-sequences", ownerOnly: true },
       { key: "workflows", label: "Workflow", path: "/workflows", ownerOnly: true },

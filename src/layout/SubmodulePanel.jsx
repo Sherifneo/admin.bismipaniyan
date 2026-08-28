@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { isFavorited, toggleFavorite } from "./sidebarState";
 import "./SubmodulePanel.css";
 
 function pathnameOf(path) {
@@ -48,6 +50,19 @@ function groupChildren(children) {
 // implementation to keep in sync with navConfig.js.
 export default function SubmodulePanel({ module, location, onNavigate, variant = "flyout" }) {
   const groups = groupChildren(module.children);
+  // Local re-render trigger for the star toggle — favorites themselves
+  // live in localStorage (sidebarState.js), this just forces this
+  // component (and, via the module-level "favoritesChanged" event, the
+  // header dropdown) to reflect a click immediately.
+  const [, forceUpdate] = useState(0);
+
+  function onToggleStar(e, child) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(module.key, child.key, child.label, child.path);
+    forceUpdate((n) => n + 1);
+    window.dispatchEvent(new Event("bp-favorites-changed"));
+  }
 
   return (
     <div className={"bp-submodule-panel" + (variant === "mobile" ? " is-mobile" : "")}>
@@ -59,17 +74,30 @@ export default function SubmodulePanel({ module, location, onNavigate, variant =
         {groups.map((group, idx) => (
           <div className="bp-submodule-group" key={group.name || `_ungrouped_${idx}`}>
             {group.name && <div className="bp-submodule-group-label">{group.name}</div>}
-            {group.items.map((child) => (
-              <NavLink
-                key={child.key}
-                to={child.path}
-                className={"bp-submodule-link" + (isChildActive(child, location) ? " is-active" : "")}
-                aria-current={isChildActive(child, location) ? "page" : undefined}
-                onClick={() => onNavigate?.(child)}
-              >
-                {child.label}
-              </NavLink>
-            ))}
+            {group.items.map((child) => {
+              const favorited = isFavorited(module.key, child.key);
+              return (
+                <div key={child.key} className="bp-submodule-row">
+                  <NavLink
+                    to={child.path}
+                    className={"bp-submodule-link" + (isChildActive(child, location) ? " is-active" : "")}
+                    aria-current={isChildActive(child, location) ? "page" : undefined}
+                    onClick={() => onNavigate?.(child)}
+                  >
+                    {child.label}
+                  </NavLink>
+                  <button
+                    type="button"
+                    className={"bp-submodule-star" + (favorited ? " is-favorited" : "")}
+                    onClick={(e) => onToggleStar(e, child)}
+                    aria-label={favorited ? `Remove ${child.label} from favorites` : `Add ${child.label} to favorites`}
+                    title={favorited ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    {favorited ? "★" : "☆"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>

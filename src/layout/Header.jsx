@@ -1,9 +1,71 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { NAV_ITEMS } from "./navConfig";
+import { getFavorites } from "./sidebarState";
 import "./Header.css";
+
+// A star button next to the theme toggle, opening a dropdown of every
+// submodule the user has starred from inside a module's flyout (see
+// SubmodulePanel.jsx) — restores the shape of the earlier, previously-
+// removed per-page Favorites system, scoped to submodule links only.
+function FavoritesMenu() {
+  const [open, setOpen] = useState(false);
+  const [favorites, setFavorites] = useState(() => getFavorites());
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function onFavoritesChanged() {
+      setFavorites(getFavorites());
+    }
+    window.addEventListener("bp-favorites-changed", onFavoritesChanged);
+    return () => window.removeEventListener("bp-favorites-changed", onFavoritesChanged);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutside(e) {
+      if (menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
+
+  return (
+    <div className="bp-header-favorites" ref={menuRef}>
+      <button
+        type="button"
+        className="bp-header-favorites-btn"
+        onClick={() => setOpen((v) => !v)}
+        title="Favorites"
+        aria-label="Favorites"
+        aria-expanded={open}
+      >
+        ★
+      </button>
+      {open && (
+        <div className="bp-header-favorites-menu">
+          {favorites.length === 0 ? (
+            <div className="bp-header-favorites-empty">No favorites yet — star a page from its module menu.</div>
+          ) : (
+            favorites.map((f) => (
+              <Link
+                key={`${f.moduleKey}:${f.childKey}`}
+                to={f.path}
+                className="bp-header-favorites-item"
+                onClick={() => setOpen(false)}
+              >
+                {f.label}
+              </Link>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Breadcrumb is derived from the same NAV_ITEMS list the sidebar uses —
 // single source of truth, no separate title-per-page bookkeeping.
@@ -76,6 +138,7 @@ export default function Header({ onMenuClick, onRefresh }) {
         ↻
       </button>
       <div className="bp-header-spacer" />
+      <FavoritesMenu />
       <button
         type="button"
         className="bp-header-theme-btn"

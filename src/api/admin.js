@@ -113,7 +113,8 @@ export const purchasingApi = {
   get: (id) => GET(`/api/admin/purchase-orders/${id}`),
   create: (body) => POST("/api/admin/purchase-orders", body),
   update: (id, body) => PUT(`/api/admin/purchase-orders/${id}`, body),
-  pay: (id) => POST(`/api/admin/purchase-orders/${id}/pay`),
+  pay: (id, body) => POST(`/api/admin/purchase-orders/${id}/pay`, body),
+  lastPrice: (productId) => GET(`/api/admin/purchase-orders/last-price?${new URLSearchParams({ product_id: productId })}`),
 };
 
 export const salesOrdersApi = {
@@ -207,10 +208,11 @@ export const costParametersApi = {
   history: (id) => GET(`/api/admin/cost-parameters/${id}/history`),
 };
 
-export const teamApi = {
-  list: () => GET("/api/admin/team"),
-  create: (body) => POST("/api/admin/team", body),
-  update: (id, body) => PUT(`/api/admin/team/${id}`, body),
+export const systemUsersApi = {
+  list: (params = {}) => GET(`/api/admin/system-users?${new URLSearchParams(cleanParams(params))}`),
+  create: (body) => POST("/api/admin/system-users", body),
+  update: (id, body) => PUT(`/api/admin/system-users/${id}`, body),
+  remove: (id) => PUT(`/api/admin/system-users/${id}/remove`),
 };
 
 export const workflowsApi = {

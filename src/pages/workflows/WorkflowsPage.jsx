@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { workflowsApi, teamApi } from "../../api/admin";
+import { workflowsApi, systemUsersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import StatusBadge from "../../components/StatusBadge";
 
@@ -22,7 +22,7 @@ export default function WorkflowsPage() {
     setLoading(true);
     setError("");
     try {
-      const [workflowsData, adminsData] = await Promise.all([workflowsApi.list(), teamApi.list()]);
+      const [workflowsData, adminsData] = await Promise.all([workflowsApi.list(), systemUsersApi.list()]);
       setItems(workflowsData.items || []);
       setAdmins((adminsData.items || adminsData || []).filter((a) => a.status === "active"));
     } catch (err) {

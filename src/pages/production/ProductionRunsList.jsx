@@ -1,54 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { productionApi, machinesApi, locationsApi, productsApi, employeesApi, bomsApi, costParametersApi } from "../../api/admin";
+import { productionApi, machinesApi, locationsApi, productsApi, bomsApi, costParametersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
-import { useAuth } from "../../auth/AuthContext";
 import { formatDate, formatDateTime } from "../../utils/date";
 
 const LIMIT = 100;
-const STAGE_LABELS = { mixing: "Mixing", baking: "Baking", packing: "Packing" };
-
-// Stage hours are stored/costed as true decimal hours (0.75 = 45 min,
-// matches hourly_rate_snapshot math everywhere) but typed/displayed as
-// HH:MM so "45 minutes" doesn't require mental decimal-hour conversion.
-function decimalToHm(decimal) {
-  if (decimal === null || decimal === undefined || decimal === "") return { h: "", m: "" };
-  const totalMinutes = Math.round(Number(decimal) * 60);
-  return { h: String(Math.floor(totalMinutes / 60)), m: String(totalMinutes % 60).padStart(2, "0") };
-}
-function hmToDecimal(h, m) {
-  const hours = Number(h) || 0;
-  const minutes = Number(m) || 0;
-  return Math.round((hours + minutes / 60) * 100) / 100;
-}
-
-// HH:MM stage-hours editor — displays/edits in real time units, converts
-// to/from decimal hours (the value actually stored and used for cost
-// math) internally so nothing downstream needs to change.
-function HoursInput({ decimalValue, onChange, disabled }) {
-  const { h, m } = decimalToHm(decimalValue);
-  return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      <input
-        type="number" min="0" step="1" className="bp-field-input" style={{ width: 56 }}
-        placeholder="H" value={h} disabled={disabled}
-        onChange={(e) => onChange(hmToDecimal(e.target.value, m))}
-      />
-      <span className="bp-td-muted">h</span>
-      <input
-        type="number" min="0" max="59" step="1" className="bp-field-input" style={{ width: 56 }}
-        placeholder="M" value={m} disabled={disabled}
-        onChange={(e) => onChange(hmToDecimal(h, e.target.value))}
-      />
-      <span className="bp-td-muted">m</span>
-    </div>
-  );
-}
 
 // Only the factory actually produces anything — the retail stores are
 // never a production location. Mirrors SalesOrdersList.jsx's storesOnly()
@@ -67,7 +28,6 @@ export default function ProductionRunsList() {
   const [products, setProducts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [machines, setMachines] = useState([]);
-  const [employees, setEmployees] = useState([]);
   const [runs, setRuns] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -83,7 +43,6 @@ export default function ProductionRunsList() {
     productsApi.list({ limit: 500 }).then((d) => setProducts(d.items || [])).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
     machinesApi.list({}).then((d) => setMachines(d.items || [])).catch(() => {});
-    employeesApi.list({}).then((d) => setEmployees(d.items || [])).catch(() => {});
   }, []);
 
   async function load() {
@@ -236,7 +195,7 @@ export default function ProductionRunsList() {
       <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
 
       {showAdd && (
-        <NewRunModal products={products} locations={locations} machines={machines} employees={employees} onClose={() => setShowAdd(false)} onDone={onSaved} />
+        <NewRunModal products={products} locations={locations} machines={machines} onClose={() => setShowAdd(false)} onDone={onSaved} />
       )}
       {viewRun && (
         <RunDetailModal runId={viewRun.run_id} onClose={() => setViewRun(null)} onChanged={load} />
@@ -250,7 +209,7 @@ const NEW_RUN_STEPS = ["Setup", "Details", "Review"];
 // 3-step wizard: Setup (machine/date/product/planned qty) -> Details
 // (BOM/workers/notes, now that the product is known) -> Review
 // (everything read-only) before actually creating the run.
-function NewRunModal({ products, locations, machines, employees, onClose, onDone }) {
+function NewRunModal({ products, locations, machines, onClose, onDone }) {
   const factoryLocations = factoryOnly(locations);
   const [step, setStep] = useState(0);
   const [productId, setProductId] = useState("");
@@ -263,11 +222,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   const [bomDetail, setBomDetail] = useState(null);
   const [runDate, setRunDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
-  const [defaultEmployeeId, setDefaultEmployeeId] = useState("");
-  // Which stages have been individually overridden — those stop
-  // following the default worker when it changes.
-  const [stageEmployees, setStageEmployees] = useState({ mixing: "", baking: "", packing: "" });
-  const [stageEditedManually, setStageEditedManually] = useState(() => new Set());
   // Only used when no BOM is picked — a run must consume raw material
   // one way or the other, never neither.
   const [rawMaterialLines, setRawMaterialLines] = useState([{ raw_material_product_id: "", quantity: "" }]);
@@ -303,22 +257,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
     bomsApi.get(bomId).then(setBomDetail).catch(() => setBomDetail(null));
   }, [bomId]);
 
-  function changeDefaultEmployee(value) {
-    setDefaultEmployeeId(value);
-    setStageEmployees((prev) => {
-      const next = { ...prev };
-      for (const stage of Object.keys(STAGE_LABELS)) {
-        if (!stageEditedManually.has(stage)) next[stage] = value;
-      }
-      return next;
-    });
-  }
-
-  function changeStageEmployee(stage, value) {
-    setStageEmployees((prev) => ({ ...prev, [stage]: value }));
-    setStageEditedManually((prev) => new Set(prev).add(stage));
-  }
-
   function goNext() {
     setError("");
     if (step === 0) {
@@ -332,10 +270,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
       }
     }
     if (step === 1) {
-      if (!defaultEmployeeId) {
-        setError("Select a default worker.");
-        return;
-      }
       if (!bomId) {
         const validLines = rawMaterialLines.filter((l) => l.raw_material_product_id && Number(l.quantity) > 0);
         if (validLines.length === 0) {
@@ -369,12 +303,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
           : rawMaterialLines
               .filter((l) => l.raw_material_product_id && Number(l.quantity) > 0)
               .map((l) => ({ raw_material_product_id: l.raw_material_product_id, quantity: Number(l.quantity) })),
-        default_employee_id: defaultEmployeeId || undefined,
-        stage_employees: {
-          mixing: stageEmployees.mixing || undefined,
-          baking: stageEmployees.baking || undefined,
-          packing: stageEmployees.packing || undefined,
-        },
       });
       onDone();
     } catch (err) {
@@ -386,7 +314,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   const selectedProduct = products.find((p) => p.product_id === productId);
   const selectedMachine = machines.find((m) => m.machine_id === machineId);
   const selectedBom = boms.find((b) => b.bom_id === bomId);
-  const employeeName = (id) => employees.find((emp) => emp.employee_id === id)?.full_name || "—";
 
   return (
     <Modal title="New production run" onClose={onClose}>
@@ -503,33 +430,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
               </>
             )}
 
-            <label className="bp-field-label" htmlFor="runDefaultWorker">Default worker</label>
-            <select id="runDefaultWorker" className="bp-field-input" value={defaultEmployeeId} onChange={(e) => changeDefaultEmployee(e.target.value)} required>
-              <option value="">Select a worker…</option>
-              {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
-            </select>
-            <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 10 }}>
-              Auto-fills Mixing, Baking, and Packing below — change any stage individually if a different worker is doing that step.
-            </p>
-
-            <label className="bp-field-label">Stage workers</label>
-            <div className="bp-form-row">
-              {Object.entries(STAGE_LABELS).map(([stage, label]) => (
-                <div key={stage} style={{ flex: 1 }}>
-                  <label className="bp-field-label" htmlFor={`runStage-${stage}`} style={{ fontWeight: 400, fontSize: 11.5 }}>{label}</label>
-                  <select
-                    id={`runStage-${stage}`}
-                    className="bp-field-input"
-                    value={stageEmployees[stage]}
-                    onChange={(e) => changeStageEmployee(stage, e.target.value)}
-                  >
-                    <option value="">— None —</option>
-                    {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-
             <label className="bp-field-label" htmlFor="runNotes">Notes (optional)</label>
             <textarea id="runNotes" className="bp-field-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </>
@@ -569,21 +469,6 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
               </>
             )}
 
-            <label className="bp-field-label">Stage workers</label>
-            <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
-              <table className="bp-table">
-                <thead><tr><th>Stage</th><th>Worker</th></tr></thead>
-                <tbody>
-                  {Object.entries(STAGE_LABELS).map(([stage, label]) => (
-                    <tr key={stage}>
-                      <td className="bp-td-strong">{label}</td>
-                      <td>{employeeName(stageEmployees[stage] || defaultEmployeeId)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
             {notes && <p className="bp-td-muted" style={{ marginTop: 0 }}>{notes}</p>}
           </>
         )}
@@ -605,36 +490,12 @@ function NewRunModal({ products, locations, machines, employees, onClose, onDone
   );
 }
 
-const STAGES_ORDER = ["mixing", "baking", "packing"];
-
-// Mixing -> Baking -> Packing must complete in that order; a stage
-// needs a worker AND hours worked before it can go to Completed, and
-// hours are captured right here, inline, since that's the moment
-// they're actually known — not deferred to run completion.
-function stageBlockReason(stage, run) {
-  if (!run.stages) return null;
-  const idx = STAGES_ORDER.indexOf(stage);
-  for (let i = 0; i < idx; i++) {
-    const prior = run.stages.find((s) => s.stage === STAGES_ORDER[i]);
-    if (!prior || prior.status !== "completed") {
-      return `Complete ${STAGE_LABELS[STAGES_ORDER[i]]} first`;
-    }
-  }
-  return null;
-}
-
 function RunDetailModal({ runId, onClose, onChanged }) {
-  const { hasPermission } = useAuth();
   const [run, setRun] = useState(null);
-  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [stageBusy, setStageBusy] = useState(null);
-  const [stageHoursDraft, setStageHoursDraft] = useState({});
   const [showComplete, setShowComplete] = useState(false);
-  const [fillingLastHours, setFillingLastHours] = useState(false);
-  const [markingAll, setMarkingAll] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -651,7 +512,6 @@ function RunDetailModal({ runId, onClose, onChanged }) {
 
   useEffect(() => {
     load();
-    employeesApi.list({}).then((d) => setEmployees(d.items || [])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
 
@@ -665,103 +525,6 @@ function RunDetailModal({ runId, onClose, onChanged }) {
       setError(err instanceof ApiError ? err.message : "Could not update status.");
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function updateStage(stage, body) {
-    setStageBusy(stage);
-    setError("");
-    try {
-      await productionApi.updateStage(runId, stage, body);
-      await load();
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not update this stage.");
-    } finally {
-      setStageBusy(null);
-    }
-  }
-
-  function completeStage(s) {
-    const blockReason = stageBlockReason(s.stage, run);
-    if (blockReason) {
-      setError(`${blockReason}.`);
-      return;
-    }
-    if (!s.employee_id) {
-      setError("Assign a worker to this stage before marking it complete.");
-      return;
-    }
-    const hours = stageHoursDraft[s.stage] ?? s.hours_worked ?? "";
-    if (!hours || Number(hours) <= 0) {
-      setError("Enter hours worked for this stage before marking it complete.");
-      return;
-    }
-    updateStage(s.stage, { status: "completed", hours_worked: Number(hours) });
-  }
-
-  const allStagesCompleted = run?.stages && run.stages.length > 0 && run.stages.every((s) => s.status === "completed");
-
-  // Prefills each not-yet-completed stage's hours from that product's
-  // last completed run — only when the worker matches this run's
-  // assigned worker for that stage, since a different worker's past
-  // hours aren't a reliable estimate for this run.
-  async function applyLastHours() {
-    setFillingLastHours(true);
-    setError("");
-    try {
-      const { stages: lastStages } = await productionApi.lastHours(run.product_id);
-      const draft = {};
-      for (const s of run.stages) {
-        if (s.status === "completed") continue;
-        const match = lastStages.find((ls) => ls.stage === s.stage && ls.employee_id === s.employee_id);
-        if (match && match.hours_worked != null) draft[s.stage] = Number(match.hours_worked);
-      }
-      if (Object.keys(draft).length === 0) {
-        setError("No matching hours found from this product's last completed run (same worker per stage).");
-      }
-      setStageHoursDraft((prev) => ({ ...prev, ...draft }));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not fetch last production hours.");
-    } finally {
-      setFillingLastHours(false);
-    }
-  }
-
-  // Completes every not-yet-completed stage in order, in one click —
-  // owner-only (production.manage full_control), and still requires
-  // every stage to already have a worker and hours filled in (via the
-  // draft or an already-saved value) exactly like completing one stage
-  // individually. Sequential (not parallel) since each stage's
-  // completion is gated on the previous one already being completed.
-  async function markAllStages() {
-    for (const s of run.stages) {
-      if (s.status === "completed") continue;
-      if (!s.employee_id) {
-        setError(`Assign a worker to ${STAGE_LABELS[s.stage]} before marking all complete.`);
-        return;
-      }
-      const hours = stageHoursDraft[s.stage] ?? s.hours_worked ?? "";
-      if (!hours || Number(hours) <= 0) {
-        setError(`Enter hours worked for ${STAGE_LABELS[s.stage]} before marking all complete.`);
-        return;
-      }
-    }
-    setMarkingAll(true);
-    setError("");
-    try {
-      for (const stage of STAGES_ORDER) {
-        const s = run.stages.find((x) => x.stage === stage);
-        if (!s || s.status === "completed") continue;
-        const hours = stageHoursDraft[s.stage] ?? s.hours_worked;
-        await productionApi.updateStage(runId, stage, { status: "completed", hours_worked: Number(hours) });
-      }
-      await load();
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not mark all stages complete.");
-    } finally {
-      setMarkingAll(false);
     }
   }
 
@@ -786,82 +549,6 @@ function RunDetailModal({ runId, onClose, onChanged }) {
 
           {run.notes && <p className="bp-td-muted" style={{ marginTop: 0, marginBottom: 12 }}>{run.notes}</p>}
 
-          {run.stages && run.stages.length > 0 && (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <label className="bp-field-label" style={{ marginBottom: 0 }}>Stages</label>
-                {!allStagesCompleted && (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button type="button" className="bp-btn-sm" onClick={applyLastHours} disabled={fillingLastHours || busy}>
-                      {fillingLastHours ? "Fetching…" : "Last Prod hrs"}
-                    </button>
-                    {hasPermission("production.manage", "full_control") && (
-                      <button type="button" className="bp-btn-sm" onClick={markAllStages} disabled={markingAll || busy}>
-                        {markingAll ? "Marking…" : "Mark all"}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
-                <table className="bp-table">
-                  <colgroup>
-                    <col style={{ width: "16%" }} />
-                    <col style={{ width: "30%" }} />
-                    <col style={{ width: "12%" }} />
-                    <col style={{ width: "18%" }} />
-                    <col style={{ width: "24%" }} />
-                  </colgroup>
-                  <thead>
-                    <tr><th>Stage</th><th>Worker</th><th>Hours</th><th>Status</th><th></th></tr>
-                  </thead>
-                  <tbody>
-                    {run.stages.map((s) => {
-                      const blockReason = stageBlockReason(s.stage, run);
-                      return (
-                        <tr key={s.stage_id}>
-                          <td className="bp-td-strong">{STAGE_LABELS[s.stage]}</td>
-                          <td>
-                            <select
-                              className="bp-field-input"
-                              value={s.employee_id || ""}
-                              onChange={(e) => updateStage(s.stage, { employee_id: e.target.value || undefined })}
-                              disabled={stageBusy === s.stage || s.status === "completed"}
-                            >
-                              <option value="">— None —</option>
-                              {employees.map((emp) => <option key={emp.employee_id} value={emp.employee_id}>{emp.full_name}</option>)}
-                            </select>
-                          </td>
-                          <td>
-                            <HoursInput
-                              decimalValue={stageHoursDraft[s.stage] ?? s.hours_worked ?? ""}
-                              onChange={(decimal) => setStageHoursDraft((prev) => ({ ...prev, [s.stage]: decimal }))}
-                              disabled={stageBusy === s.stage || s.status === "completed"}
-                            />
-                          </td>
-                          <td>
-                            {s.status === "completed" ? (
-                              <StatusBadge status="completed" />
-                            ) : (
-                              <button
-                                type="button" className="bp-btn-sm"
-                                onClick={() => completeStage(s)}
-                                disabled={stageBusy === s.stage || !!blockReason}
-                              >
-                                {stageBusy === s.stage ? "Saving…" : "Mark complete"}
-                              </button>
-                            )}
-                          </td>
-                          <td className="bp-td-muted" style={{ fontSize: 11.5 }}>{s.status !== "completed" && blockReason}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
           {run.status === "completed" && run.cost_lines && run.cost_lines.length > 0 && (
             <>
               <label className="bp-field-label">Cost breakdown</label>
@@ -874,7 +561,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
                     {run.cost_lines.map((l) => (
                       <tr key={l.cost_line_id}>
                         <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{l.line_type}</td>
-                        <td>{l.line_type === "labour" ? `${STAGE_LABELS[l.stage]} — ${l.employee_name_snapshot}` : l.line_type === "overhead" ? l.param_name_snapshot : "BOM materials"}</td>
+                        <td>{l.line_type === "labour" || l.line_type === "overhead" ? l.param_name_snapshot : "BOM materials"}</td>
                         <td className="bp-td-muted">{l.line_type === "labour" ? l.hours : l.quantity ?? "—"}</td>
                         <td className="bp-td-muted">{l.line_type === "labour" ? inr(l.hourly_rate_snapshot) : l.rate_snapshot != null ? inr(l.rate_snapshot) : "—"}</td>
                         <td className="bp-td-strong">{inr(l.cost_amount)}</td>
@@ -895,16 +582,13 @@ function RunDetailModal({ runId, onClose, onChanged }) {
               <button type="button" className="bp-btn-outline" onClick={() => setStatus("in_progress")} disabled={busy}>Start</button>
             )}
             {(run.status === "planned" || run.status === "in_progress") && (
-              <div>
-                <button
-                  type="button" className="bp-btn-primary"
-                  onClick={() => setShowComplete(true)}
-                  disabled={busy || !allStagesCompleted}
-                >
-                  Complete production
-                </button>
-                {!allStagesCompleted && <div className="bp-td-muted" style={{ fontSize: 11.5, marginTop: 4 }}>Complete all 3 stages first</div>}
-              </div>
+              <button
+                type="button" className="bp-btn-primary"
+                onClick={() => setShowComplete(true)}
+                disabled={busy}
+              >
+                Complete production
+              </button>
             )}
             {run.status !== "completed" && run.status !== "cancelled" && (
               <button type="button" className="bp-btn-outline" onClick={() => setStatus("cancelled")} disabled={busy}>Cancel</button>
@@ -973,8 +657,8 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
       return;
     }
     const overhead_entries = params
-      .filter((p) => selected[p.param_id] && quantities[p.param_id] !== undefined && quantities[p.param_id] !== "")
-      .map((p) => ({ param_id: p.param_id, quantity: Number(quantities[p.param_id]) }));
+      .filter((p) => selected[p.param_id] && (p.rate_type === "percent_of_cost" || (quantities[p.param_id] !== undefined && quantities[p.param_id] !== "")))
+      .map((p) => ({ param_id: p.param_id, quantity: p.rate_type === "percent_of_cost" ? undefined : Number(quantities[p.param_id]) }));
     setPreviewLoading(true);
     productionApi.costPreview(runId, { actual_quantity: Number(actualQuantity), overhead_entries: JSON.stringify(overhead_entries) })
       .then(setPreview)
@@ -990,7 +674,7 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
       return;
     }
     for (const p of params) {
-      if (!selected[p.param_id]) continue;
+      if (!selected[p.param_id] || p.rate_type === "percent_of_cost") continue;
       const qty = quantities[p.param_id];
       if (qty === undefined || qty === "" || !Number.isFinite(Number(qty))) {
         setError(`Enter a quantity for ${p.name}.`);
@@ -1002,7 +686,7 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
     try {
       const overhead_entries = params
         .filter((p) => selected[p.param_id])
-        .map((p) => ({ param_id: p.param_id, quantity: Number(quantities[p.param_id]) }));
+        .map((p) => ({ param_id: p.param_id, quantity: p.rate_type === "percent_of_cost" ? undefined : Number(quantities[p.param_id]) }));
       await productionApi.updateRun(runId, { status: "completed", actual_quantity: Number(actualQuantity), overhead_entries });
       onDone();
     } catch (err) {
@@ -1033,51 +717,55 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
           <div style={{ flex: 1 }} />
         </div>
 
-        <label className="bp-field-label">Stages</label>
-        <div className="bp-table-wrap" style={{ marginBottom: 10 }}>
-          <table className="bp-table">
-            <thead><tr><th>Stage</th><th>Worker</th><th>Hours</th></tr></thead>
-            <tbody>
-              {(run.stages || []).map((s) => (
-                <tr key={s.stage_id}>
-                  <td>{STAGE_LABELS[s.stage]}</td>
-                  <td>{s.employee_name}</td>
-                  <td>{s.hours_worked}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
         {params.length > 0 && (
           <>
             <label className="bp-field-label">Applicable production costs (optional — only what applies to this run)</label>
             <div className="bp-table-wrap" style={{ marginBottom: 10 }}>
               <table className="bp-table">
                 <tbody>
-                  {params.map((p) => (
-                    <tr key={p.param_id}>
-                      <td style={{ width: 30 }}>
-                        <input
-                          type="checkbox"
-                          checked={!!selected[p.param_id]}
-                          onChange={(e) => setSelected((prev) => ({ ...prev, [p.param_id]: e.target.checked }))}
-                        />
-                      </td>
-                      <td>{p.name} {p.unit ? <span className="bp-td-muted">({p.unit})</span> : null}</td>
-                      <td style={{ width: 100 }}>
-                        <input
-                          type="number" step="0.0001" className="bp-field-input"
-                          value={quantities[p.param_id] ?? ""}
-                          onChange={(e) => setQuantities((prev) => ({ ...prev, [p.param_id]: e.target.value }))}
-                          disabled={!selected[p.param_id]}
-                        />
-                      </td>
-                      <td className="bp-td-muted">
-                        {selected[p.param_id] ? inr((Number(quantities[p.param_id]) || 0) * Number(p.current_value ?? p.value ?? 0)) : "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {params.map((p) => {
+                    const isPercentOfCost = p.rate_type === "percent_of_cost";
+                    // A percent_of_cost line's amount depends on the running
+                    // total of everything else in the run, so it can't be
+                    // computed client-side like a flat qty x rate row —
+                    // instead read it back from the server's own cost-preview
+                    // response (matched by label, since lines don't carry
+                    // param_id) which the modal already refetches live.
+                    const previewLine = isPercentOfCost
+                      ? preview?.lines?.find((l) => l.label && l.label.startsWith(p.name))
+                      : null;
+                    return (
+                      <tr key={p.param_id}>
+                        <td style={{ width: 30 }}>
+                          <input
+                            type="checkbox"
+                            checked={!!selected[p.param_id]}
+                            onChange={(e) => setSelected((prev) => ({ ...prev, [p.param_id]: e.target.checked }))}
+                          />
+                        </td>
+                        <td>{p.name} {p.unit ? <span className="bp-td-muted">({p.unit})</span> : null}</td>
+                        <td style={{ width: 100 }}>
+                          {isPercentOfCost ? (
+                            <span className="bp-td-muted">—</span>
+                          ) : (
+                            <input
+                              type="number" step="0.0001" className="bp-field-input"
+                              value={quantities[p.param_id] ?? ""}
+                              onChange={(e) => setQuantities((prev) => ({ ...prev, [p.param_id]: e.target.value }))}
+                              disabled={!selected[p.param_id]}
+                            />
+                          )}
+                        </td>
+                        <td className="bp-td-muted">
+                          {!selected[p.param_id]
+                            ? "—"
+                            : isPercentOfCost
+                              ? (previewLine ? inr(previewLine.amount) : "—")
+                              : inr((Number(quantities[p.param_id]) || 0) * Number(p.current_value ?? p.value ?? 0))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

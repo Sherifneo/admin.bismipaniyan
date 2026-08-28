@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { purchasingApi, vendorsApi, locationsApi, productsApi } from "../../api/admin";
+import { purchasingApi, vendorsApi, locationsApi, productsApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import Pagination from "../../components/Pagination";
@@ -275,6 +275,27 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
   }
 
+  // Selecting a product auto-fills Unit cost from its cost_price (still
+  // freely editable afterward) — cost_price is already "the latest
+  // received purchase unit cost," so this just saves re-typing a number
+  // that's usually already correct.
+  function selectProduct(idx, productId) {
+    const product = products.find((p) => p.product_id === productId);
+    setItems((prev) => prev.map((it, i) => (
+      i === idx ? { ...it, product_id: productId, unit_cost: product?.cost_price ?? it.unit_cost } : it
+    )));
+  }
+
+  async function fetchLastPrice(idx, productId) {
+    if (!productId) return;
+    try {
+      const data = await purchasingApi.lastPrice(productId);
+      if (data) updateItem(idx, "unit_cost", data.unit_cost);
+    } catch {
+      // Silently no-op — there may just be no prior received PO for this product.
+    }
+  }
+
   function addRow() {
     setItems((prev) => [...prev, { product_id: "", quantity: "", unit_cost: "" }]);
   }
@@ -403,23 +424,28 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
         </div>
 
         <label className="bp-field-label">Line items</label>
-        {items.map((it, idx) => (
-          <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
-            <div style={{ flex: 2 }}>
-              <select className="bp-field-input" value={it.product_id} onChange={(e) => updateItem(idx, "product_id", e.target.value)}>
-                <option value="">Select product…</option>
-                {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
-              </select>
+        {items.map((it, idx) => {
+          const selectedProduct = products.find((p) => p.product_id === it.product_id);
+          return (
+            <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+              <div style={{ flex: 2 }}>
+                <select className="bp-field-input" value={it.product_id} onChange={(e) => selectProduct(idx, e.target.value)}>
+                  <option value="">Select product…</option>
+                  {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <input type="number" min="0" step="0.01" placeholder="Qty" className="bp-field-input" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
+              </div>
+              <div className="bp-td-muted" style={{ width: 50, paddingBottom: 9 }}>{selectedProduct?.uom || ""}</div>
+              <div style={{ flex: 1 }}>
+                <input type="number" min="0" step="0.01" placeholder="Unit cost ₹" className="bp-field-input" value={it.unit_cost} onChange={(e) => updateItem(idx, "unit_cost", e.target.value)} />
+              </div>
+              <button type="button" className="bp-btn-sm" onClick={() => fetchLastPrice(idx, it.product_id)} disabled={!it.product_id}>Last PO Price</button>
+              <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
             </div>
-            <div style={{ flex: 1 }}>
-              <input type="number" min="0" step="0.01" placeholder="Qty" className="bp-field-input" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <input type="number" min="0" step="0.01" placeholder="Unit cost ₹" className="bp-field-input" value={it.unit_cost} onChange={(e) => updateItem(idx, "unit_cost", e.target.value)} />
-            </div>
-            <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
-          </div>
-        ))}
+          );
+        })}
         <button type="button" className="bp-btn-sm" onClick={addRow} style={{ alignSelf: "flex-start", marginBottom: 10 }}>+ Add line</button>
 
         <label className="bp-field-label">Discount (optional)</label>
@@ -482,6 +508,7 @@ function PoDetailModal({ poId, onClose, onChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPay, setShowPay] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -509,19 +536,6 @@ function PoDetailModal({ poId, onClose, onChanged }) {
       await onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not update status.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function markPaid() {
-    setBusy(true);
-    try {
-      await purchasingApi.pay(poId);
-      await load();
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not mark this as paid.");
     } finally {
       setBusy(false);
     }
@@ -594,11 +608,77 @@ function PoDetailModal({ poId, onClose, onChanged }) {
               <button type="button" className="bp-btn-outline" onClick={() => setStatus("cancelled")} disabled={busy}>Cancel</button>
             )}
             {po.status === "received" && po.payment_status !== "paid" && (
-              <button type="button" className="bp-btn-primary" onClick={markPaid} disabled={busy}>Mark as paid</button>
+              <button type="button" className="bp-btn-primary" onClick={() => setShowPay(true)} disabled={busy}>Mark as paid</button>
             )}
           </div>
         </>
       )}
+      {showPay && (
+        <PayPoModal
+          po={po}
+          onClose={() => setShowPay(false)}
+          onDone={async () => { setShowPay(false); await load(); await onChanged(); }}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Payment account is mandatory — same rule as Cash Book's manual Add Entry
+// (backend/src/routes/cashbook.js's POST / rejects a missing
+// financial_account_id the same way), applied here since paying a PO is
+// the one PO action that actually moves money.
+function PayPoModal({ po, onClose, onDone }) {
+  const [accounts, setAccounts] = useState([]);
+  const [financialAccountId, setFinancialAccountId] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    financialAccountsApi.list().then((data) => {
+      const items = data.items || [];
+      setAccounts(items);
+      setFinancialAccountId((prev) => prev || items[0]?.financial_account_id || "");
+    }).catch(() => {});
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!financialAccountId) {
+      setError("Select a financial account (Cash or a bank account).");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await purchasingApi.pay(po.po_id, { financial_account_id: financialAccountId });
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not mark this as paid.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Mark as paid — ${po.po_number}`} onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: 0 }}>
+          Paying {inr(po.total)} to {po.vendor_name}.
+        </p>
+        <label className="bp-field-label" htmlFor="payFinancialAccount">Financial Account</label>
+        <select id="payFinancialAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required autoFocus>
+          {accounts.length === 0 && <option value="">Loading…</option>}
+          {accounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
+        </select>
+        <div className="bp-td-muted" style={{ fontSize: 11, margin: "4px 0 0" }}>
+          Where the money actually moved — Cash or a specific bank account.
+        </div>
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Mark as paid"}</button>
+        </div>
+      </form>
     </Modal>
   );
 }

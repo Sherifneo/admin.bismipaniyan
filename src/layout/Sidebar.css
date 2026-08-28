@@ -212,27 +212,6 @@
   font-weight: 700;
 }
 
-.bp-rail-pin {
-  flex: none;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 11px;
-  opacity: 0.35;
-  padding: 6px 2px;
-  filter: grayscale(1);
-  transition: opacity 0.12s ease, filter 0.12s ease;
-}
-
-.bp-rail-pin:hover {
-  opacity: 0.75;
-}
-
-.bp-rail-pin.is-pinned {
-  opacity: 1;
-  filter: none;
-}
-
 .bp-rail-chevron {
   flex: none;
   border: none;
@@ -278,9 +257,11 @@
    against .bp-sidebar (not part of .bp-shell's flex flow), so opening
    it never shifts or shrinks the page content beside it. ---- */
 .bp-sidebar-flyout {
+  /* `top` is set inline (Sidebar.jsx) from the clicked module row's
+     actual position, so the flyout always opens level with what was
+     clicked instead of a fixed offset near the top of the sidebar. */
   position: absolute;
   left: 100%;
-  top: 12px;
   margin-left: 10px;
   z-index: 25;
 }

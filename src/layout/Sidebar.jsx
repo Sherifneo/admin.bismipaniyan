@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { NAV_ITEMS } from "./navConfig";
-import { getPinned, setPinned, getLastChild, setLastChild } from "./sidebarState";
+import { getLastChild, setLastChild } from "./sidebarState";
 import SubmodulePanel from "./SubmodulePanel";
 import "./Sidebar.css";
 
@@ -50,7 +50,6 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const { admin, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [pinnedKeys, setPinnedKeys] = useState(() => new Set(getPinned()));
 
   // Which module's flyout panel is open — plain in-memory state, never
   // persisted (owner requirement). Initialized from whichever module
@@ -60,6 +59,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const initialActiveModule = NAV_ITEMS.find((item) => item.children && isModuleActive(item, location));
   const [selectedModuleKey, setSelectedModuleKey] = useState(initialActiveModule?.key || null);
   const [panelOpen, setPanelOpen] = useState(false);
+  // The clicked module row's vertical offset within the rail, used to
+  // position the flyout level with what was actually clicked instead of
+  // a fixed top offset (previously hardcoded in Sidebar.css, which made
+  // the flyout pop up near the top of the viewport for any module below
+  // the first one or two in the rail — a real visual bug).
+  const [flyoutTop, setFlyoutTop] = useState(12);
 
   // Mobile drawer has its own two-view state, independent of the
   // desktop panel above. Always resets to the Main Modules view every
@@ -108,25 +113,32 @@ export default function Sidebar({ mobileOpen, onClose }) {
     };
   }, [panelOpen]);
 
-  function onTogglePin(key) {
-    setPinnedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      setPinned([...next]);
-      return next;
-    });
+  // Positions the flyout level with the row that was actually clicked,
+  // clamped so it never renders below the visible viewport for a module
+  // near the bottom of a long rail — SubmodulePanel.css's own
+  // max-height/overflow-y:auto still handles a tall module's content
+  // scrolling inside the panel once positioned.
+  const FLYOUT_ESTIMATED_HEIGHT = 420;
+  function positionFlyoutFromEvent(e) {
+    const rowRect = e.currentTarget.closest(".bp-rail-module")?.getBoundingClientRect();
+    if (!rowRect) return;
+    const railRect = railRef.current?.getBoundingClientRect();
+    const railTop = railRect?.top ?? 0;
+    const relativeTop = rowRect.top - railTop;
+    const maxTop = Math.max(12, window.innerHeight - railTop - FLYOUT_ESTIMATED_HEIGHT);
+    setFlyoutTop(Math.min(Math.max(relativeTop, 12), maxTop));
   }
 
   // Clicking a module's row (label/icon/anywhere but the chevron):
   //  - unselected module -> select it, open the panel, navigate to its
   //    remembered-or-default child.
   //  - already-selected module -> close the panel only, page unchanged.
-  function onSelectModule(module) {
+  function onSelectModule(module, e) {
     if (selectedModuleKey === module.key && panelOpen) {
       setPanelOpen(false);
       return;
     }
+    if (e) positionFlyoutFromEvent(e);
     setSelectedModuleKey(module.key);
     setPanelOpen(true);
     const target = resolveTargetChild(module, getLastChild(module.key));
@@ -136,10 +148,11 @@ export default function Sidebar({ mobileOpen, onClose }) {
   // Chevron: toggles the panel open/closed only, never navigates. If it
   // opens a module that wasn't already selected, it selects it too (so
   // the panel shows the right content) but still doesn't touch the URL.
-  function onToggleChevron(module) {
+  function onToggleChevron(module, e) {
     if (selectedModuleKey === module.key) {
       setPanelOpen((v) => !v);
     } else {
+      if (e) positionFlyoutFromEvent(e);
       setSelectedModuleKey(module.key);
       setPanelOpen(true);
     }
@@ -185,7 +198,6 @@ export default function Sidebar({ mobileOpen, onClose }) {
     return { ...item, children: item.children.filter((c) => isVisible(c, admin, hasPermission)) };
   });
 
-  const pinnedModules = visibleItems.filter((item) => item.children && pinnedKeys.has(item.key));
   const selectedModule = visibleItems.find((item) => item.children && item.key === selectedModuleKey);
 
   function renderLeaf(item) {
@@ -202,32 +214,22 @@ export default function Sidebar({ mobileOpen, onClose }) {
     );
   }
 
-  function renderModuleRow(module, { pinnedRow = false } = {}) {
+  function renderModuleRow(module) {
     const active = isModuleActive(module, location);
     const selected = selectedModuleKey === module.key && panelOpen;
-    const isPinned = pinnedKeys.has(module.key);
     return (
       <div
-        key={pinnedRow ? `pinned-${module.key}` : module.key}
+        key={module.key}
         className={"bp-rail-module" + (active ? " is-active" : "") + (selected ? " is-selected" : "")}
       >
-        <button type="button" className="bp-rail-module-main" onClick={() => onSelectModule(module)}>
+        <button type="button" className="bp-rail-module-main" onClick={(e) => onSelectModule(module, e)}>
           <span className="bp-rail-icon" aria-hidden="true">{module.icon}</span>
           <span className="bp-rail-label">{module.label}</span>
         </button>
         <button
           type="button"
-          className={"bp-rail-pin" + (isPinned ? " is-pinned" : "")}
-          onClick={() => onTogglePin(module.key)}
-          aria-label={isPinned ? `Unpin ${module.label}` : `Pin ${module.label}`}
-          title={isPinned ? "Unpin" : "Pin"}
-        >
-          📌
-        </button>
-        <button
-          type="button"
           className="bp-rail-chevron"
-          onClick={() => onToggleChevron(module)}
+          onClick={(e) => onToggleChevron(module, e)}
           aria-label={selected ? `Collapse ${module.label}` : `Expand ${module.label}`}
           aria-expanded={selected}
         >
@@ -304,21 +306,13 @@ export default function Sidebar({ mobileOpen, onClose }) {
           <nav className="bp-sidebar-nav bp-sidebar-nav-desktop">
             {dashboardItem && renderLeaf(dashboardItem)}
 
-            {pinnedModules.length > 0 && (
-              <>
-                <div className="bp-sidebar-section-label">Pinned</div>
-                {pinnedModules.map((module) => renderModuleRow(module, { pinnedRow: true }))}
-                <div className="bp-sidebar-divider" />
-              </>
-            )}
-
             <div className="bp-sidebar-section-label">Modules</div>
             {visibleItems.map((item) => (item.children ? renderModuleRow(item) : renderLeaf(item)))}
           </nav>
         </aside>
 
         {panelOpen && selectedModule && (
-          <div ref={panelRef} className="bp-sidebar-flyout">
+          <div ref={panelRef} className="bp-sidebar-flyout" style={{ top: flyoutTop }}>
             <SubmodulePanel
               module={selectedModule}
               location={location}

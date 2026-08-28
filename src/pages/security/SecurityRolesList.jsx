@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { teamApi, securityApi } from "../../api/admin";
+import { systemUsersApi, securityApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 
 // The same permission keys the backend hardcodes in
@@ -34,7 +34,7 @@ export default function SecurityRolesList() {
       setLoadingStaff(true);
       setError("");
       try {
-        const data = await teamApi.list();
+        const data = await systemUsersApi.list();
         setStaff((data || []).filter((a) => a.role !== "owner"));
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Could not load the team.");

@@ -27,7 +27,7 @@ import CostParametersList from "./pages/production/CostParametersList";
 import ProductionRunsList from "./pages/production/ProductionRunsList";
 import ReportsPage from "./pages/reports/ReportsPage";
 import SettingsPage from "./pages/settings/SettingsPage";
-import TeamList from "./pages/team/TeamList";
+import SystemUsersList from "./pages/system-users/SystemUsersList";
 import SecurityRolesList from "./pages/security/SecurityRolesList";
 import NumberSequencesPage from "./pages/settings/NumberSequencesPage";
 import ActivityLogPage from "./pages/settings/ActivityLogPage";
@@ -60,7 +60,7 @@ const BUILT_PAGES = {
   production: ProductionRunsList,
   reports: ReportsPage,
   settings: SettingsPage,
-  team: TeamList,
+  systemUsers: SystemUsersList,
   security: SecurityRolesList,
   numbersequences: NumberSequencesPage,
   systemerrors: ActivityLogPage,

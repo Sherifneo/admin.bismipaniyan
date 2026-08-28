@@ -6,10 +6,17 @@ import Modal from "../../components/Modal";
 import { formatDate, formatDateTime } from "../../utils/date";
 
 const CATEGORY_LABELS = { material: "Material", labour: "Labour", overhead: "Overhead", utility: "Utility" };
-const BASIS_LABELS = { per_hour: "Per hour", per_production: "—" };
+const BASIS_LABELS = { per_hour: "Per hour", per_production: "—", percent_of_cost: "% of production cost" };
 
 function inr(n) {
   return n === null || n === undefined || n === "" ? "—" : "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 4 });
+}
+
+function formatRate(param) {
+  const v = param.current_value ?? param.value;
+  if (v === null || v === undefined || v === "") return "—";
+  if (param.rate_type === "percent_of_cost") return `${Number(v)}%`;
+  return inr(v);
 }
 
 // These rates are applied automatically when a production run is
@@ -106,7 +113,7 @@ export default function CostParametersList() {
               params.map((p) => (
                 <tr key={p.param_id} style={{ opacity: p.is_active ? 1 : 0.55 }}>
                   <td className="bp-td-strong">{p.name}</td>
-                  <td>{inr(p.current_value ?? p.value)}</td>
+                  <td>{formatRate(p)}</td>
                   <td className="bp-td-muted">{p.unit || "—"}</td>
                   <td className="bp-td-muted">{BASIS_LABELS[p.rate_type] ?? "—"}</td>
                   <td>
@@ -170,15 +177,17 @@ function EditRateModal({ param, onClose, onDone }) {
     }
   }
 
+  const isPercent = param.rate_type === "percent_of_cost";
+
   return (
     <Modal title={`Edit rate — ${param.name}`} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
         <p className="bp-td-muted" style={{ marginTop: 0 }}>
-          Current rate: <strong>{inr(param.current_value ?? param.value)}</strong>{param.unit ? ` / ${param.unit}` : ""}
+          Current rate: <strong>{formatRate(param)}</strong>{!isPercent && param.unit ? ` / ${param.unit}` : ""}
         </p>
 
-        <label className="bp-field-label" htmlFor="erValue">New rate (₹)</label>
+        <label className="bp-field-label" htmlFor="erValue">{isPercent ? "New rate (%)" : "New rate (₹)"}</label>
         <input id="erValue" type="number" step="0.0001" className="bp-field-input" value={value} onChange={(e) => setValue(e.target.value)} required autoFocus />
 
         <label className="bp-field-label" htmlFor="erDate">Effective date (optional)</label>
@@ -211,6 +220,7 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
   const [submitting, setSubmitting] = useState(false);
 
   const isLabour = category === "labour";
+  const isPercent = !isLabour && rateType === "percent_of_cost";
 
   async function submit(e) {
     e.preventDefault();
@@ -262,21 +272,25 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
           <>
             <div className="bp-form-row">
               <div style={{ flex: 1 }}>
-                <label className="bp-field-label" htmlFor="cpValue">Rate (₹)</label>
+                <label className="bp-field-label" htmlFor="cpValue">{isPercent ? "Rate (%)" : "Rate (₹)"}</label>
                 <input id="cpValue" type="number" step="0.0001" className="bp-field-input" value={value} onChange={(e) => setValue(e.target.value)} required />
               </div>
-              <div style={{ flex: 1 }}>
-                <label className="bp-field-label" htmlFor="cpUnit">Unit (optional)</label>
-                <input id="cpUnit" type="text" className="bp-field-input" placeholder="e.g. kWh, litre, kg" value={unit} onChange={(e) => setUnit(e.target.value)} />
-              </div>
+              {!isPercent && (
+                <div style={{ flex: 1 }}>
+                  <label className="bp-field-label" htmlFor="cpUnit">Unit (optional)</label>
+                  <input id="cpUnit" type="text" className="bp-field-input" placeholder="e.g. kWh, litre, kg" value={unit} onChange={(e) => setUnit(e.target.value)} />
+                </div>
+              )}
             </div>
             <p className="bp-td-muted" style={{ fontSize: 12, marginTop: -6, marginBottom: 10 }}>
-              Unit just labels the rate for display (e.g. "₹8.00 / kWh") — leave it blank if it doesn't apply.
+              {isPercent
+                ? "Applied to this run's Base Production Cost (material + labour + non-percentage overhead) once completed — no unit or quantity to enter."
+                : 'Unit just labels the rate for display (e.g. "₹8.00 / kWh") — leave it blank if it doesn\'t apply.'}
             </p>
           </>
         )}
 
-        {isEdit && !isLabour && (
+        {isEdit && !isLabour && !isPercent && (
           <>
             <label className="bp-field-label" htmlFor="cpUnit">Unit (optional)</label>
             <input id="cpUnit" type="text" className="bp-field-input" placeholder="e.g. kWh, litre, kg" value={unit} onChange={(e) => setUnit(e.target.value)} />
@@ -299,6 +313,7 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
               <select id="cpRateType" className="bp-field-input" value={rateType} onChange={(e) => setRateType(e.target.value)}>
                 <option value="per_production">Flat, per production run</option>
                 <option value="per_hour">Per hour</option>
+                <option value="percent_of_cost">% of production cost</option>
               </select>
             </div>
           )}
@@ -317,7 +332,7 @@ function CostParameterModal({ param, employees, onClose, onDone }) {
           </>
         )}
 
-        {!isLabour && (
+        {!isLabour && !isPercent && (
           <>
             <label className="bp-field-label" htmlFor="cpDefaultConsumption">Default amount per run (optional)</label>
             <input
@@ -375,7 +390,7 @@ function HistoryModal({ param, onClose }) {
             {history.map((h) => (
               <tr key={h.history_id}>
                 <td className="bp-td-muted">{formatDate(h.effective_date)}</td>
-                <td className="bp-td-strong">{inr(h.value)}</td>
+                <td className="bp-td-strong">{param.rate_type === "percent_of_cost" ? `${Number(h.value)}%` : inr(h.value)}</td>
               </tr>
             ))}
           </tbody>
