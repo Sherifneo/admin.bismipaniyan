@@ -223,6 +223,12 @@ export const reportsApi = {
   stockMovements: (params = {}) => GET(`/api/admin/reports/stock-movements?${new URLSearchParams(cleanParams(params))}`),
   purchaseOrdersByStatus: (params = {}) => GET(`/api/admin/reports/purchase-orders-by-status?${new URLSearchParams(cleanParams(params))}`),
   financialDimensionSummary: (params = {}) => GET(`/api/admin/reports/financial-dimension-summary?${new URLSearchParams(cleanParams(params))}`),
+  profitLoss: (params = {}) => GET(`/api/admin/reports/profit-loss?${new URLSearchParams(cleanParams(params))}`),
+  cashBankSummary: (params = {}) => GET(`/api/admin/reports/cash-bank-summary?${new URLSearchParams(cleanParams(params))}`),
+  payablesAging: () => GET("/api/admin/reports/payables-aging"),
+  inventoryValue: () => GET("/api/admin/reports/inventory-value"),
+  productionCostSummary: (params = {}) => GET(`/api/admin/reports/production-cost-summary?${new URLSearchParams(cleanParams(params))}`),
+  financialPosition: () => GET("/api/admin/reports/financial-position"),
 };
 
 export const settingsApi = {
