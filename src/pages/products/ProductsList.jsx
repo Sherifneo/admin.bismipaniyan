@@ -317,7 +317,11 @@ function ProductModal({ product, onClose, onDone }) {
   const [submitting, setSubmitting] = useState(false);
   const [uoms, setUoms] = useState([]);
   const [locks, setLocks] = useState({});
-  const codeField = useCodePreview("product", isEdit ? product.product_code : null);
+  // Product codes are split by Kind — FG- for finished_good, RM- for
+  // raw_material — so the counter key follows itemKind reactively;
+  // useCodePreview's effect already depends on its first argument, so
+  // switching Kind live-updates the preview to the new prefix.
+  const codeField = useCodePreview(isRawMaterial ? "raw_material" : "finished_good", isEdit ? product.product_code : null);
 
   useEffect(() => {
     uomsApi.list({}).then((data) => setUoms(data.items || [])).catch(() => {});
@@ -388,19 +392,6 @@ function ProductModal({ product, onClose, onDone }) {
           </div>
         )}
 
-        <CodeField label="Product code" field={codeField} isEdit={isEdit} />
-
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pSku">SKU (optional)</label>
-            <input id="pSku" type="text" className="bp-field-input" value={sku} onChange={(e) => setSku(e.target.value)} disabled={isEdit} />
-          </div>
-          <div style={{ flex: 2 }}>
-            <label className="bp-field-label" htmlFor="pName">Name</label>
-            <input id="pName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus disabled={isEdit && locks.product_name} />
-          </div>
-        </div>
-
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="pKind">Kind</label>
@@ -411,7 +402,8 @@ function ProductModal({ product, onClose, onDone }) {
                 setItemKind(next);
                 if (next === "raw_material") { setSellingPrice(""); setMarkupPercent(""); }
               }}
-              disabled={isEdit && locks.item_kind}
+              disabled={isEdit}
+              title={isEdit ? "Kind can't be changed after a product is created — its code prefix depends on it." : undefined}
             >
               <option value="finished_good">Finished good</option>
               <option value="raw_material">Raw material</option>
@@ -423,6 +415,19 @@ function ProductModal({ product, onClose, onDone }) {
               {uoms.map((u) => <option key={u.uom_id} value={u.code}>{u.label}</option>)}
               {uom && !uoms.some((u) => u.code === uom) && <option value={uom}>{uom}</option>}
             </select>
+          </div>
+        </div>
+
+        <CodeField label="Product code" field={codeField} isEdit={isEdit} />
+
+        <div className="bp-form-row">
+          <div style={{ flex: 1 }}>
+            <label className="bp-field-label" htmlFor="pSku">SKU (optional)</label>
+            <input id="pSku" type="text" className="bp-field-input" value={sku} onChange={(e) => setSku(e.target.value)} disabled={isEdit} />
+          </div>
+          <div style={{ flex: 2 }}>
+            <label className="bp-field-label" htmlFor="pName">Name</label>
+            <input id="pName" type="text" className="bp-field-input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus disabled={isEdit && locks.product_name} />
           </div>
         </div>
 
