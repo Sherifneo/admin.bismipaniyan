@@ -664,7 +664,7 @@ function CategoriesTab() {
     setLoading(true);
     setError("");
     try {
-      const data = await cashbookCategoriesApi.list({});
+      const data = await cashbookCategoriesApi.list({ includeSystemOnly: true });
       setItems(data.items || []);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load categories.");
@@ -734,13 +734,13 @@ function CategoriesTab() {
       <div className="bp-table-wrap" style={{ marginBottom: 14 }}>
         <table className="bp-table">
           <thead>
-            <tr><th>Name</th><th>Type</th><th></th></tr>
+            <tr><th>Name</th><th>Type</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={3} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={4} className="bp-table-empty">Loading…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={3} className="bp-table-empty">No categories yet.</td></tr>
+              <tr><td colSpan={4} className="bp-table-empty">No categories yet.</td></tr>
             ) : (
               items.map((c) => (
                 <tr key={c.category_id}>
@@ -758,8 +758,15 @@ function CategoriesTab() {
                     )}
                   </td>
                   <td className="bp-td-muted">{c.entry_type === "income" ? "Income" : "Expense"}</td>
+                  <td>
+                    {c.is_system_only ? (
+                      <span className="bp-badge" title="Posted automatically by another module — not selectable for a manual entry">System — Automatic</span>
+                    ) : (
+                      <span className="bp-td-muted">Manual</span>
+                    )}
+                  </td>
                   <td className="bp-td-actions">
-                    {editingId === c.category_id ? (
+                    {c.is_system_only ? null : editingId === c.category_id ? (
                       <>
                         <button type="button" className="bp-btn-sm" onClick={() => saveEdit(c.category_id)} disabled={busy}>Save</button>
                         <button type="button" className="bp-btn-sm" onClick={() => setEditingId(null)} disabled={busy}>Cancel</button>
