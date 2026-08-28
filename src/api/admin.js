@@ -194,6 +194,7 @@ export const productionApi = {
   costPreview: (id, params) => GET(`/api/admin/production-runs/${id}/cost-preview?${new URLSearchParams(cleanParams(params))}`),
   lastHours: (productId) => GET(`/api/admin/production-runs/last-hours?${new URLSearchParams({ product_id: productId })}`),
   updateStage: (runId, stage, body) => PUT(`/api/admin/production-runs/${runId}/stages/${stage}`, body),
+  remove: (id, reason) => DEL(`/api/admin/production-runs/${id}`, { reason }),
 };
 
 export const machinesApi = {

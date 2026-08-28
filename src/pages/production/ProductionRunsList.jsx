@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { productionApi, machinesApi, locationsApi, productsApi, bomsApi, costParametersApi } from "../../api/admin";
+import { Link, useSearchParams } from "react-router-dom";
+import { productionApi, machinesApi, locationsApi, productsApi, bomsApi, costParametersApi, inventoryApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
@@ -10,6 +10,7 @@ import StatusBadge from "../../components/StatusBadge";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDate, formatDateTime } from "../../utils/date";
+import { formatQty } from "../../lib/uom";
 
 const LIMIT = 100;
 
@@ -25,8 +26,22 @@ function factoryOnly(locations) {
 // and only 'completed' writes stock into inventory_movements as a
 // production_in movement (see backend/src/routes/production-runs.js) —
 // mirroring how a purchase order only touches stock on 'received'.
+const TABS = [
+  { key: "runs", label: "Production Runs" },
+  { key: "transactions", label: "Transactions" },
+];
+
 export default function ProductionRunsList() {
   const urlSearch = useUrlSearch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "runs";
+  function setTab(key) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", key);
+      return next;
+    }, { replace: true });
+  }
   const [locations, setLocations] = useState([]);
   const [machines, setMachines] = useState([]);
   const [runs, setRuns] = useState([]);
@@ -46,6 +61,7 @@ export default function ProductionRunsList() {
   }, []);
 
   async function load() {
+    if (tab !== "runs") return;
     setLoading(true);
     setError("");
     try {
@@ -62,7 +78,7 @@ export default function ProductionRunsList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, status, q, qField]);
+  }, [page, status, q, qField, tab]);
 
   // SearchByBar's "Search by <column>" now hits the server (via q/qField)
   // instead of only filtering whatever page of rows is already loaded.
@@ -78,7 +94,8 @@ export default function ProductionRunsList() {
   }
 
   const columns = [
-    { key: "product_code", label: "Item ID", accessor: (run) => run.product_code || "" },
+    { key: "run_number", label: "Run ID", accessor: (run) => run.run_number || "" },
+    { key: "product_code", label: "Product Code", accessor: (run) => run.product_code || "" },
     { key: "product_name", label: "Product", accessor: (run) => run.product_name },
     { key: "location_name", label: "Location", accessor: (run) => run.location_name },
     { key: "machine_name", label: "Machine", accessor: (run) => run.machine_name || "" },
@@ -110,9 +127,28 @@ export default function ProductionRunsList() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
         <h1 className="bp-page-title">Production Runs</h1>
-        <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New run</button>
+        {tab === "runs" && (
+          <button type="button" className="bp-btn-primary" onClick={() => setShowAdd(true)}>+ New run</button>
+        )}
       </div>
 
+      <div className="bp-tabs" style={{ marginBottom: 14 }}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`bp-tab${tab === t.key ? " is-active" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "transactions" ? (
+        <ProductionTransactionsTab />
+      ) : (
+        <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
         <select className="bp-field-input" style={{ width: "auto" }} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
           <option value="">All statuses</option>
@@ -147,18 +183,20 @@ export default function ProductionRunsList() {
               {table.isColumnVisible(columns[8].key) && <ColumnHeader table={table} column={columns[8]} />}
               {table.isColumnVisible(columns[9].key) && <ColumnHeader table={table} column={columns[9]} />}
               {table.isColumnVisible(columns[10].key) && <ColumnHeader table={table} column={columns[10]} />}
+              {table.isColumnVisible(columns[11].key) && <ColumnHeader table={table} column={columns[11]} />}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={13} className="bp-table-empty">Loading…</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">Loading…</td></tr>
             ) : table.filteredRows.length === 0 ? (
-              <tr><td colSpan={13} className="bp-table-empty">No production runs found.</td></tr>
+              <tr><td colSpan={14} className="bp-table-empty">No production runs found.</td></tr>
             ) : (
               table.filteredRows.map((run) => (
                 <tr key={run.run_id}>
                   <SelectRowCell table={table} row={run} />
+                  {table.isColumnVisible("run_number") && <td className="bp-td-muted">{run.run_number || "—"}</td>}
                   {table.isColumnVisible("product_code") && <td className="bp-td-muted">{run.product_code || "—"}</td>}
                   {table.isColumnVisible("product_name") && <td className="bp-td-strong">{run.product_name}</td>}
                   {table.isColumnVisible("location_name") && <td className="bp-td-muted">{run.location_name}</td>}
@@ -193,6 +231,8 @@ export default function ProductionRunsList() {
       </div>
 
       <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
+        </>
+      )}
 
       {showAdd && (
         <NewRunModal locations={locations} machines={machines} onClose={() => setShowAdd(false)} onDone={onSaved} />
@@ -200,6 +240,170 @@ export default function ProductionRunsList() {
       {viewRun && (
         <RunDetailModal runId={viewRun.run_id} onClose={() => setViewRun(null)} onChanged={load} />
       )}
+    </div>
+  );
+}
+
+const PRODUCTION_MOVEMENT_TYPES = "production_in,production_consume";
+const PRODUCTION_MOVEMENT_TYPE_LABELS = {
+  production_in: "Production received",
+  production_consume: "Used in production (BOM)",
+};
+
+function monthStartStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Read-only view of every production_in/production_consume inventory
+// movement — reuses the exact same GET /inventory/transactions endpoint
+// InventoryTransactionsList.jsx uses, just scoped to production's two
+// movement types (multi-value movementType) and with a Run column so
+// each row traces back to its PROD- number. No create/edit/delete/
+// reverse action anywhere on this tab.
+function ProductionTransactionsTab() {
+  const [locations, setLocations] = useState([]);
+  const [locationId, setLocationId] = useState("");
+  const [from, setFrom] = useState(monthStartStr());
+  const [to, setTo] = useState(todayStr());
+  const [page, setPage] = useState(1);
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState("");
+  const [qField, setQField] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    locationsApi.list().then(setLocations).catch(() => {});
+  }, []);
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await inventoryApi.transactions({
+        page, limit: LIMIT,
+        locationId: locationId || undefined,
+        movementType: PRODUCTION_MOVEMENT_TYPES,
+        from: from || undefined,
+        to: to || undefined,
+        q, qField,
+      });
+      setItems(data.items || []);
+      setTotal(data.total || 0);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load production transactions.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, locationId, from, to, q, qField]);
+
+  function resetPageAnd(setter) {
+    return (value) => {
+      setPage(1);
+      setter(value);
+    };
+  }
+
+  function searchByColumn(columnKey, value) {
+    setPage(1);
+    setQField(columnKey);
+    setQ(value);
+  }
+
+  const columns = [
+    { key: "universal_trans_id", label: "TransID", accessor: (r) => r.universal_trans_id || "", hiddenByDefault: true },
+    { key: "trans_id", label: "Doc #", accessor: (r) => r.trans_id || "" },
+    { key: "production_run_number", label: "Run", accessor: (r) => r.production_run_number || "" },
+    { key: "entry_date", label: "Date", accessor: (r) => r.entry_date, filter: "dateRange" },
+    { key: "product_name", label: "Product", accessor: (r) => r.product_name },
+    { key: "location_name", label: "Location", accessor: (r) => r.location_name },
+    {
+      key: "movement_type", label: "Type", accessor: (r) => r.movement_type, filter: "select",
+      options: Object.entries(PRODUCTION_MOVEMENT_TYPE_LABELS).map(([value, label]) => ({ value, label })),
+    },
+    { key: "qty_delta", label: "Qty", accessor: (r) => r.qty_delta, filter: "number" },
+    { key: "note", label: "Note", accessor: (r) => r.note || "" },
+  ];
+  const table = useDataTable({ rows: items, columns, rowKey: (r) => r.movement_id });
+
+  return (
+    <div>
+      <p className="bp-td-muted" style={{ margin: "-6px 0 14px" }}>
+        Every stock movement generated by production — received finished goods and consumed raw materials — in one read-only, chronological list.
+      </p>
+
+      <div className="bp-inventory-filters">
+        <select className="bp-field-input" value={locationId} onChange={(e) => resetPageAnd(setLocationId)(e.target.value)}>
+          <option value="">All locations</option>
+          {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
+        </select>
+        <input type="date" className="bp-field-input" style={{ width: "auto" }} value={from} onChange={(e) => resetPageAnd(setFrom)(e.target.value)} />
+        <input type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => resetPageAnd(setTo)(e.target.value)} />
+      </div>
+
+      {error && <div className="bp-inline-error">{error}</div>}
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <ColumnChooserButton table={table} columns={columns} />
+      </div>
+      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
+
+      <div className="bp-table-wrap">
+        <table className="bp-table">
+          <thead>
+            <tr>
+              {columns.map((c) => table.isColumnVisible(c.key) && <ColumnHeader key={c.key} table={table} column={c} />)}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={columns.length} className="bp-table-empty">Loading…</td></tr>
+            ) : table.filteredRows.length === 0 ? (
+              <tr><td colSpan={columns.length} className="bp-table-empty">No production transactions found.</td></tr>
+            ) : (
+              table.filteredRows.map((r) => (
+                <tr key={r.movement_id}>
+                  {table.isColumnVisible("universal_trans_id") && (
+                    <td>
+                      {r.universal_trans_id ? (
+                        <Link to={`/global-search?trans=${encodeURIComponent(r.universal_trans_id)}`} className="bp-trans-id-link">
+                          {r.universal_trans_id}
+                        </Link>
+                      ) : "—"}
+                    </td>
+                  )}
+                  {table.isColumnVisible("trans_id") && <td className="bp-td-muted">{r.trans_id || "—"}</td>}
+                  {table.isColumnVisible("production_run_number") && <td className="bp-td-muted">{r.production_run_number || "—"}</td>}
+                  {table.isColumnVisible("entry_date") && <td className="bp-td-muted">{formatDate(r.entry_date)}</td>}
+                  {table.isColumnVisible("product_name") && <td className="bp-td-strong">{r.product_name}</td>}
+                  {table.isColumnVisible("location_name") && <td>{r.location_name}</td>}
+                  {table.isColumnVisible("movement_type") && (
+                    <td>
+                      <span className={`bp-badge ${r.qty_delta < 0 ? "bp-badge-danger" : "bp-badge-success"}`}>
+                        {PRODUCTION_MOVEMENT_TYPE_LABELS[r.movement_type] || r.movement_type}
+                      </span>
+                    </td>
+                  )}
+                  {table.isColumnVisible("qty_delta") && <td className="bp-td-strong">{formatQty(r.qty_delta, r.uom)}</td>}
+                  {table.isColumnVisible("note") && <td className="bp-td-muted">{r.note || "—"}</td>}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
     </div>
   );
 }
@@ -315,7 +519,7 @@ function NewRunModal({ locations, machines, onClose, onDone }) {
   const selectedBom = boms.find((b) => b.bom_id === bomId);
 
   return (
-    <Modal title="New production run" onClose={onClose}>
+    <Modal title="New production run" onClose={onClose} size="lg">
       <div className="bp-tabs" style={{ marginBottom: 14 }}>
         {NEW_RUN_STEPS.map((label, i) => (
           <div
@@ -504,6 +708,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -548,8 +753,20 @@ function RunDetailModal({ runId, onClose, onChanged }) {
     }
   }
 
+  async function confirmDelete(reason) {
+    setBusy(true);
+    try {
+      await productionApi.remove(runId, reason);
+      setShowDeleteConfirm(false);
+      onClose();
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <Modal title={run ? `${run.product_name} — ${run.location_name}` : "Production run"} onClose={onClose} size="lg">
+    <Modal title={run ? `${run.run_number ? `${run.run_number} — ` : ""}${run.product_name} — ${run.location_name}` : "Production run"} onClose={onClose} size="lg">
       {loading ? (
         <div className="bp-td-muted">Loading…</div>
       ) : (
@@ -581,7 +798,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
                     {run.cost_lines.map((l) => (
                       <tr key={l.cost_line_id}>
                         <td className="bp-td-muted" style={{ textTransform: "capitalize" }}>{l.line_type}</td>
-                        <td>{l.line_type === "labour" || l.line_type === "overhead" ? l.param_name_snapshot : "BOM materials"}</td>
+                        <td>{l.param_name_snapshot || "Material"}</td>
                         <td className="bp-td-muted">{l.line_type === "labour" ? l.hours : l.quantity ?? "—"}</td>
                         <td className="bp-td-muted">{l.line_type === "labour" ? inr(l.hourly_rate_snapshot) : l.rate_snapshot != null ? inr(l.rate_snapshot) : "—"}</td>
                         <td className="bp-td-strong">{inr(l.cost_amount)}</td>
@@ -613,6 +830,9 @@ function RunDetailModal({ runId, onClose, onChanged }) {
             {run.status !== "completed" && run.status !== "cancelled" && (
               <button type="button" className="bp-btn-outline" onClick={() => setShowCancelConfirm(true)} disabled={busy}>Cancel</button>
             )}
+            {(run.status === "planned" || run.status === "cancelled") && (
+              <button type="button" className="bp-btn-outline" onClick={() => setShowDeleteConfirm(true)} disabled={busy}>Delete</button>
+            )}
           </div>
         </>
       )}
@@ -624,6 +844,16 @@ function RunDetailModal({ runId, onClose, onChanged }) {
           confirmLabel="Cancel run"
           onClose={() => setShowCancelConfirm(false)}
           onConfirm={confirmCancel}
+        />
+      )}
+
+      {showDeleteConfirm && (
+        <ReasonConfirmModal
+          title="Delete production run"
+          message="This removes the run from the list. Only planned or cancelled runs can be deleted."
+          confirmLabel="Delete run"
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDelete}
         />
       )}
 
