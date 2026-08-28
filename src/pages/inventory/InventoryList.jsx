@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { inventoryApi, locationsApi, productsApi } from "../../api/admin";
+import { inventoryApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { formatQty } from "../../lib/uom";
 import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
+import ProductPicker from "../../components/ProductPicker";
 import SearchBox from "../../components/SearchBox";
 import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
@@ -203,8 +204,6 @@ const MOVEMENT_TYPES = [
 ];
 
 function RecordMovementModal({ locations, onClose, onDone }) {
-  const [productQuery, setProductQuery] = useState("");
-  const [productOptions, setProductOptions] = useState([]);
   const [productId, setProductId] = useState("");
   const [locationId, setLocationId] = useState(locations[0]?.location_id || "");
   const [movementType, setMovementType] = useState("adjustment");
@@ -213,13 +212,6 @@ function RecordMovementModal({ locations, onClose, onDone }) {
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      productsApi.list({ q: productQuery, limit: 10 }).then((data) => setProductOptions(data.items || [])).catch(() => {});
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [productQuery]);
 
   const isAdjustment = movementType === "adjustment";
 
@@ -262,27 +254,13 @@ function RecordMovementModal({ locations, onClose, onDone }) {
         {error && <div className="bp-inline-error">{error}</div>}
 
         <label className="bp-field-label" htmlFor="mvProduct">Product</label>
-        <input
+        <ProductPicker
           id="mvProduct"
-          type="text"
-          className="bp-field-input"
-          placeholder="Search by name or SKU…"
-          value={productQuery}
-          onChange={(e) => { setProductQuery(e.target.value); setProductId(""); }}
+          value={productId}
+          onChange={(id) => setProductId(id)}
+          placeholder="Search by code or name…"
+          required
         />
-        {productOptions.length > 0 && !productId && (
-          <div style={{ border: "1px solid var(--bp-border)", borderRadius: "var(--bp-radius-sm)", marginTop: 4, maxHeight: 140, overflow: "auto" }}>
-            {productOptions.map((p) => (
-              <div
-                key={p.product_id}
-                style={{ padding: "6px 10px", fontSize: 13, cursor: "pointer" }}
-                onClick={() => { setProductId(p.product_id); setProductQuery(p.name); setProductOptions([]); }}
-              >
-                {p.product_code ? `${p.product_code} — ` : ""}{p.name} {p.sku ? `(${p.sku})` : ""}
-              </div>
-            ))}
-          </div>
-        )}
 
         <label className="bp-field-label" htmlFor="mvLocation">Location</label>
         <select id="mvLocation" className="bp-field-input" value={locationId} onChange={(e) => setLocationId(e.target.value)} required>

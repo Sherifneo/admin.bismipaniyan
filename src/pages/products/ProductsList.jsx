@@ -6,6 +6,7 @@ import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
 import Modal from "../../components/Modal";
 import EntityHistoryModal from "../../components/EntityHistoryModal";
+import ProductPicker from "../../components/ProductPicker";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
@@ -791,11 +792,12 @@ function BomTab() {
 function BomModal({ bomSummary, onClose, onDone }) {
   const isEdit = !!bomSummary;
   const [loading, setLoading] = useState(isEdit);
-  const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState(bomSummary?.product_id || "");
+  const [productLabel, setProductLabel] = useState("");
+  const [productUom, setProductUom] = useState("");
   const [bomName, setBomName] = useState(bomSummary?.bom_name || "");
   const [outputQty, setOutputQty] = useState(bomSummary?.output_qty ?? "1");
-  const [lines, setLines] = useState([{ raw_material_product_id: "", quantity: "" }]);
+  const [lines, setLines] = useState([{ raw_material_product_id: "", quantity: "", label: "", uom: "" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [bomRecipeLocked, setBomRecipeLocked] = useState(false);
@@ -803,7 +805,6 @@ function BomModal({ bomSummary, onClose, onDone }) {
   const locked = isEdit && bomRecipeLocked;
 
   useEffect(() => {
-    productsApi.list({ limit: 500, includeInactive: false }).then((data) => setProducts(data.items || [])).catch(() => {});
     changeManagementApi.list().then((data) => {
       const bomLock = (data.items || []).find((i) => i.field_key === "bom");
       setBomRecipeLocked(!!bomLock?.is_locked);
@@ -814,22 +815,26 @@ function BomModal({ bomSummary, onClose, onDone }) {
     if (!isEdit) return;
     bomsApi.get(bomSummary.bom_id)
       .then((data) => {
-        setLines((data.lines || []).map((l) => ({ raw_material_product_id: l.raw_material_product_id, quantity: String(l.quantity) })));
+        setProductLabel(data.product_name || "");
+        setProductUom(data.product_uom || "");
+        setLines((data.lines || []).map((l) => ({
+          raw_material_product_id: l.raw_material_product_id,
+          quantity: String(l.quantity),
+          label: l.raw_material_code ? `${l.raw_material_code} — ${l.raw_material_name}` : l.raw_material_name || "",
+          uom: l.raw_material_uom || "",
+        })));
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load this BOM."))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const finishedGoods = products.filter((p) => p.item_kind === "finished_good");
-  const rawMaterials = products.filter((p) => p.item_kind === "raw_material");
-
   function updateLine(idx, field, value) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
   }
 
   function addLine() {
-    setLines((prev) => [...prev, { raw_material_product_id: "", quantity: "" }]);
+    setLines((prev) => [...prev, { raw_material_product_id: "", quantity: "", label: "", uom: "" }]);
   }
 
   function removeLine(idx) {
@@ -871,8 +876,6 @@ function BomModal({ bomSummary, onClose, onDone }) {
     }
   }
 
-  const selectedProduct = products.find((p) => p.product_id === productId);
-
   return (
     <Modal title={isEdit ? `Edit BOM — ${bomSummary.bom_name}` : "Add BOM"} onClose={onClose}>
       {loading ? (
@@ -896,13 +899,18 @@ function BomModal({ bomSummary, onClose, onDone }) {
           <div className="bp-form-row">
             <div style={{ flex: 2 }}>
               <label className="bp-field-label" htmlFor="bomProduct">Finished good</label>
-              <select id="bomProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} disabled={isEdit || locked}>
-                <option value="">Select a product…</option>
-                {finishedGoods.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
-              </select>
+              <ProductPicker
+                id="bomProduct"
+                itemKind="finished_good"
+                value={productId}
+                initialLabel={productLabel}
+                onChange={(id, product) => { setProductId(id); setProductUom(product?.uom || ""); }}
+                placeholder="Search finished goods by code or name…"
+                disabled={isEdit || locked}
+              />
             </div>
             <div style={{ flex: 1 }}>
-              <label className="bp-field-label" htmlFor="bomOutputQty">Output qty {selectedProduct ? `(${selectedProduct.uom})` : ""}</label>
+              <label className="bp-field-label" htmlFor="bomOutputQty">Output qty {productUom ? `(${productUom})` : ""}</label>
               <input id="bomOutputQty" type="number" min="0" step="0.001" className="bp-field-input" value={outputQty} onChange={(e) => setOutputQty(e.target.value)} disabled={locked} />
             </div>
           </div>
@@ -911,44 +919,38 @@ function BomModal({ bomSummary, onClose, onDone }) {
           <input id="bomName" type="text" className="bp-field-input" value={bomName} onChange={(e) => setBomName(e.target.value)} placeholder="e.g. Standard batch" autoFocus disabled={locked} />
 
           <label className="bp-field-label" style={{ marginTop: 10 }}>Raw materials consumed</label>
-          {lines.map((line, idx) => {
-            const selectedMaterial = rawMaterials.find((p) => p.product_id === line.raw_material_product_id);
-            return (
-              <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
-                <div style={{ flex: 2 }}>
-                  <select
-                    className="bp-field-input"
-                    value={line.raw_material_product_id}
-                    onChange={(e) => updateLine(idx, "raw_material_product_id", e.target.value)}
-                    disabled={locked}
-                  >
-                    <option value="">Select raw material…</option>
-                    {rawMaterials.map((p) => (
-                      <option key={p.product_id} value={p.product_id}>
-                        {p.product_code ? `${p.product_code} — ` : ""}{p.name} (Raw material)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    className="bp-field-input"
-                    placeholder="Qty"
-                    value={line.quantity}
-                    onChange={(e) => updateLine(idx, "quantity", e.target.value)}
-                    disabled={locked}
-                  />
-                </div>
-                <div style={{ width: 50, paddingBottom: 9 }} className="bp-td-muted">
-                  {selectedMaterial?.uom || ""}
-                </div>
-                <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1 || locked}>Remove</button>
+          {lines.map((line, idx) => (
+            <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
+              <div style={{ flex: 2 }}>
+                <ProductPicker
+                  itemKind="raw_material"
+                  value={line.raw_material_product_id}
+                  initialLabel={line.label}
+                  onChange={(id, product) => {
+                    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, raw_material_product_id: id, uom: product?.uom || "" } : l)));
+                  }}
+                  placeholder="Search raw materials by code or name…"
+                  disabled={locked}
+                />
               </div>
-            );
-          })}
+              <div style={{ flex: 1 }}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  className="bp-field-input"
+                  placeholder="Qty"
+                  value={line.quantity}
+                  onChange={(e) => updateLine(idx, "quantity", e.target.value)}
+                  disabled={locked}
+                />
+              </div>
+              <div style={{ width: 50, paddingBottom: 9 }} className="bp-td-muted">
+                {line.uom || ""}
+              </div>
+              <button type="button" className="bp-btn-sm" onClick={() => removeLine(idx)} disabled={lines.length === 1 || locked}>Remove</button>
+            </div>
+          ))}
           <button type="button" className="bp-btn-sm" onClick={addLine} style={{ alignSelf: "flex-start" }} disabled={locked}>+ Add line</button>
 
           <div className="bp-form-actions">

@@ -4,6 +4,7 @@ import { productionApi, machinesApi, locationsApi, productsApi, bomsApi, costPar
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
+import ProductPicker from "../../components/ProductPicker";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
@@ -26,7 +27,6 @@ function factoryOnly(locations) {
 // mirroring how a purchase order only touches stock on 'received'.
 export default function ProductionRunsList() {
   const urlSearch = useUrlSearch();
-  const [products, setProducts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [machines, setMachines] = useState([]);
   const [runs, setRuns] = useState([]);
@@ -41,7 +41,6 @@ export default function ProductionRunsList() {
   const [viewRun, setViewRun] = useState(null);
 
   useEffect(() => {
-    productsApi.list({ limit: 500 }).then((d) => setProducts(d.items || [])).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
     machinesApi.list({}).then((d) => setMachines(d.items || [])).catch(() => {});
   }, []);
@@ -196,7 +195,7 @@ export default function ProductionRunsList() {
       <Pagination page={page} limit={LIMIT} total={total} onPageChange={setPage} />
 
       {showAdd && (
-        <NewRunModal products={products} locations={locations} machines={machines} onClose={() => setShowAdd(false)} onDone={onSaved} />
+        <NewRunModal locations={locations} machines={machines} onClose={() => setShowAdd(false)} onDone={onSaved} />
       )}
       {viewRun && (
         <RunDetailModal runId={viewRun.run_id} onClose={() => setViewRun(null)} onChanged={load} />
@@ -210,10 +209,11 @@ const NEW_RUN_STEPS = ["Setup", "Details", "Review"];
 // 3-step wizard: Setup (machine/date/product/planned qty) -> Details
 // (BOM/workers/notes, now that the product is known) -> Review
 // (everything read-only) before actually creating the run.
-function NewRunModal({ products, locations, machines, onClose, onDone }) {
+function NewRunModal({ locations, machines, onClose, onDone }) {
   const factoryLocations = factoryOnly(locations);
   const [step, setStep] = useState(0);
   const [productId, setProductId] = useState("");
+  const [productLabel, setProductLabel] = useState("");
   const [locationId, setLocationId] = useState(factoryLocations[0]?.location_id || "");
   const defaultOven = machines.find((m) => /oven/i.test(m.name));
   const [machineId, setMachineId] = useState(defaultOven?.machine_id || "");
@@ -225,13 +225,12 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
   const [notes, setNotes] = useState("");
   // Only used when no BOM is picked — a run must consume raw material
   // one way or the other, never neither.
-  const [rawMaterialLines, setRawMaterialLines] = useState([{ raw_material_product_id: "", quantity: "" }]);
+  const [rawMaterialLines, setRawMaterialLines] = useState([{ raw_material_product_id: "", quantity: "", label: "", uom: "" }]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const rawMaterials = products.filter((p) => p.item_kind === "raw_material");
 
   function addMaterialLine() {
-    setRawMaterialLines((prev) => [...prev, { raw_material_product_id: "", quantity: "" }]);
+    setRawMaterialLines((prev) => [...prev, { raw_material_product_id: "", quantity: "", label: "", uom: "" }]);
   }
   function removeMaterialLine(idx) {
     setRawMaterialLines((prev) => prev.filter((_, i) => i !== idx));
@@ -312,7 +311,6 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
     }
   }
 
-  const selectedProduct = products.find((p) => p.product_id === productId);
   const selectedMachine = machines.find((m) => m.machine_id === machineId);
   const selectedBom = boms.find((b) => b.bom_id === bomId);
 
@@ -352,10 +350,15 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
             <div className="bp-form-row">
               <div style={{ flex: 1 }}>
                 <label className="bp-field-label" htmlFor="runProduct">Product</label>
-                <select id="runProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required>
-                  <option value="">Select product…</option>
-                  {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
-                </select>
+                <ProductPicker
+                  id="runProduct"
+                  itemKind="finished_good"
+                  value={productId}
+                  initialLabel={productLabel}
+                  onChange={(id, product) => { setProductId(id); setProductLabel(product ? (product.product_code ? `${product.product_code} — ${product.name}` : product.name) : ""); }}
+                  placeholder="Search finished goods by code or name…"
+                  required
+                />
               </div>
               <div style={{ flex: 1 }}>
                 <label className="bp-field-label" htmlFor="runQty">Planned quantity</label>
@@ -408,14 +411,20 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
                 {rawMaterialLines.map((line, idx) => (
                   <div key={idx} className="bp-form-row" style={{ marginBottom: 6, alignItems: "flex-end" }}>
                     <div style={{ flex: 2 }}>
-                      <select
-                        className="bp-field-input"
+                      <ProductPicker
+                        itemKind="raw_material"
                         value={line.raw_material_product_id}
-                        onChange={(e) => updateMaterialLine(idx, "raw_material_product_id", e.target.value)}
-                      >
-                        <option value="">Select raw material…</option>
-                        {rawMaterials.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
-                      </select>
+                        initialLabel={line.label}
+                        onChange={(id, product) => {
+                          setRawMaterialLines((prev) => prev.map((l, i) => (i === idx ? {
+                            ...l,
+                            raw_material_product_id: id,
+                            label: product ? (product.product_code ? `${product.product_code} — ${product.name}` : product.name) : "",
+                            uom: product?.uom || "",
+                          } : l)));
+                        }}
+                        placeholder="Search raw materials by code or name…"
+                      />
                     </div>
                     <div style={{ flex: 1 }}>
                       <input
@@ -440,7 +449,7 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
           <>
             <label className="bp-field-label">Review</label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px 20px", marginBottom: 14 }}>
-              <div><span className="bp-td-muted">Product</span><br /><strong>{selectedProduct?.name || "—"}</strong></div>
+              <div><span className="bp-td-muted">Product</span><br /><strong>{productLabel || "—"}</strong></div>
               <div><span className="bp-td-muted">Planned quantity</span><br /><strong>{quantity || "—"}</strong></div>
               <div><span className="bp-td-muted">Location</span><br />{factoryLocations.find((l) => l.location_id === locationId)?.name || "—"}</div>
               <div><span className="bp-td-muted">Machine</span><br />{selectedMachine?.name || "— None —"}</div>
@@ -455,15 +464,12 @@ function NewRunModal({ products, locations, machines, onClose, onDone }) {
                   <table className="bp-table">
                     <thead><tr><th>Raw material</th><th>Qty</th></tr></thead>
                     <tbody>
-                      {rawMaterialLines.filter((l) => l.raw_material_product_id && Number(l.quantity) > 0).map((l, idx) => {
-                        const p = rawMaterials.find((rm) => rm.product_id === l.raw_material_product_id);
-                        return (
-                          <tr key={idx}>
-                            <td className="bp-td-strong">{p?.name || "—"}</td>
-                            <td className="bp-td-muted">{l.quantity} {p?.uom}</td>
-                          </tr>
-                        );
-                      })}
+                      {rawMaterialLines.filter((l) => l.raw_material_product_id && Number(l.quantity) > 0).map((l, idx) => (
+                        <tr key={idx}>
+                          <td className="bp-td-strong">{l.label || "—"}</td>
+                          <td className="bp-td-muted">{l.quantity} {l.uom}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

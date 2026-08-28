@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
+import ProductPicker from "../../components/ProductPicker";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
@@ -310,10 +311,6 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
       break;
     }
   }
-  const pickableProducts = lockedOwnerId === undefined
-    ? products
-    : products.filter((p) => (p.owning_partner_id || null) === lockedOwnerId);
-
   function removeRow(idx) {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -467,14 +464,14 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
           return (
             <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
               <div style={{ flex: 2 }}>
-                <select className="bp-field-input" value={it.product_id} onChange={(e) => updateItem(idx, "product_id", e.target.value)}>
-                  <option value="">Select product…</option>
-                  {pickableProducts.map((p) => (
-                    <option key={p.product_id} value={p.product_id}>
-                      {p.product_code ? `${p.product_code} — ${p.name}` : p.name}
-                    </option>
-                  ))}
-                </select>
+                <ProductPicker
+                  itemKind="finished_good"
+                  ownerId={lockedOwnerId || undefined}
+                  value={it.product_id}
+                  initialLabel={selectedProduct ? (selectedProduct.product_code ? `${selectedProduct.product_code} — ${selectedProduct.name}` : selectedProduct.name) : ""}
+                  onChange={(id) => updateItem(idx, "product_id", id)}
+                  placeholder="Search products by code or name…"
+                />
               </div>
               <div style={{ flex: 1 }}>
                 <input

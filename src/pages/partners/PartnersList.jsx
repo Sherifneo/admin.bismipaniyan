@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { partnersApi, productsApi, locationsApi, inventoryApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
+import ProductPicker from "../../components/ProductPicker";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import StatusBadge from "../../components/StatusBadge";
@@ -450,7 +451,7 @@ function AddPartnerProductForm({ partner, onClose, onDone }) {
 }
 
 function ReceiveStockForm({ partner, refreshKey, onClose, onDone }) {
-  const [products, setProducts] = useState([]);
+  const [hasProducts, setHasProducts] = useState(true);
   const [productId, setProductId] = useState("");
   const [locations, setLocations] = useState([]);
   const [locationId, setLocationId] = useState("");
@@ -461,7 +462,7 @@ function ReceiveStockForm({ partner, refreshKey, onClose, onDone }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    productsApi.list({ ownerId: partner.partner_id, limit: 200 }).then((d) => setProducts(d.items || [])).catch(() => {});
+    productsApi.list({ ownerId: partner.partner_id, limit: 1 }).then((d) => setHasProducts((d.items || []).length > 0)).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
@@ -490,16 +491,20 @@ function ReceiveStockForm({ partner, refreshKey, onClose, onDone }) {
     <Modal title={`Receive stock — ${partner.name}`} onClose={onClose}>
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
-        {products.length === 0 && (
+        {!hasProducts && (
           <p className="bp-td-muted" style={{ fontSize: 12 }}>
             This partner has no products yet — add one from Products first, with this partner set as the owning partner.
           </p>
         )}
         <label className="bp-field-label" htmlFor="rsProduct">Product</label>
-        <select id="rsProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required autoFocus>
-          <option value="">Select product…</option>
-          {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
-        </select>
+        <ProductPicker
+          id="rsProduct"
+          ownerId={partner.partner_id}
+          value={productId}
+          onChange={(id) => setProductId(id)}
+          placeholder="Search by code or name…"
+          required
+        />
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="rsLocation">Location</label>

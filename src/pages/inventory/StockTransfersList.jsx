@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { stockTransfersApi, locationsApi, productsApi } from "../../api/admin";
+import { stockTransfersApi, locationsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
 import ReasonConfirmModal from "../../components/ReasonConfirmModal";
+import ProductPicker from "../../components/ProductPicker";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { formatDate, formatDateTime } from "../../utils/date";
 
@@ -18,7 +19,6 @@ export default function StockTransfersList() {
   const { hasPermission } = useAuth();
   const [transfers, setTransfers] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -41,7 +41,6 @@ export default function StockTransfersList() {
   useEffect(() => {
     load();
     locationsApi.list().then(setLocations).catch(() => {});
-    productsApi.list({}).then((data) => setProducts(data.items || data || [])).catch(() => {});
   }, []);
 
   async function onSaved() {
@@ -164,7 +163,7 @@ export default function StockTransfersList() {
         </table>
       </div>
 
-      {showAdd && <TransferModal locations={locations} products={products} onClose={() => setShowAdd(false)} onDone={onSaved} />}
+      {showAdd && <TransferModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} />}
       {cancelTarget && (
         <ReasonConfirmModal
           title="Cancel stock transfer"
@@ -178,7 +177,7 @@ export default function StockTransfersList() {
   );
 }
 
-function TransferModal({ locations, products, onClose, onDone }) {
+function TransferModal({ locations, onClose, onDone }) {
   const [productId, setProductId] = useState("");
   const [fromLocationId, setFromLocationId] = useState("");
   const [toLocationId, setToLocationId] = useState("");
@@ -227,10 +226,13 @@ function TransferModal({ locations, products, onClose, onDone }) {
         {error && <div className="bp-inline-error">{error}</div>}
 
         <label className="bp-field-label" htmlFor="stProduct">Product</label>
-        <select id="stProduct" className="bp-field-input" value={productId} onChange={(e) => setProductId(e.target.value)} required autoFocus>
-          <option value="">Select a product…</option>
-          {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>)}
-        </select>
+        <ProductPicker
+          id="stProduct"
+          value={productId}
+          onChange={(id) => setProductId(id)}
+          placeholder="Search by code or name…"
+          required
+        />
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
