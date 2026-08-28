@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vb03128be — Widen New Run modal, add Run ID column and Delete action, new Transactions tab for Production Runs — 2026-08-29 00:38 (+03:00)
+
+**Version ID**: `b03128be279f3b5b0bfb9e09c0877541b91097ef` (short: `b03128be`)
+**How to get this version**: `git checkout b03128be279f3b5b0bfb9e09c0877541b91097ef` (read-only) or `git show b03128be279f3b5b0bfb9e09c0877541b91097ef` (view the diff)
+
+**AS-IS (before):** `NewRunModal` had no `size` prop, rendering cramped at the default 420px width with an internal scrollbar — the only one of Production Runs' three modals missing the `size="lg"` bump the other two already had. The table's first column, "Item ID," actually showed the *product's* code, not any identifier belonging to the run itself — there was no run-level ID anywhere in the UI. A planned or cancelled run had no way to be removed from the list. The cost breakdown's material line always displayed the hardcoded string "BOM materials," even for a run that used the no-BOM manual raw-material path.
+**TO-BE (after):** `NewRunModal` now uses `size="lg"`, matching `RunDetailModal`/`CompleteRunModal`. The table gained a new "Run ID" column (`run_number`, e.g. `PROD-000001`) and renamed "Item ID" to "Product Code" so the two are clearly distinct. Planned/cancelled runs get a "Delete" button next to Cancel, opening the existing `ReasonConfirmModal` pattern before calling the new soft-delete backend route. The cost breakdown now renders whatever label the backend actually stored (`l.param_name_snapshot || "Material"`) instead of a hardcoded guess. New read-only "Transactions" tab (reusing Inventory's existing `GET /inventory/transactions` endpoint, scoped to `production_in`+`production_consume`) shows every movement a production run generates in one chronological list, each row traceable to its `PROD-` number — no create/edit/delete/reverse control anywhere on this tab.
+
+---
+
 ## v62b07699 — Widen BOM modal, fix kg quantity display, correct Favorites doc, tune mobile header/PO row — 2026-08-29 00:00 (+03:00)
 
 **Version ID**: `62b076997b0ca4f068bddbb95b2b6a39a9904280` (short: `62b07699`)
