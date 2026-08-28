@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v134777fc — Redesign PO line-item row, add History buttons, wire cancel confirmations, surface unreceived partner stock — 2026-08-28 22:12 (+03:00)
+
+**Version ID**: `134777fcbae8620f92a88523b2cb97a28568b5f5` (short: `134777fc`)
+**How to get this version**: `git checkout 134777fcbae8620f92a88523b2cb97a28568b5f5` (read-only) or `git show 134777fcbae8620f92a88523b2cb97a28568b5f5` (view the diff)
+
+**AS-IS (before):** `NewPoModal`'s line-item row (`PurchaseOrdersList.jsx`) showed only a product name (no code/Item ID) and a bare unlabeled 50px UOM div squeezed against two unsized action buttons inside a non-`size="lg"` modal — visually crowded/overlapping on a normal window. Products and Employees had no way to see who changed a price/name/salary/position and when — no history route or UI existed anywhere. Cancel on Production Runs, Purchase Orders, and Sales Orders fired the status change immediately with zero confirmation; Stock Transfers had a weaker native `window.confirm` with no reason captured. A supplying partner's newly-added product (via "+ Add product") was completely invisible in the Stock tab until stock was separately received, because that list's query was an inner join anchored on `inventory_movements` — a product with zero movement rows never appeared at all, with no indication why.
+**TO-BE (after):** PO line rows now show `CODE — Name` in the product picker, a labeled UOM column, wrap onto a second line instead of crowding (`flex-wrap` + sized action buttons), and the modal is `size="lg"`. Products and Employees gained a "History" button (new shared `EntityHistoryModal`) showing field/old value/new value/actor/timestamp, backed by new backend logging on both `PUT` routes into the existing generic `admin_audit_log` table (same shape already used for System Users' employee-link log) and new `GET /:id/history` routes. Cancelling a Production Run/Purchase Order/Sales Order/Stock Transfer now opens `ReasonConfirmModal`, requiring a typed reason before the backend accepts the cancellation (each backend route now 400s a cancel with no reason, and logs the accepted reason to `admin_audit_log`). Partner Stock tab's backend query now `LEFT JOIN`s `inventory_movements` when scoped to a partner, so a not-yet-received product shows as a 0-qty row with an inline "Receive stock" nudge instead of being hidden entirely. Also fixed a real bug found while touching this code: `products.js`'s `PUT /:id` used `cost_price ?? null` / `selling_price ?? null` instead of `COALESCE`, so omitting either field (e.g. a Change-Management-locked field the frontend deliberately excludes from the payload) silently wrote `NULL` over the existing price — now `COALESCE`'d like every other field on that statement.
+
+---
+
 ## v405d4544 — Add PO price/payment-account UI, System Users, sidebar Favorites, percent overhead — 2026-08-28 19:59 (+03:00)
 
 **Version ID**: `405d4544611a9919989ff3a261e360188cb72c1f` (short: `405d4544`)
