@@ -269,9 +269,15 @@
     display: none;
   }
 
-  .bp-header-refresh-btn {
+  .bp-header-refresh-btn,
+  .bp-header-theme-btn,
+  .bp-header-favorites-btn {
     width: 28px;
     height: 28px;
+  }
+
+  .bp-header-favorites-menu {
+    width: 220px;
   }
 
   .bp-header-userinfo {

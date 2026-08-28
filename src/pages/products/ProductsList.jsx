@@ -878,7 +878,7 @@ function BomModal({ bomSummary, onClose, onDone }) {
   }
 
   return (
-    <Modal title={isEdit ? `Edit BOM — ${bomSummary.bom_name}` : "Add BOM"} onClose={onClose}>
+    <Modal title={isEdit ? `Edit BOM — ${bomSummary.bom_name}` : "Add BOM"} onClose={onClose} size="lg">
       {loading ? (
         <div>Loading…</div>
       ) : (

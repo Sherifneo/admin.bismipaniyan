@@ -192,7 +192,7 @@ export default function InventoryTransactionsList() {
                       </span>
                     </td>
                   )}
-                  {table.isColumnVisible("qty_delta") && <td className="bp-td-strong">{formatQty(r.qty_delta)}</td>}
+                  {table.isColumnVisible("qty_delta") && <td className="bp-td-strong">{formatQty(r.qty_delta, r.uom)}</td>}
                   {table.isColumnVisible("partner_name") && <td className="bp-td-muted">{r.partner_name || "—"}</td>}
                   {table.isColumnVisible("note") && <td className="bp-td-muted">{r.note || "—"}</td>}
                   {table.isColumnVisible("recorded_by_name") && <td className="bp-td-muted">{r.recorded_by_name || "—"}</td>}
