@@ -69,17 +69,52 @@ export default function ReportsPage() {
   );
 }
 
+// ---- Financial Year helpers ---------------------------------------------
+// Bismi's FY runs April 1 - March 31 (Indian standard). These are plain
+// date-range helpers, not a stored concept anywhere in the backend — the
+// Month/Financial Year pickers below are just faster ways to set From/To;
+// the report itself always runs on a plain from/to range, same as before.
+function pad2(n) { return String(n).padStart(2, "0"); }
+function ymd(y, m, d) { return `${y}-${pad2(m)}-${pad2(d)}`; }
+function lastDayOfMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+
+// FY "2026" means 01-Apr-2026 to 31-Mar-2027.
+function fyRange(fyStartYear) {
+  return { from: ymd(fyStartYear, 4, 1), to: ymd(fyStartYear + 1, 3, 31) };
+}
+// Which FY a given date falls in (returns the FY's start calendar year).
+function fyStartYearFor(dateStr) {
+  const [y, m] = dateStr.split("-").map(Number);
+  return m >= 4 ? y : y - 1;
+}
+function monthRange(year, month) {
+  return { from: ymd(year, month, 1), to: ymd(year, month, lastDayOfMonth(year, month)) };
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 // ---- Profit & Loss -----------------------------------------------------
 // Cash-basis management report — a plain indented statement, not a
 // DataTable row list, matching the owner's requested layout.
 function ProfitLossTab() {
   const today = new Date().toISOString().slice(0, 10);
+  const [todayY, todayM] = today.split("-").map(Number);
   const monthStart = today.slice(0, 8) + "01";
   const [from, setFrom] = useState(monthStart);
   const [to, setTo] = useState(today);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Month/Year picker state — separate from from/to, but every change here
+  // just overwrites from/to (a shortcut, not a second filtering mode).
+  const [pickerMonth, setPickerMonth] = useState(todayM);
+  const [pickerYear, setPickerYear] = useState(todayY);
+  const currentFyStartYear = fyStartYearFor(today);
+  const [fyYear, setFyYear] = useState(currentFyStartYear);
+
+  const [ytd, setYtd] = useState(null);
+  const [ytdLoading, setYtdLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -91,16 +126,83 @@ function ProfitLossTab() {
       .finally(() => setLoading(false));
   }, [from, to]);
 
+  // YTD = FY-start-to-today, computed off the CURRENT date always (not the
+  // selected from/to range) — a fixed reference point shown alongside
+  // whatever period is selected above, so "how's the year doing" and "how's
+  // this period doing" can be compared side by side.
+  useEffect(() => {
+    setYtdLoading(true);
+    reportsApi
+      .profitLoss({ from: ymd(currentFyStartYear, 4, 1), to: today })
+      .then(setYtd)
+      .catch(() => setYtd(null))
+      .finally(() => setYtdLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function applyMonth(month, year) {
+    setPickerMonth(month);
+    setPickerYear(year);
+    const r = monthRange(year, month);
+    setFrom(r.from);
+    setTo(r.to);
+  }
+  function applyFy(fyStart) {
+    setFyYear(fyStart);
+    const r = fyRange(fyStart);
+    setFrom(r.from);
+    setTo(r.to);
+  }
+
   return (
     <div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
-        <input type="date" className="bp-field-input" style={{ width: "auto" }} value={from} onChange={(e) => setFrom(e.target.value)} />
-        <span className="bp-td-muted">to</span>
-        <input type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => setTo(e.target.value)} />
+      <div style={{ display: "flex", gap: 18, alignItems: "flex-end", marginBottom: 10, flexWrap: "wrap" }}>
+        <div>
+          <div className="bp-td-muted" style={{ fontSize: 11, marginBottom: 3 }}>Custom range</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="date" className="bp-field-input" style={{ width: "auto" }} value={from} onChange={(e) => setFrom(e.target.value)} />
+            <span className="bp-td-muted">to</span>
+            <input type="date" className="bp-field-input" style={{ width: "auto" }} value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <div className="bp-td-muted" style={{ fontSize: 11, marginBottom: 3 }}>Month</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <select className="bp-field-input" style={{ width: "auto" }} value={pickerMonth} onChange={(e) => applyMonth(Number(e.target.value), pickerYear)}>
+              {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+            </select>
+            <select className="bp-field-input" style={{ width: "auto" }} value={pickerYear} onChange={(e) => applyMonth(pickerMonth, Number(e.target.value))}>
+              {[todayY - 2, todayY - 1, todayY, todayY + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+        <div>
+          <div className="bp-td-muted" style={{ fontSize: 11, marginBottom: 3 }}>Financial Year</div>
+          <select className="bp-field-input" style={{ width: "auto" }} value={fyYear} onChange={(e) => applyFy(Number(e.target.value))}>
+            {[currentFyStartYear - 2, currentFyStartYear - 1, currentFyStartYear, currentFyStartYear + 1].map((y) => (
+              <option key={y} value={y}>FY {y}–{String(y + 1).slice(2)} (Apr {y} – Mar {y + 1})</option>
+            ))}
+          </select>
+        </div>
       </div>
       <p className="bp-td-muted" style={{ fontSize: 12, margin: "0 0 16px" }}>
         Management P&L based on posted financial transactions and cash recognition dates — not a statutory/accrual statement.
       </p>
+
+      {!ytdLoading && ytd && (
+        <div className="bp-kpi-grid" style={{ marginBottom: 18, maxWidth: 520 }}>
+          <div className="bp-kpi-card">
+            <div className="bp-kpi-label">Year to Date (FY {currentFyStartYear}, Apr {currentFyStartYear} – today)</div>
+            <div className="bp-kpi-value">{inr(ytd.net_profit)}</div>
+          </div>
+          {data && (
+            <div className="bp-kpi-card">
+              <div className="bp-kpi-label">Selected period</div>
+              <div className="bp-kpi-value">{inr(data.net_profit)}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <div className="bp-inline-error">{error}</div>}
       {loading ? (
