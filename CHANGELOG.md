@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v405d4544 — Add PO price/payment-account UI, System Users, sidebar Favorites, percent overhead — 2026-08-28 19:59 (+03:00)
+
+**Version ID**: `405d4544611a9919989ff3a261e360188cb72c1f` (short: `405d4544`)
+**How to get this version**: `git checkout 405d4544611a9919989ff3a261e360188cb72c1f` (read-only) or `git show 405d4544611a9919989ff3a261e360188cb72c1f` (view the diff)
+
+**AS-IS (before):** Purchase Order line items required Unit Cost typed by hand with no auto-fill or "last price" lookup, and no UOM shown; "Mark as paid" silently used the default Financial Account with no picker. Team was the module name throughout (route `/team`, files, API path), had no way to remove an account (only Suspend), and an employee-link change was just one plain field inside the general Edit form with no confirmation or audit trail. The sidebar's submodule flyout opened at a hardcoded fixed vertical offset regardless of which module row was clicked, misaligning for anything below the first module or two; module-level Pin was the only saved-shortcut mechanism, with no per-submodule favoriting at all. Cost Parameters' Basis was limited to flat or per-hour; Production Runs required completing 3 sequenced stages (Mixing→Baking→Packing, each needing a worker and hours) before a run could be completed at all, with labour cost computed only from that stage data.
+**TO-BE (after):** PO line items auto-fill Unit Cost from the selected product's `cost_price`, show UOM, and offer a "Last PO Price" button (new `GET /purchase-orders/last-price` endpoint); paying a PO now opens a modal requiring a Financial Account (backend `POST /:id/pay` rejects a missing one), while PO creation/receipt still post nothing to Cash Book — payment remains the single financial posting point. Team is renamed to System User end to end (`/api/admin/system-users`, `SystemUsersList.jsx`); an owner-only "Remove User" action soft-deletes (`status='removed'`) into a new "Delete User" tab, and changing a linked employee is now its own action with a one-step confirmation, logged to `admin_audit_log` (visible in Activity Log). The sidebar flyout now opens level with whichever module row was actually clicked; Pin is removed entirely and replaced with a submodule-level Favorite (a star toggle inside each flyout, surfaced as a cross-module list in a new header ★ dropdown next to the theme toggle). Cost Parameters gained a "% of production cost" basis (Rate becomes a percentage, no Unit/quantity). Production Runs' entire stage-completion gate is removed — a run completes immediately with just Actual Quantity + whichever Cost Parameters apply, labour now just an ordinary optional checklist entry; overhead computes in two passes per an explicit formula (Base Production Cost = material + labour + non-percentage overhead; Percentage Overhead = Base × Rate%; Total = Base + Percentage Overhead), with percentage lines never chained against each other or themselves.
+
+---
+
 ## v503fe0d2 — Show system-only badge and hide edit controls for reserved Cash Book categories — 2026-08-28 18:31 (+03:00)
 
 **Version ID**: `503fe0d20409939fe12edc563c1951e62b9e6a60` (short: `503fe0d2`)
