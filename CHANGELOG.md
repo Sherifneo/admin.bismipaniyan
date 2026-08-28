@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v62d06e8b — Add Month/Financial Year filters and YTD comparison to P&L tab — 2026-08-28 15:44 (+03:00)
+
+**Version ID**: `62d06e8b8f102feb3db5429c02be36160c48ba63` (short: `62d06e8b`)
+**How to get this version**: `git checkout 62d06e8b8f102feb3db5429c02be36160c48ba63` (read-only) or `git show 62d06e8b8f102feb3db5429c02be36160c48ba63` (view the diff)
+
+**AS-IS (before):** `ProfitLossTab` in `src/pages/reports/ReportsPage.jsx` had only a plain custom From/To date range — no quick way to jump to a specific month or financial year, and no Year-to-Date figure shown anywhere.
+**TO-BE (after):** Added Month (dropdown + year) and Financial Year (Apr–Mar) quick-pickers next to the existing custom range — both are pure shortcuts that set `from`/`to`, the report itself still runs on a plain date range, no new backend filtering mode. Added a Year-to-Date net profit figure (FY start, always April 1, through today) shown side by side with the currently selected period's own net profit, so "how's the year doing" and "how's this period doing" are visible at a glance. No backend change — reuses the existing `/profit-loss?from&to` endpoint twice (once for YTD, once for the selected range).
+
+---
+
 ## v2fc32e17 — Add Financial Reports tabs (P&L, Financial Position, Cash & Bank, Payables Aging, Inventory & Production) — 2026-08-28 11:22 (+03:00)
 
 **Version ID**: `2fc32e17c05cea22f394fa41b94e3f1c487a21a0` (short: `2fc32e17`)
