@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v62b07699 — Widen BOM modal, fix kg quantity display, correct Favorites doc, tune mobile header/PO row — 2026-08-29 00:00 (+03:00)
+
+**Version ID**: `62b076997b0ca4f068bddbb95b2b6a39a9904280` (short: `62b07699`)
+**How to get this version**: `git checkout 62b076997b0ca4f068bddbb95b2b6a39a9904280` (read-only) or `git show 62b076997b0ca4f068bddbb95b2b6a39a9904280` (view the diff)
+
+**AS-IS (before):** `BomModal`'s `<Modal>` call had no `size` prop, rendering at the default 420px max-width with an internal scrollbar even for a normal-sized recipe form. `InventoryTransactionsList.jsx` called `formatQty(r.qty_delta)` with no `uom` argument, so a fractional kg quantity (e.g. -0.4 kg consumed in a production run) always fell into the whole-number-rounding branch and displayed as "-0" instead of "-0.40 kg" — the backend's `GET /inventory/transactions` route also never selected `p.uom` in the first place, so there was nothing correct to pass even after fixing the call site. `CLAUDE.md` claimed "Favorites removed entirely... back to Pin-only" — stale; the actual shipped feature (from an earlier round) is the reverse: Favorites replaced Pin, and Pin no longer exists in the code at all. On a phone-width screen, the header's theme-toggle and Favorites buttons had no shrink rule at the existing 860px breakpoint (unlike the refresh button, which already did), and the Purchase Order line-item row's `flex-wrap` had no actual mobile-width tuning, producing an awkward ragged multi-line wrap with buttons sometimes orphaned alone.
+**TO-BE (after):** `BomModal` now passes `size="lg"`, matching `RunDetailModal`/`CompleteRunModal`'s existing pattern. `InventoryTransactionsList.jsx` now calls `formatQty(r.qty_delta, r.uom)`, and the backend query includes `p.uom` — kg quantities now display correctly to 2 decimal places. `CLAUDE.md`'s Favorites section now accurately describes the live header ★ dropdown + per-submodule star toggle, backed by `sidebarState.js`. Header's theme and Favorites buttons now shrink to 28×28px at the 860px breakpoint alongside the refresh button, and the Favorites dropdown narrows to 220px. `.bp-po-line-row` gets a dedicated `max-width: 560px` rule that stacks every field to full width in a clean single column instead of relying on bare `flex-wrap`.
+
+---
+
 ## v7ed0e972 — Hide selling price for raw materials, add PO GRN/Payment Receipt buttons, show percent rate in cost preview, unify duplicate search boxes — 2026-08-28 23:27 (+03:00)
 
 **Version ID**: `7ed0e9720c736b77749e71c5193476d658ebc081` (short: `7ed0e972`)
