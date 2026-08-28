@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v503fe0d2 — Show system-only badge and hide edit controls for reserved Cash Book categories — 2026-08-28 18:31 (+03:00)
+
+**Version ID**: `503fe0d20409939fe12edc563c1951e62b9e6a60` (short: `503fe0d2`)
+**How to get this version**: `git checkout 503fe0d20409939fe12edc563c1951e62b9e6a60` (read-only) or `git show 503fe0d20409939fe12edc563c1951e62b9e6a60` (view the diff)
+
+**AS-IS (before):** The Cash Book Categories tab (`CashBookList.jsx`'s `CategoriesTab`) fetched categories with no `includeSystemOnly` param, showed no status column, and offered Rename/Delete on every row — including the 6 categories (Salaries, Raw materials, Partner/shop payout, Partner settlement received, Bulk order, Store sales) that the paired backend commit now reserves for automatic posting only. A manual Cash Book entry could also pick any of those 6 categories, creating an entry with zero link back to the real employee/purchase-order/partner/sale record — completely bypassing that flow's own duplicate-payment protection (e.g. Salary Payments' one-payment-per-employee-per-period guard).
+**TO-BE (after):** Categories tab now fetches with `includeSystemOnly=true` and shows a new Status column with a "System — Automatic" badge for the 6 reserved categories; Rename/Delete are hidden for those rows (the backend rejects both anyway, this just avoids offering a control that would only 400). The Add Entry modal's dropdown needs no change — the backend's new default (`GET /cashbook-categories` without `includeSystemOnly`) now excludes these 6 categories automatically, so they simply stop appearing as selectable options. Paired with a backend commit adding a real `is_system_only` column and three-step server-side validation (exists → matches entry type → not system-only) on the manual entry route itself, so the fix holds even against a direct API call, not just the UI.
+
+---
+
 ## v62d06e8b — Add Month/Financial Year filters and YTD comparison to P&L tab — 2026-08-28 15:44 (+03:00)
 
 **Version ID**: `62d06e8b8f102feb3db5429c02be36160c48ba63` (short: `62d06e8b`)
