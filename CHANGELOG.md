@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v90026760 — Replace every product-selecting dropdown with a shared searchable ProductPicker — 2026-08-28 22:48 (+03:00)
+
+**Version ID**: `90026760dc5d880a7dd90f9c5ce1d90b2707d065` (short: `90026760`)
+**How to get this version**: `git checkout 90026760dc5d880a7dd90f9c5ce1d90b2707d065` (read-only) or `git show 90026760dc5d880a7dd90f9c5ce1d90b2707d065` (view the diff)
+
+**AS-IS (before):** Every product-selecting dropdown in the app besides the Purchase Order line-item picker (already fixed in the prior commit) was a plain native `<select>` — BOM's "finished good" picker showed bare names with no product code and no search; Sales Orders, Production Runs (both its Product picker and raw-material line picker), Stock Transfers, and Partners' "+ Receive stock" form each had their own inconsistent level of polish, several missing the product code entirely, none searchable. Production Runs' "Product" picker had **no kind filter at all**, so a raw material could technically be selected as what a run produces. `InventoryList.jsx`'s "Record Movement" modal already had a real debounced search-as-you-type combobox, but it was local JSX/state specific to that one screen — not reusable.
+**TO-BE (after):** New shared `src/components/ProductPicker.jsx`, generalized from that Inventory combobox — a debounced (250ms) search box calling `productsApi.list({ q, itemKind, ownerId, limit: 10 })`, rendering `CODE — Name (uom)` results in a click-to-pick dropdown, with click-outside/Escape to close. Swapped into every picker: BOM's finished-good picker (`itemKind="finished_good"`) and raw-material line picker (`itemKind="raw_material"`), Sales Orders' line-item picker (`itemKind="finished_good"`, still respecting the existing partner-cart-lock via `ownerId`), Production Runs' Product picker (now correctly `itemKind="finished_good"` — fixes the missing-filter gap) and its raw-material line picker (`itemKind="raw_material"`), Stock Transfers' picker (unfiltered, but now searchable/coded and no longer silently capped by a missing `limit`), and Partners' Receive Stock picker (`ownerId={partner.partner_id}`, now shows code + is searchable instead of name-only). Each screen's now-redundant bulk `productsApi.list({ limit: 500 })` fetch and client-side `item_kind` filtering were removed in favor of the picker's own server-filtered search.
+
+---
+
 ## v134777fc — Redesign PO line-item row, add History buttons, wire cancel confirmations, surface unreceived partner stock — 2026-08-28 22:12 (+03:00)
 
 **Version ID**: `134777fcbae8620f92a88523b2cb97a28568b5f5` (short: `134777fc`)
