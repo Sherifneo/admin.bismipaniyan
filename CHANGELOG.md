@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v7ed0e972 — Hide selling price for raw materials, add PO GRN/Payment Receipt buttons, show percent rate in cost preview, unify duplicate search boxes — 2026-08-28 23:27 (+03:00)
+
+**Version ID**: `7ed0e9720c736b77749e71c5193476d658ebc081` (short: `7ed0e972`)
+**How to get this version**: `git checkout 7ed0e9720c736b77749e71c5193476d658ebc081` (read-only) or `git show 7ed0e9720c736b77749e71c5193476d658ebc081` (view the diff)
+
+**AS-IS (before):** A raw material's Selling price field was always `disabled` (since raw materials are never sold directly) but rendered identically to a Change-Management-locked field — no visual difference between "not applicable" and "locked," reading as a stuck/broken control. Purchase Orders had no downloadable documents. Production Run's Complete-run checklist showed a bare `—` in the rate column for a percent-of-cost parameter instead of its actual rate. Inventory, Partners, Products, Vendors, and Customers each rendered two separate, redundant search UIs stacked on top of each other — a big `SearchBox` (text + Search button) and a small `SearchByBar` (column-picker dropdown) — both filtering the same data independently.
+**TO-BE (after):** `ProductModal` now fully hides (not just disables) the Selling price and Selling % fields whenever Kind is Raw material — finished goods are unaffected. `PurchaseOrdersList.jsx`'s `PoDetailModal` gained "Download GRN" (visible once received) and "Download Payment Receipt" (visible once paid) buttons, both non-blocking — paying never requires downloading the GRN first. `ProductionRunsList.jsx`'s checklist now shows the parameter's actual percentage (e.g. "30%") in that row's rate column. New shared `components/LiveSearchBox.jsx` (debounced, shows a small dropdown of live matches, click a result to open that record, Enter runs the existing table search, Escape/click-outside closes) replaces the `SearchBox`+`SearchByBar` pairing on exactly those 5 pages — every other page still using `SearchByBar` alone is untouched.
+
+---
+
 ## v90026760 — Replace every product-selecting dropdown with a shared searchable ProductPicker — 2026-08-28 22:48 (+03:00)
 
 **Version ID**: `90026760dc5d880a7dd90f9c5ce1d90b2707d065` (short: `90026760`)
