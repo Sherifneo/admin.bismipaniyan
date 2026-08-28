@@ -8,9 +8,9 @@ import Modal from "../../components/Modal";
 import EntityHistoryModal from "../../components/EntityHistoryModal";
 import ProductPicker from "../../components/ProductPicker";
 import Pagination from "../../components/Pagination";
-import SearchBox from "../../components/SearchBox";
+import LiveSearchBox from "../../components/LiveSearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
+import { useDataTable, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDateTime } from "../../utils/date";
 
@@ -88,16 +88,6 @@ export default function ProductsList() {
   function submitSearch(value) {
     setPage(1);
     setQField("");
-    setQ(value);
-  }
-
-  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
-  // instead of only filtering whatever page of rows is already loaded —
-  // fixes results on page 2/3+ being invisible to the old client-only
-  // column search.
-  function searchByColumn(columnKey, value) {
-    setPage(1);
-    setQField(columnKey);
     setQ(value);
   }
 
@@ -189,11 +179,16 @@ export default function ProductsList() {
         </select>
       </div>
 
-      <SearchBox placeholder="Search by name or SKU…" onSearch={submitSearch} initialValue={urlSearch.q} />
+      <LiveSearchBox
+        placeholder="Search by code, name, or SKU…"
+        initialValue={urlSearch.q}
+        onSearch={submitSearch}
+        fetchSuggestions={(term) => productsApi.list({ page: 1, limit: 8, itemKind, q: term, includeInactive: true }).then((d) => d.items || [])}
+        renderSuggestion={(p) => `${p.product_code ? `${p.product_code} — ` : ""}${p.name}`}
+        onSelect={(p) => setEditProduct(p)}
+      />
 
       {error && <div className="bp-inline-error">{error}</div>}
-
-      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">
@@ -458,31 +453,37 @@ function ProductModal({ product, onClose, onDone }) {
             <label className="bp-field-label" htmlFor="pCost">Cost price / Purchase price (₹)</label>
             <input id="pCost" type="number" min="0" step="0.01" className="bp-field-input" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required disabled={isEdit && locks.cost_price} />
           </div>
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
-            <input
-              id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice}
-              onChange={(e) => applySellingPrice(e.target.value)}
-              required={!isRawMaterial}
-              disabled={isRawMaterial || (isEdit && locks.selling_price)}
-            />
-          </div>
+          {!isRawMaterial && (
+            <div style={{ flex: 1 }}>
+              <label className="bp-field-label" htmlFor="pSelling">Selling price (₹)</label>
+              <input
+                id="pSelling" type="number" min="0" step="0.01" className="bp-field-input" value={sellingPrice}
+                onChange={(e) => applySellingPrice(e.target.value)}
+                required
+                disabled={isEdit && locks.selling_price}
+              />
+            </div>
+          )}
         </div>
 
-        <div className="bp-form-row">
-          <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pMarkup">Selling %</label>
-            <input
-              id="pMarkup" type="number" step="0.01" className="bp-field-input" placeholder="e.g. 45"
-              value={markupPercent} onChange={(e) => applyMarkup(e.target.value)}
-              disabled={isRawMaterial || (isEdit && locks.selling_price) || costPrice === ""}
-            />
-          </div>
-          <div style={{ flex: 1 }} />
-        </div>
-        <p className="bp-td-muted" style={{ fontSize: 11.5, marginTop: -6 }}>
-          Selling % and Selling price stay in sync both ways — change either one and the other updates automatically. This field is optional; you can just type Selling price directly.
-        </p>
+        {!isRawMaterial && (
+          <>
+            <div className="bp-form-row">
+              <div style={{ flex: 1 }}>
+                <label className="bp-field-label" htmlFor="pMarkup">Selling %</label>
+                <input
+                  id="pMarkup" type="number" step="0.01" className="bp-field-input" placeholder="e.g. 45"
+                  value={markupPercent} onChange={(e) => applyMarkup(e.target.value)}
+                  disabled={(isEdit && locks.selling_price) || costPrice === ""}
+                />
+              </div>
+              <div style={{ flex: 1 }} />
+            </div>
+            <p className="bp-td-muted" style={{ fontSize: 11.5, marginTop: -6 }}>
+              Selling % and Selling price stay in sync both ways — change either one and the other updates automatically. This field is optional; you can just type Selling price directly.
+            </p>
+          </>
+        )}
 
         <label className="bp-field-label" htmlFor="pLowStock">Low stock alert threshold</label>
         <input id="pLowStock" type="number" min="0" step="0.01" className="bp-field-input" value={lowStockAlert} onChange={(e) => setLowStockAlert(e.target.value)} disabled={isEdit && locks.low_stock_alert} />

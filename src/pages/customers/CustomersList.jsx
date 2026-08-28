@@ -3,9 +3,9 @@ import { customersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
-import SearchBox from "../../components/SearchBox";
+import LiveSearchBox from "../../components/LiveSearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
+import { useDataTable, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDateTime } from "../../utils/date";
 
@@ -85,7 +85,14 @@ export default function CustomersList() {
         Repeat and bulk buyers — used on Sales Orders. A one-off walk-in sale doesn't need a saved customer.
       </p>
 
-      <SearchBox placeholder="Search by name or phone…" onSearch={setQ} initialValue={urlSearch.q} />
+      <LiveSearchBox
+        placeholder="Search by code, name, or phone…"
+        initialValue={urlSearch.q}
+        onSearch={setQ}
+        fetchSuggestions={(term) => customersApi.list({ q: term, includeInactive: true }).then((d) => (d.items || []).slice(0, 8))}
+        renderSuggestion={(c) => `${c.customer_code ? `${c.customer_code} — ` : ""}${c.name}${c.phone ? ` (${c.phone})` : ""}`}
+        onSelect={(c) => setEditCustomer(c)}
+      />
 
       {error && <div className="bp-inline-error">{error}</div>}
 
@@ -93,7 +100,6 @@ export default function CustomersList() {
         <DataTableToolbar table={table} filename="customers" totalCount={customers.length} />
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

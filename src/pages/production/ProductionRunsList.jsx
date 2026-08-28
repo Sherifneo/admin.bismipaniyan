@@ -776,7 +776,7 @@ function CompleteRunModal({ runId, run, onClose, onDone }) {
                         <td>{p.name} {p.unit ? <span className="bp-td-muted">({p.unit})</span> : null}</td>
                         <td style={{ width: 100 }}>
                           {isPercentOfCost ? (
-                            <span className="bp-td-muted">—</span>
+                            <span className="bp-td-muted">{p.current_value ?? p.value}%</span>
                           ) : (
                             <input
                               type="number" step="0.0001" className="bp-field-input"

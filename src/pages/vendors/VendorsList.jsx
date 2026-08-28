@@ -3,9 +3,9 @@ import { vendorsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
-import SearchBox from "../../components/SearchBox";
+import LiveSearchBox from "../../components/LiveSearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
-import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
+import { useDataTable, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import { formatDateTime } from "../../utils/date";
 
@@ -74,7 +74,14 @@ export default function VendorsList() {
         Suppliers Bismi buys raw materials from — used on Purchase Orders.
       </p>
 
-      <SearchBox placeholder="Search by name…" onSearch={setQ} initialValue={urlSearch.q} />
+      <LiveSearchBox
+        placeholder="Search by code or name…"
+        initialValue={urlSearch.q}
+        onSearch={setQ}
+        fetchSuggestions={(term) => vendorsApi.list({ q: term }).then((d) => (d.items || []).slice(0, 8))}
+        renderSuggestion={(v) => `${v.vendor_code ? `${v.vendor_code} — ` : ""}${v.name}`}
+        onSelect={(v) => setEditVendor(v)}
+      />
 
       {error && <div className="bp-inline-error">{error}</div>}
 
@@ -82,7 +89,6 @@ export default function VendorsList() {
         <DataTableToolbar table={table} filename="vendors" totalCount={vendors.length} />
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

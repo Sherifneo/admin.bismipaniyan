@@ -6,8 +6,8 @@ import ExportMenu from "../../components/ExportMenu";
 import Pagination from "../../components/Pagination";
 import Modal from "../../components/Modal";
 import ProductPicker from "../../components/ProductPicker";
-import SearchBox from "../../components/SearchBox";
-import { useDataTable, SearchByBar, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
+import LiveSearchBox from "../../components/LiveSearchBox";
+import { useDataTable, ColumnHeader, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { useUrlSearch } from "../../hooks/useUrlSearch";
 import "./Inventory.css";
 
@@ -75,14 +75,6 @@ export default function InventoryList() {
     setQ(value);
   }
 
-  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
-  // instead of only filtering whatever page of rows is already loaded.
-  function searchByColumn(columnKey, value) {
-    setPage(1);
-    setQField(columnKey);
-    setQ(value);
-  }
-
   async function onMovementSaved() {
     setShowMovement(false);
     await load();
@@ -128,14 +120,19 @@ export default function InventoryList() {
         </select>
       </div>
 
-      <SearchBox placeholder="Search by product name or SKU…" onSearch={submitSearch} initialValue={urlSearch.q} />
+      <LiveSearchBox
+        placeholder="Search by product code, name, or SKU…"
+        initialValue={urlSearch.q}
+        onSearch={submitSearch}
+        fetchSuggestions={(term) => inventoryApi.list({ page: 1, limit: 8, locationId, q: term }).then((d) => d.items || [])}
+        renderSuggestion={(r) => `${r.product_code ? `${r.product_code} — ` : ""}${r.name}${r.location_name ? ` (${r.location_name})` : ""}`}
+      />
 
       {error && <div className="bp-inline-error">{error}</div>}
 
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

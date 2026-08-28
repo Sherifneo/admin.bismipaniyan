@@ -116,6 +116,8 @@ export const purchasingApi = {
   update: (id, body) => PUT(`/api/admin/purchase-orders/${id}`, body),
   pay: (id, body) => POST(`/api/admin/purchase-orders/${id}/pay`, body),
   lastPrice: (productId) => GET(`/api/admin/purchase-orders/last-price?${new URLSearchParams({ product_id: productId })}`),
+  downloadGrn: (id) => downloadFile(`/api/admin/purchase-orders/${id}/grn`),
+  downloadPaymentReceipt: (id) => downloadFile(`/api/admin/purchase-orders/${id}/payment-receipt`),
 };
 
 export const salesOrdersApi = {

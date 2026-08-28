@@ -4,8 +4,8 @@ import { partnersApi, productsApi, locationsApi, inventoryApi } from "../../api/
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import ProductPicker from "../../components/ProductPicker";
+import LiveSearchBox from "../../components/LiveSearchBox";
 import Pagination from "../../components/Pagination";
-import SearchBox from "../../components/SearchBox";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
@@ -70,14 +70,6 @@ export default function PartnersList() {
     setQ(value);
   }
 
-  // SearchByBar's "Search by <column>" now hits the server (via q/qField)
-  // instead of only filtering whatever page of rows is already loaded.
-  function searchByColumn(columnKey, value) {
-    setPage(1);
-    setQField(columnKey);
-    setQ(value);
-  }
-
   async function onSaved() {
     setShowAdd(false);
     setEditPartner(null);
@@ -123,7 +115,14 @@ export default function PartnersList() {
         </select>
       </div>
 
-      <SearchBox placeholder="Search by name…" onSearch={submitSearch} initialValue={urlSearch.q} />
+      <LiveSearchBox
+        placeholder="Search by code or name…"
+        initialValue={urlSearch.q}
+        onSearch={submitSearch}
+        fetchSuggestions={(term) => partnersApi.list({ page: 1, limit: 8, type, q: term }).then((d) => d.items || [])}
+        renderSuggestion={(p) => `${p.partner_code ? `${p.partner_code} — ` : ""}${p.name}`}
+        onSelect={(p) => setEditPartner(p)}
+      />
 
       {error && <div className="bp-inline-error">{error}</div>}
 
@@ -131,7 +130,6 @@ export default function PartnersList() {
         <DataTableToolbar table={table} filename="partners" totalCount={partners.length} />
         <ColumnChooserButton table={table} columns={columns} />
       </div>
-      <SearchByBar table={table} columns={columns} onServerSearch={searchByColumn} serverColumn={qField} serverValue={q} />
 
       <div className="bp-table-wrap">
         <table className="bp-table">

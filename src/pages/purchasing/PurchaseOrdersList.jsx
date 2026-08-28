@@ -569,6 +569,22 @@ function PoDetailModal({ poId, onClose, onChanged }) {
     }
   }
 
+  async function downloadGrn() {
+    try {
+      await purchasingApi.downloadGrn(poId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not generate the GRN.");
+    }
+  }
+
+  async function downloadPaymentReceipt() {
+    try {
+      await purchasingApi.downloadPaymentReceipt(poId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not generate the payment receipt.");
+    }
+  }
+
   return (
     <Modal title={po ? `${po.po_number} — ${po.vendor_code ? `${po.vendor_code} — ` : ""}${po.vendor_name}` : "Purchase order"} onClose={onClose}>
       {loading ? (
@@ -637,6 +653,12 @@ function PoDetailModal({ poId, onClose, onChanged }) {
             )}
             {po.status === "received" && po.payment_status !== "paid" && (
               <button type="button" className="bp-btn-primary" onClick={() => setShowPay(true)} disabled={busy}>Mark as paid</button>
+            )}
+            {po.status === "received" && (
+              <button type="button" className="bp-btn-outline" onClick={downloadGrn} disabled={busy}>Download GRN</button>
+            )}
+            {po.payment_status === "paid" && (
+              <button type="button" className="bp-btn-outline" onClick={downloadPaymentReceipt} disabled={busy}>Download Payment Receipt</button>
             )}
           </div>
         </>
