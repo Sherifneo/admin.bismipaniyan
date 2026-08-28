@@ -3,6 +3,7 @@ import { stockTransfersApi, locationsApi, productsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
+import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
 import { formatDate, formatDateTime } from "../../utils/date";
 
@@ -22,6 +23,7 @@ export default function StockTransfersList() {
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -61,15 +63,13 @@ export default function StockTransfersList() {
     }
   }
 
-  async function cancel(transfer) {
-    if (!window.confirm(`Cancel transfer ${transfer.transfer_number}?`)) return;
-    setBusyId(transfer.transfer_id);
+  async function confirmCancel(reason) {
+    setBusyId(cancelTarget.transfer_id);
     setError("");
     try {
-      await stockTransfersApi.cancel(transfer.transfer_id);
+      await stockTransfersApi.cancel(cancelTarget.transfer_id, reason);
+      setCancelTarget(null);
       await load();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not cancel this transfer.");
     } finally {
       setBusyId(null);
     }
@@ -153,7 +153,7 @@ export default function StockTransfersList() {
                         <button type="button" className="bp-btn-sm" onClick={() => complete(t)} disabled={busyId === t.transfer_id}>
                           {busyId === t.transfer_id ? "…" : "Complete"}
                         </button>
-                        <button type="button" className="bp-btn-sm" onClick={() => cancel(t)} disabled={busyId === t.transfer_id}>Cancel</button>
+                        <button type="button" className="bp-btn-sm" onClick={() => setCancelTarget(t)} disabled={busyId === t.transfer_id}>Cancel</button>
                       </>
                     )}
                   </td>
@@ -165,6 +165,15 @@ export default function StockTransfersList() {
       </div>
 
       {showAdd && <TransferModal locations={locations} products={products} onClose={() => setShowAdd(false)} onDone={onSaved} />}
+      {cancelTarget && (
+        <ReasonConfirmModal
+          title="Cancel stock transfer"
+          message={`Cancel transfer ${cancelTarget.transfer_number}?`}
+          confirmLabel="Cancel transfer"
+          onClose={() => setCancelTarget(null)}
+          onConfirm={confirmCancel}
+        />
+      )}
     </div>
   );
 }

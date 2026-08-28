@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { productionApi, machinesApi, locationsApi, productsApi, bomsApi, costParametersApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
+import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell, ColumnChooserButton } from "../../components/DataTable";
@@ -496,6 +497,7 @@ function RunDetailModal({ runId, onClose, onChanged }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -523,6 +525,18 @@ function RunDetailModal({ runId, onClose, onChanged }) {
       await onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not update status.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmCancel(reason) {
+    setBusy(true);
+    try {
+      await productionApi.updateRun(runId, { status: "cancelled", reason });
+      setShowCancelConfirm(false);
+      await load();
+      await onChanged();
     } finally {
       setBusy(false);
     }
@@ -591,10 +605,20 @@ function RunDetailModal({ runId, onClose, onChanged }) {
               </button>
             )}
             {run.status !== "completed" && run.status !== "cancelled" && (
-              <button type="button" className="bp-btn-outline" onClick={() => setStatus("cancelled")} disabled={busy}>Cancel</button>
+              <button type="button" className="bp-btn-outline" onClick={() => setShowCancelConfirm(true)} disabled={busy}>Cancel</button>
             )}
           </div>
         </>
+      )}
+
+      {showCancelConfirm && (
+        <ReasonConfirmModal
+          title="Cancel production run"
+          message="This will mark the run as cancelled. This cannot be undone."
+          confirmLabel="Cancel run"
+          onClose={() => setShowCancelConfirm(false)}
+          onConfirm={confirmCancel}
+        />
       )}
 
       {showComplete && (

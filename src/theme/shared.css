@@ -435,6 +435,21 @@
   }
 }
 
+/* Purchase Order line-item rows: unlike a plain bp-form-row, this one can
+   hold 6 elements (item/qty/uom/cost/last-price-button/remove-button) —
+   allow wrapping instead of squeezing everything into one fixed line. */
+.bp-po-line-row {
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.bp-po-line-header {
+  margin-bottom: 2px;
+}
+.bp-po-line-uom {
+  padding-bottom: 9px;
+  text-align: center;
+}
+
 /* ---- misc ---- */
 .bp-inline-error {
   background: var(--bp-danger-bg);

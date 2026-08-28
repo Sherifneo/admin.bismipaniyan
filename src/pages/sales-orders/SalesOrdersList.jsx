@@ -4,6 +4,7 @@ import { salesOrdersApi, customersApi, locationsApi, productsApi, employeesApi }
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
+import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import CodeField, { useCodePreview } from "../../components/CodeField";
@@ -569,6 +570,7 @@ function SoDetailModal({ soId, onClose, onChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -601,14 +603,13 @@ function SoDetailModal({ soId, onClose, onChanged }) {
     }
   }
 
-  async function cancel() {
+  async function confirmCancel(reason) {
     setBusy(true);
     try {
-      await salesOrdersApi.cancel(soId);
+      await salesOrdersApi.cancel(soId, reason);
+      setShowCancelConfirm(false);
       await load();
       await onChanged();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not cancel this sale.");
     } finally {
       setBusy(false);
     }
@@ -678,13 +679,22 @@ function SoDetailModal({ soId, onClose, onChanged }) {
           <div className="bp-form-actions">
             <button type="button" className="bp-btn-outline" onClick={downloadInvoice}>Download invoice</button>
             {so.status === "draft" && (
-              <button type="button" className="bp-btn-outline" onClick={cancel} disabled={busy}>Cancel order</button>
+              <button type="button" className="bp-btn-outline" onClick={() => setShowCancelConfirm(true)} disabled={busy}>Cancel order</button>
             )}
             {so.status === "draft" && (
               <button type="button" className="bp-btn-primary" onClick={complete} disabled={busy}>Complete sale</button>
             )}
           </div>
         </>
+      )}
+      {showCancelConfirm && (
+        <ReasonConfirmModal
+          title="Cancel sales order"
+          message="This will mark the order as cancelled. This cannot be undone."
+          confirmLabel="Cancel order"
+          onClose={() => setShowCancelConfirm(false)}
+          onConfirm={confirmCancel}
+        />
       )}
     </Modal>
   );

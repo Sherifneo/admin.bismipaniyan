@@ -354,15 +354,25 @@ function PartnerStockModal({ partner, onClose }) {
         <div className="bp-td-muted">No consigned stock recorded yet.</div>
       ) : (
         <table className="bp-table">
-          <thead><tr><th>Product</th><th>Location</th><th>Qty on hand</th></tr></thead>
+          <thead><tr><th>Product</th><th>Location</th><th>Qty on hand</th><th></th></tr></thead>
           <tbody>
-            {stock.map((s) => (
-              <tr key={`${s.product_id}-${s.location_id}`}>
-                <td className="bp-td-strong">{s.name}</td>
-                <td className="bp-td-muted">{s.location_name}</td>
-                <td>{s.consignment_stock_qty} {s.uom}</td>
-              </tr>
-            ))}
+            {stock.map((s) => {
+              const qty = Number(s.consignment_stock_qty) || 0;
+              return (
+                <tr key={`${s.product_id}-${s.location_id || "none"}`}>
+                  <td className="bp-td-strong">{s.name}</td>
+                  <td className="bp-td-muted">{s.location_name || "—"}</td>
+                  <td>{qty} {s.uom}</td>
+                  <td>
+                    {qty === 0 && (
+                      <button type="button" className="bp-btn-sm" onClick={() => setShowReceive(true)}>
+                        Not yet received — Receive stock
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

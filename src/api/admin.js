@@ -28,6 +28,7 @@ export const productsApi = {
   create: (body) => POST("/api/admin/products", body),
   update: (id, body) => PUT(`/api/admin/products/${id}`, body),
   remove: (id) => DEL(`/api/admin/products/${id}`),
+  history: (id) => GET(`/api/admin/products/${id}/history`),
 };
 
 export const uomsApi = {
@@ -123,7 +124,7 @@ export const salesOrdersApi = {
   create: (body) => POST("/api/admin/sales-orders", body),
   update: (id, body) => PUT(`/api/admin/sales-orders/${id}`, body),
   complete: (id) => POST(`/api/admin/sales-orders/${id}/complete`),
-  cancel: (id) => POST(`/api/admin/sales-orders/${id}/cancel`),
+  cancel: (id, reason) => POST(`/api/admin/sales-orders/${id}/cancel`, { reason }),
   downloadInvoice: (id) => downloadFile(`/api/admin/sales-orders/${id}/invoice`),
 };
 
@@ -180,7 +181,7 @@ export const stockTransfersApi = {
   list: (params = {}) => GET(`/api/admin/stock-transfers?${new URLSearchParams(cleanParams(params))}`),
   create: (body) => POST("/api/admin/stock-transfers", body),
   complete: (id) => PUT(`/api/admin/stock-transfers/${id}/complete`),
-  cancel: (id) => PUT(`/api/admin/stock-transfers/${id}/cancel`),
+  cancel: (id, reason) => PUT(`/api/admin/stock-transfers/${id}/cancel`, { reason }),
 };
 
 export const productionApi = {
@@ -269,6 +270,7 @@ export const employeesApi = {
   create: (body) => POST("/api/admin/employees", body),
   update: (id, body) => PUT(`/api/admin/employees/${id}`, body),
   listSalaryPayments: (id) => GET(`/api/admin/employees/${id}/salary-payments`),
+  history: (id) => GET(`/api/admin/employees/${id}/history`),
 };
 
 export const salaryPaymentsApi = {

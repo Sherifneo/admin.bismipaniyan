@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { employeesApi, locationsApi, positionsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
+import EntityHistoryModal from "../../components/EntityHistoryModal";
 import CodeField, { useCodePreview } from "../../components/CodeField";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
@@ -20,6 +21,7 @@ export default function EmployeesList({ onManagePositions }) {
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
+  const [historyEmployee, setHistoryEmployee] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -110,6 +112,7 @@ export default function EmployeesList({ onManagePositions }) {
                   <td className="bp-td-muted">{e.is_active ? "Yes" : "No"}</td>
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(ev) => { ev.stopPropagation(); setEditEmployee(e); }}>Edit</button>
+                    <button type="button" className="bp-btn-sm" onClick={(ev) => { ev.stopPropagation(); setHistoryEmployee(e); }}>History</button>
                   </td>
                 </tr>
               ))
@@ -120,6 +123,14 @@ export default function EmployeesList({ onManagePositions }) {
 
       {showAdd && <EmployeeModal locations={locations} onClose={() => setShowAdd(false)} onDone={onSaved} onManagePositions={onManagePositions} />}
       {editEmployee && <EmployeeModal employee={editEmployee} locations={locations} onClose={() => setEditEmployee(null)} onDone={onSaved} onManagePositions={onManagePositions} />}
+      {historyEmployee && (
+        <EntityHistoryModal
+          title={`History — ${historyEmployee.full_name}`}
+          entityId={historyEmployee.employee_id}
+          fetchFn={employeesApi.history}
+          onClose={() => setHistoryEmployee(null)}
+        />
+      )}
     </div>
   );
 }

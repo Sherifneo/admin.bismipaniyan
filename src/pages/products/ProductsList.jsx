@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import ExportMenu from "../../components/ExportMenu";
 import Modal from "../../components/Modal";
+import EntityHistoryModal from "../../components/EntityHistoryModal";
 import Pagination from "../../components/Pagination";
 import SearchBox from "../../components/SearchBox";
 import CodeField, { useCodePreview } from "../../components/CodeField";
@@ -61,6 +62,7 @@ export default function ProductsList() {
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
+  const [historyProduct, setHistoryProduct] = useState(null);
 
   async function load() {
     if (tab !== "products") return;
@@ -248,6 +250,7 @@ export default function ProductsList() {
                   {table.isColumnVisible("updated_at") && <td className="bp-td-muted">{formatDateTime(p.updated_at) || "—"}</td>}
                   <td className="bp-td-actions">
                     <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setEditProduct(p); }}>Edit</button>
+                    <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); setHistoryProduct(p); }}>History</button>
                     {hasPermission("products.manage", "full_control") && (
                       p.is_active ? (
                         <button type="button" className="bp-btn-sm" onClick={(e) => { e.stopPropagation(); remove(p); }}>Deactivate</button>
@@ -267,6 +270,14 @@ export default function ProductsList() {
 
       {showAdd && <ProductModal onClose={() => setShowAdd(false)} onDone={onSaved} />}
       {editProduct && <ProductModal product={editProduct} onClose={() => setEditProduct(null)} onDone={onSaved} />}
+      {historyProduct && (
+        <EntityHistoryModal
+          title={`History — ${historyProduct.name}`}
+          entityId={historyProduct.product_id}
+          fetchFn={productsApi.history}
+          onClose={() => setHistoryProduct(null)}
+        />
+      )}
         </>
       )}
     </div>
@@ -443,7 +454,7 @@ function ProductModal({ product, onClose, onDone }) {
 
         <div className="bp-form-row">
           <div style={{ flex: 1 }}>
-            <label className="bp-field-label" htmlFor="pCost">Cost price (₹)</label>
+            <label className="bp-field-label" htmlFor="pCost">Cost price / Purchase price (₹)</label>
             <input id="pCost" type="number" min="0" step="0.01" className="bp-field-input" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required disabled={isEdit && locks.cost_price} />
           </div>
           <div style={{ flex: 1 }}>

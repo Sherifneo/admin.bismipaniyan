@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { purchasingApi, vendorsApi, locationsApi, productsApi, financialAccountsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
+import ReasonConfirmModal from "../../components/ReasonConfirmModal";
 import Pagination from "../../components/Pagination";
 import StatusBadge from "../../components/StatusBadge";
 import { useCodePreview } from "../../components/CodeField";
@@ -386,7 +387,7 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
   }
 
   return (
-    <Modal title="New purchase order" onClose={onClose}>
+    <Modal title="New purchase order" onClose={onClose} size="lg">
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
@@ -424,25 +425,39 @@ function NewPoModal({ vendors, locations, onClose, onDone }) {
         </div>
 
         <label className="bp-field-label">Line items</label>
+        <div className="bp-form-row bp-po-line-row bp-po-line-header" aria-hidden="true">
+          <div style={{ flex: 3 }}><span className="bp-td-muted">Item</span></div>
+          <div style={{ flex: 1 }}><span className="bp-td-muted">Qty</span></div>
+          <div style={{ flex: "0 0 60px" }}><span className="bp-td-muted">UOM</span></div>
+          <div style={{ flex: 1 }}><span className="bp-td-muted">Unit cost ₹</span></div>
+          <div style={{ flex: "0 0 auto" }} />
+          <div style={{ flex: "0 0 auto" }} />
+        </div>
         {items.map((it, idx) => {
           const selectedProduct = products.find((p) => p.product_id === it.product_id);
           return (
-            <div key={idx} className="bp-form-row" style={{ alignItems: "flex-end" }}>
-              <div style={{ flex: 2 }}>
+            <div key={idx} className="bp-form-row bp-po-line-row" style={{ alignItems: "flex-end" }}>
+              <div style={{ flex: 3, minWidth: 160 }}>
                 <select className="bp-field-input" value={it.product_id} onChange={(e) => selectProduct(idx, e.target.value)}>
                   <option value="">Select product…</option>
-                  {products.map((p) => <option key={p.product_id} value={p.product_id}>{p.name}</option>)}
+                  {products.map((p) => (
+                    <option key={p.product_id} value={p.product_id}>{p.product_code ? `${p.product_code} — ${p.name}` : p.name}</option>
+                  ))}
                 </select>
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 70 }}>
                 <input type="number" min="0" step="0.01" placeholder="Qty" className="bp-field-input" value={it.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} />
               </div>
-              <div className="bp-td-muted" style={{ width: 50, paddingBottom: 9 }}>{selectedProduct?.uom || ""}</div>
-              <div style={{ flex: 1 }}>
+              <div className="bp-td-muted bp-po-line-uom" style={{ flex: "0 0 60px" }}>{selectedProduct?.uom || "—"}</div>
+              <div style={{ flex: 1, minWidth: 90 }}>
                 <input type="number" min="0" step="0.01" placeholder="Unit cost ₹" className="bp-field-input" value={it.unit_cost} onChange={(e) => updateItem(idx, "unit_cost", e.target.value)} />
               </div>
-              <button type="button" className="bp-btn-sm" onClick={() => fetchLastPrice(idx, it.product_id)} disabled={!it.product_id}>Last PO Price</button>
-              <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
+              <div style={{ flex: "0 0 auto" }}>
+                <button type="button" className="bp-btn-sm" style={{ whiteSpace: "nowrap" }} onClick={() => fetchLastPrice(idx, it.product_id)} disabled={!it.product_id}>Last PO Price</button>
+              </div>
+              <div style={{ flex: "0 0 auto" }}>
+                <button type="button" className="bp-btn-outline" onClick={() => removeRow(idx)} disabled={items.length === 1}>✕</button>
+              </div>
             </div>
           );
         })}
@@ -509,6 +524,7 @@ function PoDetailModal({ poId, onClose, onChanged }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPay, setShowPay] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -536,6 +552,18 @@ function PoDetailModal({ poId, onClose, onChanged }) {
       await onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not update status.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmCancel(reason) {
+    setBusy(true);
+    try {
+      await purchasingApi.update(poId, { status: "cancelled", reason });
+      setShowCancelConfirm(false);
+      await load();
+      await onChanged();
     } finally {
       setBusy(false);
     }
@@ -605,7 +633,7 @@ function PoDetailModal({ poId, onClose, onChanged }) {
               <button type="button" className="bp-btn-primary" onClick={() => setStatus("received")} disabled={busy}>Mark received (adds to stock)</button>
             )}
             {po.status !== "received" && po.status !== "cancelled" && (
-              <button type="button" className="bp-btn-outline" onClick={() => setStatus("cancelled")} disabled={busy}>Cancel</button>
+              <button type="button" className="bp-btn-outline" onClick={() => setShowCancelConfirm(true)} disabled={busy}>Cancel</button>
             )}
             {po.status === "received" && po.payment_status !== "paid" && (
               <button type="button" className="bp-btn-primary" onClick={() => setShowPay(true)} disabled={busy}>Mark as paid</button>
@@ -618,6 +646,15 @@ function PoDetailModal({ poId, onClose, onChanged }) {
           po={po}
           onClose={() => setShowPay(false)}
           onDone={async () => { setShowPay(false); await load(); await onChanged(); }}
+        />
+      )}
+      {showCancelConfirm && (
+        <ReasonConfirmModal
+          title="Cancel purchase order"
+          message="This will mark the purchase order as cancelled. This cannot be undone."
+          confirmLabel="Cancel order"
+          onClose={() => setShowCancelConfirm(false)}
+          onConfirm={confirmCancel}
         />
       )}
     </Modal>
