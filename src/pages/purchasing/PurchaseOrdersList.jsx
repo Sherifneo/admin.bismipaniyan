@@ -586,7 +586,7 @@ function PoDetailModal({ poId, onClose, onChanged }) {
   }
 
   return (
-    <Modal title={po ? `${po.po_number} — ${po.vendor_code ? `${po.vendor_code} — ` : ""}${po.vendor_name}` : "Purchase order"} onClose={onClose}>
+    <Modal title={po ? `${po.po_number} — ${po.vendor_code ? `${po.vendor_code} — ` : ""}${po.vendor_name}` : "Purchase order"} onClose={onClose} size="lg">
       {loading ? (
         <div className="bp-td-muted">Loading…</div>
       ) : error ? (

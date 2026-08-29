@@ -818,6 +818,9 @@ function RunDetailModal({ runId, onClose, onChanged }) {
             {run.status === "planned" && (
               <button type="button" className="bp-btn-outline" onClick={() => setStatus("in_progress")} disabled={busy}>Start</button>
             )}
+            {run.status === "in_progress" && (
+              <button type="button" className="bp-btn-outline" onClick={() => setStatus("planned")} disabled={busy}>Back to Planned</button>
+            )}
             {(run.status === "planned" || run.status === "in_progress") && (
               <button
                 type="button" className="bp-btn-primary"

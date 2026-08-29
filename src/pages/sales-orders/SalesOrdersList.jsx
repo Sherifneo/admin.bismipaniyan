@@ -407,7 +407,7 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
   }
 
   return (
-    <Modal title="New sale" onClose={onClose}>
+    <Modal title="New sale" onClose={onClose} size="lg">
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
 
@@ -621,7 +621,7 @@ function SoDetailModal({ soId, onClose, onChanged }) {
   }
 
   return (
-    <Modal title={so ? `${so.so_number} — ${so.customer_name || so.walkin_name || "Walk-in"}` : "Sales order"} onClose={onClose}>
+    <Modal title={so ? `${so.so_number} — ${so.customer_name || so.walkin_name || "Walk-in"}` : "Sales order"} onClose={onClose} size="lg">
       {loading ? (
         <div className="bp-td-muted">Loading…</div>
       ) : error && !so ? (
