@@ -22,9 +22,14 @@ function fmtShortDate(iso) {
 // Chart palette — Bismi's own brand purple + amber (theme.css's
 // --bp-brand/--bp-amber), not nammahearth's literal plum/cream hex.
 // Kept as plain hex here (not CSS vars) since recharts reads colors as
-// JS props, not through CSS custom properties.
-const CHART_COLORS = { amber: "#e8940f", cream: "#f7ede0", purple: "#5b1f97" };
-const PIE_COLORS = [CHART_COLORS.amber, CHART_COLORS.cream];
+// JS props, not through CSS custom properties. Chart cards are white
+// (owner request 2026-08-29) — axis/grid/tick colors below are tuned
+// for a light card, not the earlier dark-purple one.
+const CHART_COLORS = { amber: "#e8940f", purple: "#5b1f97" };
+const PIE_COLORS = [CHART_COLORS.amber, CHART_COLORS.purple];
+const AXIS_TICK = { fill: "#6a625c", fontSize: 11 };
+const AXIS_LINE = { stroke: "rgba(43, 36, 32, 0.14)" };
+const GRID_STROKE = "rgba(43, 36, 32, 0.1)";
 
 function ChartTooltip({ active, payload, label, formatter }) {
   if (!active || !payload || !payload.length) return null;
@@ -167,16 +172,16 @@ export default function Dashboard() {
               <p className="bp-chart-card-sub">{PERIOD_OPTIONS.find((o) => o.value === period)?.label}, completed sales</p>
               {stats.sales_trend && stats.sales_trend.some((d) => d.sales > 0) ? (
                 <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={stats.sales_trend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <AreaChart data={stats.sales_trend} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="bpRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={CHART_COLORS.amber} stopOpacity={0.55} />
-                        <stop offset="100%" stopColor={CHART_COLORS.amber} stopOpacity={0.03} />
+                        <stop offset="0%" stopColor={CHART_COLORS.amber} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={CHART_COLORS.amber} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                    <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={{ fill: "rgba(247,237,224,0.75)", fontSize: 11 }} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tickLine={false} />
-                    <YAxis tick={{ fill: "rgba(247,237,224,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={54} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                    <XAxis dataKey="date" tickFormatter={fmtShortDate} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+                    <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={54} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
                     <Tooltip content={<ChartTooltip formatter={(p) => `${inr(p.payload.sales)} · ${p.payload.orders} order${p.payload.orders === 1 ? "" : "s"}`} />} labelFormatter={fmtShortDate} />
                     <Area type="monotone" dataKey="sales" stroke={CHART_COLORS.amber} strokeWidth={2} fill="url(#bpRevenueFill)" />
                   </AreaChart>
@@ -210,8 +215,8 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="bp-chart-legend-row">
-                    <span>🟠 Bank — {inr(stats.bank_balance)}</span>
-                    <span>⚪ Cash — {inr(stats.cash_balance)}</span>
+                    <span><span className="bp-chart-legend-dot" style={{ background: CHART_COLORS.amber }} />Bank — {inr(stats.bank_balance)}</span>
+                    <span><span className="bp-chart-legend-dot" style={{ background: CHART_COLORS.purple }} />Cash — {inr(stats.cash_balance)}</span>
                   </div>
                 </>
               ) : (
@@ -227,9 +232,9 @@ export default function Dashboard() {
               {stats.top_items && stats.top_items.length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={stats.top_items} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: "rgba(247,237,224,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
-                    <YAxis type="category" dataKey="item_name" tick={{ fill: "rgba(247,237,224,0.85)", fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} horizontal={false} />
+                    <XAxis type="number" tick={AXIS_TICK} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
+                    <YAxis type="category" dataKey="item_name" tick={{ fill: "#3a332e", fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
                     <Tooltip content={<ChartTooltip formatter={(p) => `${inr(p.payload.revenue)} · qty ${p.payload.quantity}`} />} />
                     <Bar dataKey="revenue" fill={CHART_COLORS.amber} radius={[0, 4, 4, 0]} />
                   </BarChart>
@@ -248,9 +253,9 @@ export default function Dashboard() {
                     data={["planned", "in_progress", "completed", "cancelled"].map((k) => ({ stage: PIPELINE_LABELS[k], count: stats.production_pipeline[k] || 0 }))}
                     margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                    <XAxis dataKey="stage" tick={{ fill: "rgba(247,237,224,0.75)", fontSize: 11 }} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tickLine={false} />
-                    <YAxis tick={{ fill: "rgba(247,237,224,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                    <XAxis dataKey="stage" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+                    <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip formatter={(p) => `${p.value} run${p.value === 1 ? "" : "s"}`} />} />
                     <Bar dataKey="count" fill={CHART_COLORS.amber} radius={[4, 4, 0, 0]} />
                   </BarChart>
