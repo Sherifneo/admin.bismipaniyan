@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v8394f5e4 — Show on-hand stock at From location on the New stock transfer form — 2026-08-29 (+03:00)
+
+**Version ID**: `8394f5e4b0e9d8ba4f741d7fc8fcbe7e92f37f18` (short: `8394f5e4`)
+**How to get this version**: `git checkout 8394f5e4b0e9d8ba4f741d7fc8fcbe7e92f37f18` (read-only) or `git show 8394f5e4b0e9d8ba4f741d7fc8fcbe7e92f37f18` (view the diff)
+
+**AS-IS (before):** `TransferModal` (Inventory → Transfers → New stock transfer) had no way to see how much of the selected product was actually on hand at the From location before typing a transfer quantity — the operator had to leave the modal, check the Stock tab separately, then come back.
+**TO-BE (after):** Selecting both a product and a From location now shows a live "On hand: N unit" line right under the From location dropdown, re-fetched (via the new backend `productId` filter on `GET /inventory`, see backend CHANGELOG) whenever either changes. Shows "Checking on-hand stock…" while loading, "On hand: 0" if the product has no stock at that location — never blocks submission, purely informational.
+
+---
+
 ## v90741fa7 — Widen Sales/Purchase Order line-item modals, add Back to Planned for Production Runs — 2026-08-29 (+03:00)
 
 **Version ID**: `90741fa7f6d5976686358f1e6c9c674ef0161075` (short: `90741fa7`)
