@@ -277,6 +277,14 @@
     left: 0;
     top: 0;
     height: 100vh;
+    /* On mobile, the drawer (.bp-sidebar-rail) is a separate fixed
+       element that slides in on its own — this outer wrapper no longer
+       needs to occupy layout width. Without this, it stayed 232px wide
+       (the desktop rail width) and sat as an invisible fixed block over
+       the header's left edge even while the drawer was closed off-screen,
+       silently intercepting taps on the hamburger menu button and
+       anything else underneath it. */
+    width: 0;
   }
 
   .bp-sidebar-rail {
