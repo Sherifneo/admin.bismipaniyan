@@ -8,6 +8,16 @@ inspect or restore any past version:
 - `git checkout <hash>` — check out that exact snapshot (read-only/detached HEAD; use `git checkout main` afterward to return to the tip).
 - `git log --oneline` — the short hashes below (e.g. `4b63b3ac`) match what Hostinger's deployments screen shows.
 
+---
+
+## v43164b39 — Mandatory account-confirmation step on every payment action — 2026-08-29
+
+**Version ID**: `43164b39cad6257b3cad1ee3a80501781e04f5cf` (short: `43164b39`)
+**How to get this version**: `git checkout 43164b39cad6257b3cad1ee3a80501781e04f5cf` (read-only) or `git show 43164b39cad6257b3cad1ee3a80501781e04f5cf` (view the diff)
+
+**AS-IS (before):** "Mark paid" on Salary Payments was a single click that posted straight to Cash Book with no account chosen — it silently landed on whichever account `company_settings.default_financial_account_id` pointed to (Petty Cash), with any admin holding `hr.manage` edit able to trigger it. Auditing the rest of the app found the identical gap on three more money-moving actions: completing a Sales Order (posts the sale's income entry), a Partner pay-out, and marking a Partner Settlement paid — all four silently defaulted to the company's default account with zero confirmation of which real account the money actually moved through.
+**TO-BE (after):** Salary payment is now owner/super_user only (the Pay button itself is hidden from other roles; the server rejects the request either way) and, like the other three actions, now opens a small confirm modal with an account picker (Cash or a specific bank account) pre-filled from the company default as a convenience only — nothing posts until the account is reviewed and Confirm is clicked. Backend: all four routes (`salary-payments.js` POST /, `sales-orders.js` POST /:id/complete, `partners.js` POST /:id/pay-out, `partners.js` PUT /settlements/:id/status) now reject a missing `financial_account_id` with a clear 400 instead of silently resolving to the default.
+
 Each entry states what the code/behavior was **AS-IS** (before) and what it became **TO-BE** (after).
 
 ---
