@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v588ea597 — Fix mobile navigation menu button not responding to taps — 2026-08-29 (+03:00)
+
+**Version ID**: `588ea597176bec5c090404b403a100eee2db44fe` (short: `588ea597`)
+**How to get this version**: `git checkout 588ea597176bec5c090404b403a100eee2db44fe` (read-only) or `git show 588ea597176bec5c090404b403a100eee2db44fe` (view the diff)
+
+**AS-IS (before):** On mobile (≤860px), `.bp-sidebar`'s base rule set `width: var(--bp-sidebar-width)` (232px) and was never given a mobile-specific width override — only `position`/`left`/`top`/`height` were overridden in the mobile media query. The actual sliding drawer (`.bp-sidebar-rail`) is a separate fixed element that correctly translated off-screen when closed, but its parent `.bp-sidebar` stayed a `position: fixed`, full-height, 232px-wide, `z-index: 20` invisible block pinned to the top-left of the viewport at all times — sitting directly over the header's hamburger menu button and swallowing every tap in that region, so the mobile nav appeared completely unresponsive.
+**TO-BE (after):** Added `width: 0` to `.bp-sidebar`'s mobile media-query block. The outer wrapper no longer occupies any layout width when closed, so it can't shadow-block taps on the header underneath it; the drawer itself (`.bp-sidebar-rail`) is unaffected since it already carries its own fixed width independent of its parent.
+
+---
+
 ## vb03128be — Widen New Run modal, add Run ID column and Delete action, new Transactions tab for Production Runs — 2026-08-29 00:38 (+03:00)
 
 **Version ID**: `b03128be279f3b5b0bfb9e09c0877541b91097ef` (short: `b03128be`)
