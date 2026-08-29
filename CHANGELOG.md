@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vb83bf8a8 — Fix mobile nav taps not registering, remove Business theme — 2026-08-29 (+03:00)
+
+**Version ID**: `b83bf8a8d4ca9f0d75b9566056c9ac31266b189e` (short: `b83bf8a8`)
+**How to get this version**: `git checkout b83bf8a8d4ca9f0d75b9566056c9ac31266b189e` (read-only) or `git show b83bf8a8d4ca9f0d75b9566056c9ac31266b189e` (view the diff)
+
+**AS-IS (before):** After the previous fix (v588ea597) made the hamburger button tappable, the drawer itself opened but nothing inside it responded to taps — the whole mobile menu read as dead on real devices. `.bp-sidebar-rail` (the drawer element) had no explicit `height`, relying on its normal flex-child sizing which no longer applies once it's `position: fixed`, and combined `transform` + `backdrop-filter` + `transition` in a pattern known to cause iOS Safari to silently stop forwarding touch events to a fixed element's children after the first transition runs. Separately, on login the app was defaulting to the "Business" theme for the product owner's demo instead of System — because "Business" was still a selectable theme option that had been chosen once on that browser and stayed stored in `localStorage`; the code's actual default (no stored preference) was already "system," but the theme itself being selectable at all was no longer wanted.
+**TO-BE (after):** `.bp-sidebar-rail` now has an explicit `height: 100vh`/`bottom: 0`, `will-change: transform`, and `pointer-events` toggled off entirely while the drawer is closed (`pointer-events: none` on `.bp-sidebar:not(.is-open) .bp-sidebar-rail`) — both defend against the same class of stale-hit-testing bug. "Business" is fully removed as a theme choice: gone from `ProfilePage.jsx`'s theme picker, `ThemeContext.jsx` no longer accepts `"business"` as a valid stored value (falls back to `"system"` for any browser that already had it saved), and its dedicated palette/badge-radius CSS blocks in `theme.css` are deleted. System/Light/Dark are the only three themes now, for every user.
+
+---
+
 ## v588ea597 — Fix mobile navigation menu button not responding to taps — 2026-08-29 (+03:00)
 
 **Version ID**: `588ea597176bec5c090404b403a100eee2db44fe` (short: `588ea597`)
