@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vf8dc1bb9 — Fix real cause of dead mobile nav (overlay z-index), default Standard mode — 2026-08-29 (+03:00)
+
+**Version ID**: `f8dc1bb999167f48293b6378670bbf09f2cd3c54` (short: `f8dc1bb9`)
+**How to get this version**: `git checkout f8dc1bb999167f48293b6378670bbf09f2cd3c54` (read-only) or `git show f8dc1bb999167f48293b6378670bbf09f2cd3c54` (view the diff)
+
+**AS-IS (before):** The previous fix (vb83bf8a8) didn't resolve the dead mobile menu because it targeted the wrong layer — the actual cause was a z-index stacking bug. `.bp-sidebar`'s base rule sets `z-index: 20`, and the mobile media query only ever overrode `position`/`left`/`top`/`height`/`width` on it, never `z-index`. Because `.bp-sidebar` is `position: fixed`, it creates its own stacking context — everything inside it, including `.bp-sidebar-rail`'s own `z-index: 200`, is capped at that context's level (20) relative to siblings outside it. `.bp-sidebar-overlay` is rendered as a sibling of `.bp-sidebar`, not a child, at `z-index: 190` — well above 20 — so on mobile the overlay sat directly on top of the entire open drawer. The drawer was visibly open and rendering correctly (as the screenshot showed), but every tap on a module row or nav link was actually landing on the invisible overlay above it, which explains why the whole menu read as completely dead. Separately, Design mode ("Liquid Glass" vs "Standard") still defaulted to Glass for any browser with no saved preference — the purple/blurred look kept appearing for the product-owner demo instead of the flat Standard look, even though System (the theme) was already correctly defaulting.
+**TO-BE (after):** `.bp-sidebar`'s mobile block now sets `z-index: 205`, clearing it above `.bp-sidebar-overlay`'s 190 so the drawer's own stacking context is no longer trapped underneath it — every tap now reaches the actual button/link. `ModeContext.jsx`'s default flipped: any browser with no `bp_admin_mode` stored now gets `"standard"` (flat, no blur) instead of `"glass"` — combined with System already being the default theme, a fresh login now shows the intended flat/System look out of the box.
+
+---
+
 ## vb83bf8a8 — Fix mobile nav taps not registering, remove Business theme — 2026-08-29 (+03:00)
 
 **Version ID**: `b83bf8a8d4ca9f0d75b9566056c9ac31266b189e` (short: `b83bf8a8`)
