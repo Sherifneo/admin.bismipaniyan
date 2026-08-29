@@ -93,15 +93,19 @@
   --bp-shadow-md: 0 2px 8px rgba(20, 20, 24, 0.08);
   --bp-shadow-lg: 0 8px 24px rgba(20, 20, 24, 0.12);
 
-  /* Two-panel nav accent (Sidebar.jsx/SubmodulePanel.jsx) — always warm
-     amber/gold, deliberately independent of --bp-standard-accent (which
-     is blue in 2 of the 4 Standard themes). Every theme block below
-     redefines these three to a warm tone, never blue, per explicit
-     "no blue in the nav" requirement. -soft is a translucent version
-     for hover/active row backgrounds. */
-  --bp-nav-accent: var(--bp-amber);
-  --bp-nav-accent-text: var(--bp-brand-dark);
-  --bp-nav-accent-soft: rgba(232, 148, 15, 0.16);
+  /* Two-panel nav accent (Sidebar.jsx/SubmodulePanel.jsx) — the
+     highlight on whichever sidebar item is currently open. Neutral
+     light-gray-on-dark-text, per explicit owner direction (2026-08-29,
+     was previously warm amber) — deliberately independent of
+     --bp-standard-accent (blue in 2 of the 4 Standard themes) and never
+     blue, matching the pre-existing "no blue in the nav" rule. Glass
+     mode's rail is a dark translucent purple, so its own gray needs to
+     read as a light frosted chip against that dark ground rather than
+     the flat page-gray Standard mode uses on its white rail. -soft is a
+     translucent version for hover/active row backgrounds. */
+  --bp-nav-accent: #e2e5ea;
+  --bp-nav-accent-text: #23262b;
+  --bp-nav-accent-soft: rgba(255, 255, 255, 0.12);
 
   color-scheme: light;
 }
@@ -157,9 +161,9 @@
 
     --bp-brand-text: #c9a6f5;
 
-    --bp-nav-accent: var(--bp-amber);
-    --bp-nav-accent-text: #2a1500;
-    --bp-nav-accent-soft: rgba(232, 148, 15, 0.22);
+    --bp-nav-accent: #e2e5ea;
+    --bp-nav-accent-text: #23262b;
+    --bp-nav-accent-soft: rgba(255, 255, 255, 0.1);
 
     color-scheme: dark;
   }
@@ -215,9 +219,9 @@
 
   --bp-brand-text: #c9a6f5;
 
-  --bp-nav-accent: var(--bp-amber);
-  --bp-nav-accent-text: #2a1500;
-  --bp-nav-accent-soft: rgba(232, 148, 15, 0.22);
+  --bp-nav-accent: #e2e5ea;
+  --bp-nav-accent-text: #23262b;
+  --bp-nav-accent-soft: rgba(255, 255, 255, 0.1);
 
   color-scheme: dark;
 }
@@ -315,12 +319,13 @@
   --bp-warning: #c77800;
   --bp-warning-bg: #fdf1de;
 
-  /* Nav accent stays warm amber/gold even though this theme's general
-     --bp-standard-accent is iOS blue — the two-panel nav never uses
-     --bp-standard-accent, only this dedicated token. */
-  --bp-nav-accent: #c97e0b;
-  --bp-nav-accent-text: #3a2400;
-  --bp-nav-accent-soft: rgba(201, 126, 11, 0.14);
+  /* Nav accent: neutral light gray, per explicit owner direction
+     (2026-08-29, was previously warm amber) — the two-panel nav never
+     uses --bp-standard-accent (iOS blue in this theme), only this
+     dedicated token. */
+  --bp-nav-accent: #e9ebef;
+  --bp-nav-accent-text: #1c1c2e;
+  --bp-nav-accent-soft: rgba(28, 28, 46, 0.06);
 }
 
 /* ---- Standard + System + dark OS preference: pure black, bold white
@@ -361,9 +366,9 @@
     --bp-warning: #ffc14d;
     --bp-warning-bg: rgba(255, 193, 77, 0.16);
 
-    --bp-nav-accent: #d99123;
-    --bp-nav-accent-text: #1a1200;
-    --bp-nav-accent-soft: rgba(217, 145, 35, 0.2);
+    --bp-nav-accent: #3a3a3d;
+    --bp-nav-accent-text: #ffffff;
+    --bp-nav-accent-soft: rgba(255, 255, 255, 0.1);
   }
 
   :root[data-mode="standard"][data-theme="system"] .bp-rail-link,
@@ -402,9 +407,9 @@
   --bp-standard-accent-dark: #333b45;
   --bp-standard-accent-text: #ffffff;
 
-  --bp-nav-accent: #c97e0b;
-  --bp-nav-accent-text: #3a2400;
-  --bp-nav-accent-soft: rgba(201, 126, 11, 0.14);
+  --bp-nav-accent: #e9ebef;
+  --bp-nav-accent-text: #17181b;
+  --bp-nav-accent-soft: rgba(23, 24, 27, 0.06);
 }
 
 /* ---- Standard + Dark: Copilot-inspired, with exact colors specified by
@@ -438,9 +443,9 @@
   --bp-standard-accent-dark: #565064;
   --bp-standard-accent-text: #ffffff;
 
-  --bp-nav-accent: #d99123;
-  --bp-nav-accent-text: #1a1200;
-  --bp-nav-accent-soft: rgba(217, 145, 35, 0.18);
+  --bp-nav-accent: #4a4556;
+  --bp-nav-accent-text: #ffffff;
+  --bp-nav-accent-soft: rgba(255, 255, 255, 0.08);
 }
 
 /* Sidebar.css layers a purple gradient over --bp-sidebar-tint (Glass
