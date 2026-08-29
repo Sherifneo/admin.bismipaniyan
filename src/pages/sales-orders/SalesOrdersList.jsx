@@ -268,11 +268,6 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
     }
   }
 
-  const [gstEnabled, setGstEnabled] = useState(false);
-  const [gstAmount, setGstAmount] = useState("");
-  const [gstPercent, setGstPercent] = useState("");
-  const [gstEditedField, setGstEditedField] = useState(null);
-
   useEffect(() => {
     productsApi.list({ limit: 500, itemKind: "finished_good" }).then((d) => setProducts(d.items || [])).catch(() => {});
   }, []);
@@ -324,16 +319,7 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
     liveDiscountAmount = subtotal * ((Number(discountPercent) || 0) / 100);
   }
   const subtotalAfterDiscount = subtotal - liveDiscountAmount;
-
-  let liveGstAmount = 0;
-  if (gstEnabled) {
-    if (gstEditedField === "amount") {
-      liveGstAmount = Number(gstAmount) || 0;
-    } else if (gstEditedField === "percent") {
-      liveGstAmount = subtotalAfterDiscount * ((Number(gstPercent) || 0) / 100);
-    }
-  }
-  const liveTotal = subtotalAfterDiscount + liveGstAmount;
+  const liveTotal = subtotalAfterDiscount;
 
   function onDiscountAmountChange(v) {
     setDiscountAmount(v);
@@ -345,17 +331,6 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
     setDiscountEditedField(v === "" ? null : "percent");
     if (v !== "") setDiscountAmount(String(Math.round(subtotal * (Number(v) / 100) * 100) / 100));
   }
-  function onGstAmountChange(v) {
-    setGstAmount(v);
-    setGstEditedField(v === "" ? null : "amount");
-    if (v !== "") setGstPercent(subtotalAfterDiscount > 0 ? String(Math.round((Number(v) / subtotalAfterDiscount) * 100 * 100) / 100) : "0");
-  }
-  function onGstPercentChange(v) {
-    setGstPercent(v);
-    setGstEditedField(v === "" ? null : "percent");
-    if (v !== "") setGstAmount(String(Math.round(subtotalAfterDiscount * (Number(v) / 100) * 100) / 100));
-  }
-
   async function submit(e) {
     e.preventDefault();
     if (!locationId) {
@@ -379,10 +354,6 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
       setError("Add at least one complete line item.");
       return;
     }
-    if (gstEnabled && !gstEditedField) {
-      setError("Enter a GST percent or a GST amount.");
-      return;
-    }
     setSubmitting(true);
     setError("");
     try {
@@ -393,9 +364,6 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
         notes: notes || undefined,
         sales_responsible_employee_id: salesResponsibleId,
         items: cleanItems.map((it) => ({ product_id: it.product_id, quantity: Number(it.quantity), unit_price: Number(it.unit_price) })),
-        gst_enabled: gstEnabled,
-        gst_percent: gstEnabled && gstEditedField === "percent" ? Number(gstPercent) : undefined,
-        gst_amount: gstEnabled && gstEditedField === "amount" ? Number(gstAmount) : undefined,
         discount_percent: discountEditedField === "percent" ? Number(discountPercent) : undefined,
         discount_amount: discountEditedField === "amount" ? Number(discountAmount) : undefined,
       });
@@ -508,36 +476,10 @@ function NewSoModal({ customers, locations, employees, onClose, onDone }) {
           </div>
         )}
 
-        <label className="bp-field-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={gstEnabled}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setGstEnabled(checked);
-              if (!checked) { setGstAmount(""); setGstPercent(""); setGstEditedField(null); }
-            }}
-          />
-          Apply GST
-        </label>
-        {gstEnabled && (
-          <div className="bp-form-row">
-            <div style={{ flex: 1 }}>
-              <input type="number" min="0" step="0.01" placeholder="GST ₹" className="bp-field-input" value={gstAmount} onChange={(e) => onGstAmountChange(e.target.value)} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <input type="number" min="0" max="100" step="0.01" placeholder="GST %" className="bp-field-input" value={gstPercent} onChange={(e) => onGstPercentChange(e.target.value)} />
-            </div>
-          </div>
-        )}
-
         <div className="bp-settlement-calc">
           <div className="bp-settlement-calc-row"><span>Subtotal</span><span>{inr(subtotal)}</span></div>
           {liveDiscountAmount > 0 && (
             <div className="bp-settlement-calc-row"><span>Discount</span><span>−{inr(liveDiscountAmount)}</span></div>
-          )}
-          {gstEnabled && liveGstAmount > 0 && (
-            <div className="bp-settlement-calc-row"><span>GST</span><span>+{inr(liveGstAmount)}</span></div>
           )}
           <div className="bp-settlement-calc-row bp-settlement-calc-total"><span>Total</span><span>{inr(liveTotal)}</span></div>
         </div>
