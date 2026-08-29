@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v1a4fbfe7 — Change dashboard chart cards from dark purple to white — 2026-08-29 (+03:00)
+
+**Version ID**: `1a4fbfe7ecdcd9da1a3426d9b89b58b778f3fe9c` (short: `1a4fbfe7`)
+**How to get this version**: `git checkout 1a4fbfe7ecdcd9da1a3426d9b89b58b778f3fe9c` (read-only) or `git show 1a4fbfe7ecdcd9da1a3426d9b89b58b778f3fe9c` (view the diff)
+
+**AS-IS (before):** The 4 dashboard chart cards (Revenue trend, Cash vs Bank, Top products, Production pipeline) used a fixed dark-purple gradient background — the Cash-vs-Bank pie's "Cash" slice color (a cream tone) was nearly invisible against that dark card, and the Revenue trend chart's largest Y-axis label ("60k") crowded the card's right edge.
+**TO-BE (after):** All 4 chart cards now use a white surface with a thin brand-purple top rule, matching the rest of the app's light card style. Every axis/grid/tick color and the pie's slice colors were re-tuned for legibility on white (Cash's slice is now brand purple instead of the old barely-visible cream, clearly distinct from Bank's amber). Widened the Revenue trend chart's right margin so its axis label no longer crowds the edge.
+
+---
+
 ## vf2ff1bfa — Add premium dashboard: revenue trend, cash vs bank, top products, production pipeline charts — 2026-08-29 (+03:00)
 
 **Version ID**: `f2ff1bfae9549385a02cade89198c358a73c0960` (short: `f2ff1bfa`)
