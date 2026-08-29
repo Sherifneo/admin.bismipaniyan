@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { stockTransfersApi, locationsApi } from "../../api/admin";
+import { stockTransfersApi, locationsApi, inventoryApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
@@ -186,6 +186,35 @@ function TransferModal({ locations, onClose, onDone }) {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [productUom, setProductUom] = useState("");
+  const [onHand, setOnHand] = useState(null);
+  const [onHandLoading, setOnHandLoading] = useState(false);
+
+  // On-hand at the FROM location, so the operator can see what's
+  // actually available before typing a transfer quantity — re-fetched
+  // whenever either the product or the from-location changes. Bismi-
+  // owned stock only (inventoryApi.list's stock_qty), matching what a
+  // transfer of Bismi's own stock actually draws down.
+  useEffect(() => {
+    if (!productId || !fromLocationId) {
+      setOnHand(null);
+      return;
+    }
+    let cancelled = false;
+    setOnHandLoading(true);
+    inventoryApi.list({ productId, locationId: fromLocationId, limit: 1 })
+      .then((data) => {
+        if (cancelled) return;
+        setOnHand(data.items?.[0]?.stock_qty ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setOnHand(null);
+      })
+      .finally(() => {
+        if (!cancelled) setOnHandLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [productId, fromLocationId]);
 
   async function submit(e) {
     e.preventDefault();
@@ -229,7 +258,7 @@ function TransferModal({ locations, onClose, onDone }) {
         <ProductPicker
           id="stProduct"
           value={productId}
-          onChange={(id) => setProductId(id)}
+          onChange={(id, product) => { setProductId(id); setProductUom(product?.uom || ""); }}
           placeholder="Search by code or name…"
           required
         />
@@ -241,6 +270,11 @@ function TransferModal({ locations, onClose, onDone }) {
               <option value="">Select…</option>
               {locations.map((l) => <option key={l.location_id} value={l.location_id}>{l.name}</option>)}
             </select>
+            {productId && fromLocationId && (
+              <p className="bp-td-muted" style={{ margin: "4px 0 0", fontSize: 12.5 }}>
+                {onHandLoading ? "Checking on-hand stock…" : `On hand: ${onHand ?? 0}${productUom ? ` ${productUom}` : ""}`}
+              </p>
+            )}
           </div>
           <div style={{ flex: 1 }}>
             <label className="bp-field-label" htmlFor="stTo">To location</label>
