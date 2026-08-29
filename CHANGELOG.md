@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vba50e6dc — Add per-column search to Inventory Cost tables — 2026-08-29 (+03:00)
+
+**Version ID**: `ba50e6dcdc570a5dd752d736e76480f548d126b0` (short: `ba50e6dc`)
+**How to get this version**: `git checkout ba50e6dcdc570a5dd752d736e76480f548d126b0` (read-only) or `git show ba50e6dcdc570a5dd752d736e76480f548d126b0` (view the diff)
+
+**AS-IS (before):** The new Inventory Cost page (vc06494e9) shipped with plain `<table>`/`<th>` headers on both tables — no per-column search, breaking this app's own standing rule ("Every new list table needs search — no exceptions," admin-portal CLAUDE.md) that was missed on this page.
+**TO-BE (after):** Both tables (Current Product Cost, Production Cost) now use `useDataTable` + `ColumnHeader` + `ColumnChooserButton`, the same pattern every other list page in the app uses — each column header now has its own filter control, matching Stock/Transactions/every other table.
+
+---
+
 ## vc06494e9 — Add Inventory → Cost submodule (read-only current cost + production cost history) — 2026-08-29 (+03:00)
 
 **Version ID**: `c06494e91ecb0c2de1226399ac3ffec5c97df09d` (short: `c06494e9`)
