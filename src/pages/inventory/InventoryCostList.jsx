@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { formatDate } from "../../utils/date";
 import ExportMenu from "../../components/ExportMenu";
 import ProductPicker from "../../components/ProductPicker";
+import { useDataTable, ColumnHeader, ColumnChooserButton } from "../../components/DataTable";
 import { RunDetailModal } from "../production/ProductionRunsList";
 
 function inr(n) {
@@ -98,6 +99,29 @@ export default function InventoryCostList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runProductId, from, to]);
 
+  const productColumns = [
+    { key: "name", label: "Product", accessor: (r) => r.name },
+    { key: "product_code", label: "Code", accessor: (r) => r.product_code || "" },
+    { key: "item_kind", label: "Type", accessor: (r) => ITEM_KIND_LABELS[r.item_kind] || r.item_kind },
+    { key: "uom", label: "UOM", accessor: (r) => r.uom },
+    { key: "current_unit_cost", label: "Current Unit Cost", accessor: (r) => r.current_unit_cost, filter: "number" },
+    { key: "cost_source", label: "Source", accessor: (r) => r.cost_source },
+  ];
+  const productTable = useDataTable({ rows: products, columns: productColumns, rowKey: (r) => r.product_id });
+
+  const runColumns = [
+    { key: "run_number", label: "Run ID", accessor: (r) => r.run_number || "" },
+    { key: "run_date", label: "Date", accessor: (r) => formatDate(r.run_date) },
+    { key: "product_name", label: "Product", accessor: (r) => r.product_name },
+    { key: "actual_quantity", label: "Actual Qty", accessor: (r) => r.actual_quantity, filter: "number" },
+    { key: "material_cost", label: "Material", accessor: (r) => r.material_cost, filter: "number" },
+    { key: "labour_cost", label: "Labour", accessor: (r) => r.labour_cost, filter: "number" },
+    { key: "overhead_cost", label: "Overhead", accessor: (r) => r.overhead_cost, filter: "number" },
+    { key: "total_cost", label: "Total Cost", accessor: (r) => r.total_cost, filter: "number" },
+    { key: "cost_per_unit", label: "Cost/Unit", accessor: (r) => r.cost_per_unit, filter: "number" },
+  ];
+  const runTable = useDataTable({ rows: runs, columns: runColumns, rowKey: (r) => r.run_id });
+
   return (
     <div>
       <h1 className="bp-page-title">Cost</h1>
@@ -128,32 +152,31 @@ export default function InventoryCostList() {
 
         {productsError && <div className="bp-inline-error">{productsError}</div>}
 
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          <ColumnChooserButton table={productTable} columns={productColumns} />
+        </div>
+
         <div className="bp-table-wrap">
           <table className="bp-table">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Code</th>
-                <th>Type</th>
-                <th>UOM</th>
-                <th>Current Unit Cost</th>
-                <th>Source</th>
+                {productColumns.map((c) => productTable.isColumnVisible(c.key) && <ColumnHeader key={c.key} table={productTable} column={c} />)}
               </tr>
             </thead>
             <tbody>
               {productsLoading ? (
-                <tr><td colSpan={6} className="bp-td-muted">Loading…</td></tr>
-              ) : products.length === 0 ? (
-                <tr><td colSpan={6} className="bp-td-muted">No products found.</td></tr>
+                <tr><td colSpan={productColumns.length} className="bp-table-empty">Loading…</td></tr>
+              ) : productTable.filteredRows.length === 0 ? (
+                <tr><td colSpan={productColumns.length} className="bp-table-empty">No products found.</td></tr>
               ) : (
-                products.map((p) => (
+                productTable.filteredRows.map((p) => (
                   <tr key={p.product_id}>
-                    <td>{p.name}</td>
-                    <td className="bp-td-muted">{p.product_code}</td>
-                    <td className="bp-td-muted">{ITEM_KIND_LABELS[p.item_kind] || p.item_kind}</td>
-                    <td className="bp-td-muted">{p.uom}</td>
-                    <td className="bp-td-strong">{inr(p.current_unit_cost)}</td>
-                    <td className="bp-td-muted">{p.cost_source}</td>
+                    {productTable.isColumnVisible("name") && <td>{p.name}</td>}
+                    {productTable.isColumnVisible("product_code") && <td className="bp-td-muted">{p.product_code}</td>}
+                    {productTable.isColumnVisible("item_kind") && <td className="bp-td-muted">{ITEM_KIND_LABELS[p.item_kind] || p.item_kind}</td>}
+                    {productTable.isColumnVisible("uom") && <td className="bp-td-muted">{p.uom}</td>}
+                    {productTable.isColumnVisible("current_unit_cost") && <td className="bp-td-strong">{inr(p.current_unit_cost)}</td>}
+                    {productTable.isColumnVisible("cost_source") && <td className="bp-td-muted">{p.cost_source}</td>}
                   </tr>
                 ))
               )}
@@ -185,39 +208,35 @@ export default function InventoryCostList() {
 
         {runsError && <div className="bp-inline-error">{runsError}</div>}
 
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          <ColumnChooserButton table={runTable} columns={runColumns} />
+        </div>
+
         <div className="bp-table-wrap">
           <table className="bp-table">
             <thead>
               <tr>
-                <th>Run ID</th>
-                <th>Date</th>
-                <th>Product</th>
-                <th>Actual Qty</th>
-                <th>Material</th>
-                <th>Labour</th>
-                <th>Overhead</th>
-                <th>Total Cost</th>
-                <th>Cost/Unit</th>
+                {runColumns.map((c) => runTable.isColumnVisible(c.key) && <ColumnHeader key={c.key} table={runTable} column={c} />)}
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {runsLoading ? (
-                <tr><td colSpan={10} className="bp-td-muted">Loading…</td></tr>
-              ) : runs.length === 0 ? (
-                <tr><td colSpan={10} className="bp-td-muted">No completed production runs found.</td></tr>
+                <tr><td colSpan={runColumns.length + 1} className="bp-table-empty">Loading…</td></tr>
+              ) : runTable.filteredRows.length === 0 ? (
+                <tr><td colSpan={runColumns.length + 1} className="bp-table-empty">No completed production runs found.</td></tr>
               ) : (
-                runs.map((r) => (
+                runTable.filteredRows.map((r) => (
                   <tr key={r.run_id}>
-                    <td>{r.run_number || "—"}</td>
-                    <td className="bp-td-muted">{formatDate(r.run_date)}</td>
-                    <td>{r.product_name}</td>
-                    <td className="bp-td-muted">{r.actual_quantity} {r.uom}</td>
-                    <td className="bp-td-muted">{inr(r.material_cost)}</td>
-                    <td className="bp-td-muted">{inr(r.labour_cost)}</td>
-                    <td className="bp-td-muted">{inr(r.overhead_cost)}</td>
-                    <td className="bp-td-strong">{inr(r.total_cost)}</td>
-                    <td className="bp-td-strong">{inr(r.cost_per_unit)}</td>
+                    {runTable.isColumnVisible("run_number") && <td>{r.run_number || "—"}</td>}
+                    {runTable.isColumnVisible("run_date") && <td className="bp-td-muted">{formatDate(r.run_date)}</td>}
+                    {runTable.isColumnVisible("product_name") && <td>{r.product_name}</td>}
+                    {runTable.isColumnVisible("actual_quantity") && <td className="bp-td-muted">{r.actual_quantity} {r.uom}</td>}
+                    {runTable.isColumnVisible("material_cost") && <td className="bp-td-muted">{inr(r.material_cost)}</td>}
+                    {runTable.isColumnVisible("labour_cost") && <td className="bp-td-muted">{inr(r.labour_cost)}</td>}
+                    {runTable.isColumnVisible("overhead_cost") && <td className="bp-td-muted">{inr(r.overhead_cost)}</td>}
+                    {runTable.isColumnVisible("total_cost") && <td className="bp-td-strong">{inr(r.total_cost)}</td>}
+                    {runTable.isColumnVisible("cost_per_unit") && <td className="bp-td-strong">{inr(r.cost_per_unit)}</td>}
                     <td><button type="button" className="bp-btn-sm" onClick={() => setViewRunId(r.run_id)}>View</button></td>
                   </tr>
                 ))
