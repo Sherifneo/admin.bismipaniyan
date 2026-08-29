@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## v90741fa7 — Widen Sales/Purchase Order line-item modals, add Back to Planned for Production Runs — 2026-08-29 (+03:00)
+
+**Version ID**: `90741fa7f6d5976686358f1e6c9c674ef0161075` (short: `90741fa7`)
+**How to get this version**: `git checkout 90741fa7f6d5976686358f1e6c9c674ef0161075` (read-only) or `git show 90741fa7f6d5976686358f1e6c9c674ef0161075` (view the diff)
+
+**AS-IS (before):** The "New sale" modal (Sales Orders) packed a product picker + quantity + unit price + delete button into one row inside the default ~420px modal width — the same crowding issue already fixed for BOM/Purchase Order-create/Production Run modals earlier, just never applied here. The Sales Order and Purchase Order detail modals' 4-column items tables (Product/Qty/Price/Total) had the same problem. Separately, Production Runs had no way to undo a "Start" — once a run moved from Planned to In Progress, the only actions available were Complete or Cancel; there was no way back to Planned short of cancelling (which is a permanent, reason-logged action).
+**TO-BE (after):** "New sale," the Sales Order detail modal, and the Purchase Order detail modal all now use `size="lg"`, matching the width already used elsewhere for line-item-heavy modals. Production Runs' detail view gained a "Back to Planned" button, shown only while a run is `in_progress`, reverting it to `planned` via the existing generic status-update route (no backend change needed — `PUT /:id` already handles any non-cancel/non-complete status as a plain field update). Delete remains restricted to Planned/Cancelled runs only, already enforced server-side and unaffected by this change.
+
+---
+
 ## vf8dc1bb9 — Fix real cause of dead mobile nav (overlay z-index), default Standard mode — 2026-08-29 (+03:00)
 
 **Version ID**: `f8dc1bb999167f48293b6378670bbf09f2cd3c54` (short: `f8dc1bb9`)
