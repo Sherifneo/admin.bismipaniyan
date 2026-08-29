@@ -10,7 +10,13 @@ inspect or restore any past version:
 
 ---
 
-## vcec002f8 — Make Pay Salary's amount field editable — 2026-08-29
+## v7ad8ddfc — Remove Apply GST from the New Sale form — 2026-08-29
+
+**Version ID**: `7ad8ddfc40573e1bd77733f55324768b70d25677` (short: `7ad8ddfc`)
+**How to get this version**: `git checkout 7ad8ddfc40573e1bd77733f55324768b70d25677` (read-only) or `git show 7ad8ddfc40573e1bd77733f55324768b70d25677` (view the diff)
+
+**AS-IS (before):** The New Sale form had an "Apply GST" checkbox + amount/percent fields that added a GST charge into the sale's total — shown on-screen and posted to Cash Book as income — even though the printed PDF invoice never charges GST (Bismi is Composition-scheme). A real order (SO-000021) showed ₹19,765 on-screen/in the books but ₹16,750 on the actual invoice — a ₹3,015 gap that was never real revenue.
+**TO-BE (after):** The GST checkbox, its two input fields, and its line in the live totals preview are removed from the New Sale form — the total now equals subtotal minus discount only, matching what the invoice actually shows. The Sales Order detail modal's GST display line is unchanged (still conditionally shown when `so.gst_enabled` is true) so an already-completed order that had GST applied before this change keeps showing its real recorded figures. Matches the corresponding backend change (see backend CHANGELOG).
 
 **Version ID**: `cec002f8c7fe20a2b6e45b5d5e8c8c685dbe24f9` (short: `cec002f8`)
 **How to get this version**: `git checkout cec002f8c7fe20a2b6e45b5d5e8c8c685dbe24f9` (read-only) or `git show cec002f8c7fe20a2b6e45b5d5e8c8c685dbe24f9` (view the diff)
