@@ -73,7 +73,7 @@ export default function SalaryPaymentsList() {
         </div>
       </div>
       <p className="bp-td-muted" style={{ margin: "-6px 0 14px" }}>
-        Every active employee for the selected month — mark paid to write one Cash Book expense entry automatically.
+        Every active employee for the selected month — Pay salary writes one Cash Book expense entry.
       </p>
 
       {error && <div className="bp-inline-error">{error}</div>}
@@ -144,8 +144,11 @@ export default function SalaryPaymentsList() {
 // auto-post to whatever the company default happens to be. The picker
 // pre-fills with company_settings.default_financial_account_id (today
 // Petty Cash) purely as a convenience default — nothing is written
-// until the owner reviews and clicks Confirm.
+// until the owner reviews and clicks Confirm. Amount defaults to the
+// employee's monthly_salary but stays editable (e.g. an advance
+// deduction or part-month pay), per explicit owner direction.
 function PaySalaryModal({ row, period, onClose, onDone }) {
+  const [amount, setAmount] = useState(row.monthly_salary);
   const [accounts, setAccounts] = useState([]);
   const [financialAccountId, setFinancialAccountId] = useState("");
   const [error, setError] = useState("");
@@ -165,6 +168,11 @@ function PaySalaryModal({ row, period, onClose, onDone }) {
 
   async function submit(e) {
     e.preventDefault();
+    const payAmount = Number(amount);
+    if (!Number.isFinite(payAmount) || payAmount <= 0) {
+      setError("Enter a valid amount.");
+      return;
+    }
     if (!financialAccountId) {
       setError("Select which account to pay from.");
       return;
@@ -175,7 +183,7 @@ function PaySalaryModal({ row, period, onClose, onDone }) {
       await salaryPaymentsApi.pay({
         employee_id: row.employee_id,
         pay_period: period,
-        amount: row.monthly_salary,
+        amount: payAmount,
         financial_account_id: financialAccountId,
       });
       onDone();
@@ -190,16 +198,21 @@ function PaySalaryModal({ row, period, onClose, onDone }) {
       <form onSubmit={submit} className="bp-form">
         {error && <div className="bp-inline-error">{error}</div>}
         <p className="bp-td-muted" style={{ fontSize: 12, marginTop: 0 }}>
-          Paying {inr(row.monthly_salary)} to {row.full_name} for {period}. This writes one Cash Book expense entry.
+          {row.full_name} for {period}. Monthly salary: {inr(row.monthly_salary)}.
         </p>
-        <label className="bp-field-label" htmlFor="paySalaryAccount">Pay from account</label>
-        <select id="paySalaryAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required autoFocus>
+
+        <label className="bp-field-label" htmlFor="paySalaryAmount">Amount (₹)</label>
+        <input id="paySalaryAmount" type="number" min="0.01" step="0.01" className="bp-field-input" value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus />
+
+        <label className="bp-field-label" htmlFor="paySalaryAccount" style={{ marginTop: 10 }}>Pay from account</label>
+        <select id="paySalaryAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required>
           {accounts.length === 0 && <option value="">Loading…</option>}
           {accounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
         </select>
         <div className="bp-td-muted" style={{ fontSize: 11, margin: "4px 0 0" }}>
           Where the money actually moved — Cash or a specific bank account.
         </div>
+
         <div className="bp-form-actions">
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
           <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Paying…" : "Confirm pay salary"}</button>
