@@ -10,6 +10,16 @@ inspect or restore any past version:
 
 ---
 
+## vcec002f8 — Make Pay Salary's amount field editable — 2026-08-29
+
+**Version ID**: `cec002f8c7fe20a2b6e45b5d5e8c8c685dbe24f9` (short: `cec002f8`)
+**How to get this version**: `git checkout cec002f8c7fe20a2b6e45b5d5e8c8c685dbe24f9` (read-only) or `git show cec002f8c7fe20a2b6e45b5d5e8c8c685dbe24f9` (view the diff)
+
+**AS-IS (before):** `PaySalaryModal` (added in the previous entry) always paid the employee's exact `monthly_salary` with no way to adjust it for that specific month.
+**TO-BE (after):** The modal now has an editable Amount field, pre-filled from `monthly_salary` — the owner can lower or raise it before confirming (e.g. an advance deduction or part-month pay) while the account-picker/confirm-step behavior is unchanged.
+
+---
+
 ## v43164b39 — Mandatory account-confirmation step on every payment action — 2026-08-29
 
 **Version ID**: `43164b39cad6257b3cad1ee3a80501781e04f5cf` (short: `43164b39`)
