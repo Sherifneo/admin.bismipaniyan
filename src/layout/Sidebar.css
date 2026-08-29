@@ -277,6 +277,17 @@
     left: 0;
     top: 0;
     height: 100vh;
+    /* The base rule's z-index: 20 was never overridden here — since
+       .bp-sidebar is `position: fixed` it creates its own stacking
+       context, which caps everything inside it (including the rail's
+       own z-index: 200 below) at that context's level relative to
+       siblings. .bp-sidebar-overlay is a SIBLING of .bp-sidebar at
+       z-index: 190 — well above .bp-sidebar's context of 20 — so the
+       overlay sat directly on top of the entire open drawer, silently
+       swallowing every tap meant for a module row or nav link
+       underneath it. This is the actual cause of the drawer opening but
+       nothing inside it responding to taps. */
+    z-index: 205;
     /* On mobile, the drawer (.bp-sidebar-rail) is a separate fixed
        element that slides in on its own — this outer wrapper no longer
        needs to occupy layout width. Without this, it stayed 232px wide
