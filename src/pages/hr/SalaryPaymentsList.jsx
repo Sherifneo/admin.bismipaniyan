@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { salaryPaymentsApi } from "../../api/admin";
+import { salaryPaymentsApi, financialAccountsApi, companySettingsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import StatusBadge from "../../components/StatusBadge";
+import Modal from "../../components/Modal";
 import { useDataTable, SearchByBar, ColumnHeader, DataTableToolbar, SelectAllHeaderCell, SelectRowCell } from "../../components/DataTable";
 
 function inr(n) {
@@ -20,11 +22,13 @@ function currentPeriod() {
 // this shows every active employee for the chosen month even if nothing
 // has been paid yet, so nobody is missed.
 export default function SalaryPaymentsList() {
+  const { admin } = useAuth();
+  const canPay = admin?.role === "owner" || admin?.role === "super_user";
   const [period, setPeriod] = useState(currentPeriod());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [payingId, setPayingId] = useState(null);
+  const [payTarget, setPayTarget] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -44,19 +48,6 @@ export default function SalaryPaymentsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
-  async function markPaid(row) {
-    if (!window.confirm(`Mark ${inr(row.monthly_salary)} paid to ${row.full_name} for ${period}? This writes one Cash Book expense entry.`)) return;
-    setPayingId(row.employee_id);
-    setError("");
-    try {
-      await salaryPaymentsApi.pay({ employee_id: row.employee_id, pay_period: period, amount: row.monthly_salary });
-      await load();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not record this payment.");
-    } finally {
-      setPayingId(null);
-    }
-  }
 
   const columns = [
     { key: "employee_code", label: "Code", accessor: (r) => r.employee_code || "" },
@@ -122,9 +113,9 @@ export default function SalaryPaymentsList() {
                   <td><StatusBadge status={r.salary_payment_id ? "paid" : "requested"} label={r.salary_payment_id ? "Paid" : "Unpaid"} /></td>
                   <td className="bp-td-muted">{r.paid_date || "—"}</td>
                   <td className="bp-td-actions">
-                    {!r.salary_payment_id && (
-                      <button type="button" className="bp-btn-sm" onClick={() => markPaid(r)} disabled={payingId === r.employee_id}>
-                        {payingId === r.employee_id ? "Paying…" : "Mark paid"}
+                    {!r.salary_payment_id && canPay && (
+                      <button type="button" className="bp-btn-sm" onClick={() => setPayTarget(r)}>
+                        Pay salary
                       </button>
                     )}
                   </td>
@@ -134,6 +125,86 @@ export default function SalaryPaymentsList() {
           </tbody>
         </table>
       </div>
+
+      {payTarget && (
+        <PaySalaryModal
+          row={payTarget}
+          period={period}
+          onClose={() => setPayTarget(null)}
+          onDone={async () => { setPayTarget(null); await load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// Owner/super_user only (enforced again server-side — see backend
+// salary-payments.js's POST /). Mirrors PurchaseOrdersList.jsx's
+// PayPoModal: an explicit account picker + confirm step, never an
+// auto-post to whatever the company default happens to be. The picker
+// pre-fills with company_settings.default_financial_account_id (today
+// Petty Cash) purely as a convenience default — nothing is written
+// until the owner reviews and clicks Confirm.
+function PaySalaryModal({ row, period, onClose, onDone }) {
+  const [accounts, setAccounts] = useState([]);
+  const [financialAccountId, setFinancialAccountId] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    Promise.all([financialAccountsApi.list(), companySettingsApi.get()])
+      .then(([accountsData, settings]) => {
+        const items = accountsData.items || [];
+        setAccounts(items);
+        const defaultId = settings?.default_financial_account_id;
+        const fallback = items.some((a) => a.financial_account_id === defaultId) ? defaultId : items[0]?.financial_account_id || "";
+        setFinancialAccountId((prev) => prev || fallback);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!financialAccountId) {
+      setError("Select which account to pay from.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await salaryPaymentsApi.pay({
+        employee_id: row.employee_id,
+        pay_period: period,
+        amount: row.monthly_salary,
+        financial_account_id: financialAccountId,
+      });
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not record this payment.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title={`Pay salary — ${row.full_name}`} onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: 0 }}>
+          Paying {inr(row.monthly_salary)} to {row.full_name} for {period}. This writes one Cash Book expense entry.
+        </p>
+        <label className="bp-field-label" htmlFor="paySalaryAccount">Pay from account</label>
+        <select id="paySalaryAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required autoFocus>
+          {accounts.length === 0 && <option value="">Loading…</option>}
+          {accounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
+        </select>
+        <div className="bp-td-muted" style={{ fontSize: 11, margin: "4px 0 0" }}>
+          Where the money actually moved — Cash or a specific bank account.
+        </div>
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Paying…" : "Confirm pay salary"}</button>
+        </div>
+      </form>
+    </Modal>
   );
 }

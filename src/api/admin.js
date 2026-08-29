@@ -100,7 +100,7 @@ export const partnersApi = {
   remove: (id) => DEL(`/api/admin/partners/${id}`),
   listSettlements: (partnerId, params = {}) => GET(`/api/admin/partners/${partnerId}/settlements?${new URLSearchParams(cleanParams(params))}`),
   createSettlement: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/settlements`, body),
-  updateSettlementStatus: (settlementId, status) => PUT(`/api/admin/partners/settlements/${settlementId}/status`, { status }),
+  updateSettlementStatus: (settlementId, status, financial_account_id) => PUT(`/api/admin/partners/settlements/${settlementId}/status`, { status, financial_account_id }),
   receiveStock: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/receive-stock`, body),
   createProduct: (partnerId, body) => POST(`/api/admin/partners/${partnerId}/products`, body),
   payableBalance: (partnerId) => GET(`/api/admin/partners/${partnerId}/payable-balance`),
@@ -130,7 +130,7 @@ export const salesOrdersApi = {
   get: (id) => GET(`/api/admin/sales-orders/${id}`),
   create: (body) => POST("/api/admin/sales-orders", body),
   update: (id, body) => PUT(`/api/admin/sales-orders/${id}`, body),
-  complete: (id) => POST(`/api/admin/sales-orders/${id}/complete`),
+  complete: (id, body) => POST(`/api/admin/sales-orders/${id}/complete`, body),
   cancel: (id, reason) => POST(`/api/admin/sales-orders/${id}/cancel`, { reason }),
   downloadInvoice: (id) => downloadFile(`/api/admin/sales-orders/${id}/invoice`),
 };

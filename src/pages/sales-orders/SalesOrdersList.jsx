@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { salesOrdersApi, customersApi, locationsApi, productsApi, employeesApi } from "../../api/admin";
+import { salesOrdersApi, customersApi, locationsApi, productsApi, employeesApi, financialAccountsApi, companySettingsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import Modal from "../../components/Modal";
@@ -568,6 +568,7 @@ function SoDetailModal({ soId, onClose, onChanged }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -587,10 +588,11 @@ function SoDetailModal({ soId, onClose, onChanged }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [soId]);
 
-  async function complete() {
+  async function complete(financialAccountId) {
     setBusy(true);
     try {
-      await salesOrdersApi.complete(soId);
+      await salesOrdersApi.complete(soId, { financial_account_id: financialAccountId });
+      setShowComplete(false);
       await load();
       await onChanged();
     } catch (err) {
@@ -679,7 +681,7 @@ function SoDetailModal({ soId, onClose, onChanged }) {
               <button type="button" className="bp-btn-outline" onClick={() => setShowCancelConfirm(true)} disabled={busy}>Cancel order</button>
             )}
             {so.status === "draft" && (
-              <button type="button" className="bp-btn-primary" onClick={complete} disabled={busy}>Complete sale</button>
+              <button type="button" className="bp-btn-primary" onClick={() => setShowComplete(true)} disabled={busy}>Complete sale</button>
             )}
           </div>
         </>
@@ -693,6 +695,67 @@ function SoDetailModal({ soId, onClose, onChanged }) {
           onConfirm={confirmCancel}
         />
       )}
+      {showComplete && so && (
+        <CompleteSaleModal
+          so={so}
+          submitting={busy}
+          onClose={() => setShowComplete(false)}
+          onConfirm={complete}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Completing a sale posts a real cashbook receipt (see backend
+// sales-orders.js's POST /:id/complete) — same mandatory account-picker
+// confirm step as Purchase Orders' PayPoModal, so the money is never
+// silently posted to whatever the company default account happens to
+// be. Pre-fills from company_settings.default_financial_account_id as
+// a convenience only — nothing posts until Confirm is clicked.
+function CompleteSaleModal({ so, submitting, onClose, onConfirm }) {
+  const [accounts, setAccounts] = useState([]);
+  const [financialAccountId, setFinancialAccountId] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    Promise.all([financialAccountsApi.list(), companySettingsApi.get()])
+      .then(([accountsData, settings]) => {
+        const items = accountsData.items || [];
+        setAccounts(items);
+        const defaultId = settings?.default_financial_account_id;
+        const fallback = items.some((a) => a.financial_account_id === defaultId) ? defaultId : items[0]?.financial_account_id || "";
+        setFinancialAccountId((prev) => prev || fallback);
+      })
+      .catch(() => {});
+  }, []);
+
+  function submit(e) {
+    e.preventDefault();
+    if (!financialAccountId) {
+      setError("Select which account received this sale.");
+      return;
+    }
+    onConfirm(financialAccountId);
+  }
+
+  return (
+    <Modal title={`Complete sale — ${so.so_number}`} onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: 0 }}>
+          Completing this order posts {inr(so.total)} as received. Choose where it landed.
+        </p>
+        <label className="bp-field-label" htmlFor="completeSoAccount">Received into account</label>
+        <select id="completeSoAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required autoFocus>
+          {accounts.length === 0 && <option value="">Loading…</option>}
+          {accounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
+        </select>
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Completing…" : "Confirm complete sale"}</button>
+        </div>
+      </form>
     </Modal>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { partnersApi, productsApi, locationsApi, inventoryApi } from "../../api/admin";
+import { partnersApi, productsApi, locationsApi, inventoryApi, financialAccountsApi, companySettingsApi } from "../../api/admin";
 import { ApiError } from "../../api/client";
 import Modal from "../../components/Modal";
 import ProductPicker from "../../components/ProductPicker";
@@ -534,6 +534,7 @@ function SettlementsModal({ partner, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [payTarget, setPayTarget] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -552,11 +553,6 @@ function SettlementsModal({ partner, onClose }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function markPaid(settlement) {
-    await partnersApi.updateSettlementStatus(settlement.settlement_id, "paid");
-    await load();
-  }
 
   const owedLabel = partner.type === "external_shop" ? "Shop owes Bismi" : "Bismi owes partner";
 
@@ -635,7 +631,7 @@ function SettlementsModal({ partner, onClose }) {
                   )}
                   <td className="bp-td-actions">
                     {s.status === "pending" && (
-                      <button type="button" className="bp-btn-sm" onClick={() => markPaid(s)}>Mark paid</button>
+                      <button type="button" className="bp-btn-sm" onClick={() => setPayTarget(s)}>Mark paid</button>
                     )}
                   </td>
                 </tr>
@@ -659,6 +655,73 @@ function SettlementsModal({ partner, onClose }) {
           onDone={async () => { setShowAdd(false); await load(); }}
         />
       )}
+      {payTarget && (
+        <MarkSettlementPaidModal
+          settlement={payTarget}
+          onClose={() => setPayTarget(null)}
+          onDone={async () => { setPayTarget(null); await load(); }}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Marking a settlement paid posts a real cashbook entry (income or
+// expense depending on partner type — see backend partners.js's PUT
+// /settlements/:settlementId/status) — same mandatory account-picker
+// confirm step as everywhere else money actually moves.
+function MarkSettlementPaidModal({ settlement, onClose, onDone }) {
+  const [accounts, setAccounts] = useState([]);
+  const [financialAccountId, setFinancialAccountId] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    Promise.all([financialAccountsApi.list(), companySettingsApi.get()])
+      .then(([accountsData, settings]) => {
+        const items = accountsData.items || [];
+        setAccounts(items);
+        const defaultId = settings?.default_financial_account_id;
+        const fallback = items.some((a) => a.financial_account_id === defaultId) ? defaultId : items[0]?.financial_account_id || "";
+        setFinancialAccountId((prev) => prev || fallback);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!financialAccountId) {
+      setError("Select which account this settlement is moving through.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await partnersApi.updateSettlementStatus(settlement.settlement_id, "paid", financialAccountId);
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not mark this settlement paid.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Mark settlement paid" onClose={onClose}>
+      <form onSubmit={submit} className="bp-form">
+        {error && <div className="bp-inline-error">{error}</div>}
+        <p className="bp-td-muted" style={{ fontSize: 12, marginTop: 0 }}>
+          Posts {inr(settlement.net_amount)} to Cash Book. Choose the account.
+        </p>
+        <label className="bp-field-label" htmlFor="settlePayAccount">Account</label>
+        <select id="settlePayAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required autoFocus>
+          {accounts.length === 0 && <option value="">Loading…</option>}
+          {accounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
+        </select>
+        <div className="bp-form-actions">
+          <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" className="bp-btn-primary" disabled={submitting}>{submitting ? "Saving…" : "Confirm mark paid"}</button>
+        </div>
+      </form>
     </Modal>
   );
 }
@@ -670,22 +733,35 @@ function SettlementsModal({ partner, onClose }) {
 function PayOutForm({ partner, onClose, onDone }) {
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState([]);
+  const [financialAccountId, setFinancialAccountId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    partnersApi.payableBalance(partner.partner_id)
-      .then((d) => setBalance(d.payable_balance))
+    Promise.all([partnersApi.payableBalance(partner.partner_id), financialAccountsApi.list(), companySettingsApi.get()])
+      .then(([balanceData, accountsData, settings]) => {
+        setBalance(balanceData.payable_balance);
+        const items = accountsData.items || [];
+        setAccounts(items);
+        const defaultId = settings?.default_financial_account_id;
+        const fallback = items.some((a) => a.financial_account_id === defaultId) ? defaultId : items[0]?.financial_account_id || "";
+        setFinancialAccountId((prev) => prev || fallback);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load the balance owed."))
       .finally(() => setLoading(false));
   }, [partner.partner_id]);
 
   async function submit(e) {
     e.preventDefault();
+    if (!financialAccountId) {
+      setError("Select which account this payout is coming from.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
-      await partnersApi.payOut(partner.partner_id, {});
+      await partnersApi.payOut(partner.partner_id, { financial_account_id: financialAccountId });
       onDone();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not record this payout.");
@@ -710,10 +786,15 @@ function PayOutForm({ partner, onClose, onDone }) {
           Commission is already taken from each sale — this pays out the full balance above. Cash/Bank decreases by
           this amount and the balance owed clears to zero; no additional income or expense is created.
         </p>
+        <label className="bp-field-label" htmlFor="payOutAccount">Pay from account</label>
+        <select id="payOutAccount" className="bp-field-input" value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)} required>
+          {accounts.length === 0 && <option value="">Loading…</option>}
+          {accounts.map((a) => <option key={a.financial_account_id} value={a.financial_account_id}>{a.name}</option>)}
+        </select>
         <div className="bp-form-actions">
           <button type="button" className="bp-btn-outline" onClick={onClose} disabled={submitting}>Cancel</button>
           <button type="submit" className="bp-btn-primary" disabled={submitting || loading || !balance}>
-            {submitting ? "Saving…" : "Pay out"}
+            {submitting ? "Saving…" : "Confirm pay out"}
           </button>
         </div>
       </form>
