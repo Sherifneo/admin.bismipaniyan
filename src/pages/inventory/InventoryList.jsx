@@ -108,7 +108,7 @@ export default function InventoryList() {
 
       <div className="bp-kpi-grid" style={{ marginBottom: 14 }}>
         <div className="bp-kpi-card">
-          <div className="bp-kpi-label">Total inventory value (filtered)</div>
+          <div className="bp-kpi-label">Inventory Value — Current Cost Estimate (filtered)</div>
           <div className="bp-kpi-value">{inr(totalValue)}</div>
         </div>
       </div>

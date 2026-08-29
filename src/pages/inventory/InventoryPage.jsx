@@ -2,11 +2,13 @@ import { useSearchParams } from "react-router-dom";
 import InventoryList from "./InventoryList";
 import StockTransfersList from "./StockTransfersList";
 import InventoryTransactionsList from "./InventoryTransactionsList";
+import InventoryCostList from "./InventoryCostList";
 
 const TABS = [
   { key: "stock", label: "Stock" },
   { key: "transfers", label: "Transfers" },
   { key: "transactions", label: "Transactions" },
+  { key: "cost", label: "Cost" },
 ];
 
 // One Inventory module, one nav entry — Stock and Transfers are tabs on
@@ -49,6 +51,7 @@ export default function InventoryPage() {
       {tab === "stock" && <InventoryList />}
       {tab === "transfers" && <StockTransfersList />}
       {tab === "transactions" && <InventoryTransactionsList />}
+      {tab === "cost" && <InventoryCostList />}
     </div>
   );
 }

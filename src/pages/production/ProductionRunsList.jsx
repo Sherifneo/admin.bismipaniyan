@@ -701,7 +701,7 @@ function NewRunModal({ locations, machines, onClose, onDone }) {
   );
 }
 
-function RunDetailModal({ runId, onClose, onChanged }) {
+export function RunDetailModal({ runId, onClose, onChanged }) {
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

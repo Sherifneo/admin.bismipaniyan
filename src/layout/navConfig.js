@@ -71,6 +71,7 @@ export const NAV_ITEMS = [
       { key: "inventory", label: "Inventory", path: "/inventory?tab=stock", requiredPermission: "inventory.manage" },
       { key: "stocktransfers", label: "Stock Transfers", path: "/inventory?tab=transfers", requiredPermission: "inventory.manage" },
       { key: "inventorytransactions", label: "Transactions", path: "/inventory?tab=transactions", requiredPermission: "inventory.manage" },
+      { key: "inventorycost", label: "Cost", path: "/inventory?tab=cost", requiredPermission: "inventory.manage" },
       { key: "stores", label: "Retail Stores", path: "/stores", requiredPermission: "stores.manage" },
     ],
   },

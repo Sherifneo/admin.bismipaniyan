@@ -83,6 +83,11 @@ export const inventoryApi = {
   recordMovement: (body) => POST("/api/admin/inventory/movements", body),
 };
 
+export const inventoryCostApi = {
+  products: (params = {}) => GET(`/api/admin/inventory-cost/products?${new URLSearchParams(cleanParams(params))}`),
+  productionRuns: (params = {}) => GET(`/api/admin/inventory-cost/production-runs?${new URLSearchParams(cleanParams(params))}`),
+};
+
 export const waOrdersApi = {
   list: (params = {}) => GET(`/api/admin/wa-orders?${new URLSearchParams(cleanParams(params))}`),
   updateStatus: (id, status) => PUT(`/api/admin/wa-orders/${id}`, { status }),
