@@ -291,11 +291,26 @@
     position: fixed;
     left: 0;
     top: 0;
+    bottom: 0;
     z-index: 200;
     width: min(86vw, 320px);
+    height: 100vh;
     transform: translateX(-100%);
     transition: transform 0.22s ease;
     box-shadow: var(--bp-shadow-lg);
+    /* When closed, translated fully off-screen — but without this the
+       element (and its click handlers) can still occupy hit-testing
+       space in some mobile browsers during/after the transform, and
+       promoting it to its own compositing layer avoids a known iOS
+       Safari bug where a backdrop-filter element combined with a
+       transform silently stops forwarding touch events to its
+       children after the transition runs once. */
+    will-change: transform;
+    pointer-events: auto;
+  }
+
+  .bp-sidebar:not(.is-open) .bp-sidebar-rail {
+    pointer-events: none;
   }
 
   .bp-sidebar.is-open .bp-sidebar-rail {

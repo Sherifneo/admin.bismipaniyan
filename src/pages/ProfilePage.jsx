@@ -43,18 +43,8 @@ export default function ProfilePage() {
 
 function PersonalizationCard() {
   const { preference, setTheme } = useTheme();
-  const { mode, setMode: setModeRaw } = useMode();
+  const { mode, setMode } = useMode();
   const { size, setSize } = useTextSize();
-
-  // "business" only has styling in Standard mode — stepping back to
-  // Glass while it's selected would leave it silently stored but
-  // invisible (falls back to looking like Light). Revert to "system" at
-  // the moment of leaving Standard so the picker never shows a selected
-  // theme that no longer does anything.
-  function setMode(next) {
-    if (next !== "standard" && preference === "business") setTheme("system");
-    setModeRaw(next);
-  }
 
   return (
     <div className="bp-card">
@@ -69,12 +59,6 @@ function PersonalizationCard() {
           <ThemeOption current={preference} value="system" label="System" icon="🖥️" onClick={setTheme} />
           <ThemeOption current={preference} value="light" label="Light" icon="☀️" onClick={setTheme} />
           <ThemeOption current={preference} value="dark" label="Dark" icon="🌙" onClick={setTheme} />
-          {/* Business is a Standard-mode-only look (white sidebar, blue
-              accent, pastel pill badges) — only shown once Standard is
-              selected below, since it has no Glass-mode styling. */}
-          {mode === "standard" && (
-            <ThemeOption current={preference} value="business" label="Business" icon="💼" onClick={setTheme} />
-          )}
         </div>
       </div>
 

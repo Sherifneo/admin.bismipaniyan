@@ -14,20 +14,14 @@ const STORAGE_KEY = "bp_admin_theme";
 // theme.css's [data-mode="standard"][data-theme="system"] block) rather
 // than only being a deferral to the OS.
 //
-// "business" is a 4th theme choice — a distinct light blue/white
-// business-tool look, Standard-mode-only by design (see theme.css's
-// [data-mode="standard"][data-theme="business"] block and
-// ProfilePage.jsx, which only shows this swatch while Mode=Standard).
-// Selecting it while Glass mode is active is a reachable combination
-// (nothing blocks setting data-theme="business" directly) but has no
-// Glass-specific styling of its own — theme.css's Glass dark-detection
-// selector list explicitly excludes it (see the ":not([data-theme=...])"
-// comment there) so it falls back to reading as Glass Light rather than
-// accidentally matching the dark branch.
+// "business" was a 4th theme choice (Standard-mode-only) that has been
+// removed from the picker — any browser that already has it stored
+// (from before this removal) falls back to "system" here rather than
+// being read back as a theme that no longer has a picker option.
 function getStoredPreference() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "dark" || stored === "system" || stored === "business") return stored;
+    if (stored === "light" || stored === "dark" || stored === "system") return stored;
   } catch {
     // localStorage unavailable (private mode, disabled) — fall back to system.
   }
