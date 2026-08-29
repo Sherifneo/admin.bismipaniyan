@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vc06494e9 — Add Inventory → Cost submodule (read-only current cost + production cost history) — 2026-08-29 (+03:00)
+
+**Version ID**: `c06494e91ecb0c2de1226399ac3ffec5c97df09d` (short: `c06494e9`)
+**How to get this version**: `git checkout c06494e91ecb0c2de1226399ac3ffec5c97df09d` (read-only) or `git show c06494e91ecb0c2de1226399ac3ffec5c97df09d` (view the diff)
+
+**AS-IS (before):** There was no single screen answering "what does this product currently cost" or "what did our completed production runs actually cost" — a Product's `cost_price` was visible on the Products screen, and a run's cost breakdown only on that run's own detail modal, with nothing tying the two together in one place. Inventory's Stock tab labeled its stock-value KPI plainly as "Total inventory value," which reads as a precise/formal figure rather than the simple quantity × current-cost estimate it actually is.
+**TO-BE (after):** New "Cost" tab on Inventory (`/inventory?tab=cost`), fully read-only per the owner's spec — no edit/create/delete control anywhere on the page, no new cost table, no FIFO/weighted-average/standard-costing. **Current Product Cost** table: every active product's `cost_price`, plus a plain-language "Source" (Latest Purchase for a raw material, Latest Production for a finished good, Partner Product for anything partner-owned) — filterable by type and a quick text search. **Production Cost** table: every *completed* production run's material/labour/overhead/total cost and cost-per-unit, straight from the existing frozen cost-line snapshot (never recalculated from today's rates — a past run's cost never moves), filterable by product and date range, with a View button opening the existing Production Run detail modal rather than a second cost-breakdown UI. Both tables export to CSV via the existing `ExportMenu`. Inventory Stock's KPI label changed to "Inventory Value — Current Cost Estimate" to make clear it's a management estimate, not a formal valuation.
+
+---
+
 ## v8394f5e4 — Show on-hand stock at From location on the New stock transfer form — 2026-08-29 (+03:00)
 
 **Version ID**: `8394f5e4b0e9d8ba4f741d7fc8fcbe7e92f37f18` (short: `8394f5e4`)
