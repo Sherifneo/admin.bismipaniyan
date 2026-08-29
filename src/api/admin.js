@@ -8,7 +8,7 @@ export const authApi = {
 };
 
 export const dashboardApi = {
-  getStats: (periodDays) => GET(`/api/admin/dashboard?period=${periodDays}`),
+  getStats: (periodDays = 14) => GET(`/api/admin/dashboard?period=${periodDays}`),
 };
 
 export const globalSearchApi = {

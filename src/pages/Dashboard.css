@@ -42,3 +42,122 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Today's KPI row + operations charts — deliberately higher-
+   contrast than the rest of this app's muted back-office chrome, since
+   this is the one section meant to read as a premium analytics panel
+   rather than a dense data-entry screen. Kept restrained (no
+   animation, no heavy gradient) per explicit owner direction —
+   "premium" here means clean typography/spacing/color, not motion. ---- */
+
+.bp-kpi-grid-featured {
+  margin-bottom: 14px;
+}
+
+.bp-kpi-featured {
+  background: linear-gradient(155deg, rgba(91, 31, 151, 0.14), rgba(232, 148, 15, 0.08)), var(--bp-glass-tint-strong);
+  border-color: rgba(232, 148, 15, 0.28);
+  padding-top: 16px;
+}
+
+.bp-kpi-icon {
+  display: block;
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.bp-kpi-featured .bp-kpi-value {
+  font-size: 23px;
+}
+
+.bp-dashboard-period-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.bp-dashboard-period-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bp-text-muted);
+}
+
+.bp-dashboard-period-select {
+  width: auto;
+  min-width: 140px;
+}
+
+.bp-dashboard-charts {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.bp-dashboard-charts-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .bp-dashboard-charts,
+  .bp-dashboard-charts-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Chart cards use Bismi's own brand purple + amber, fixed dark surface
+   regardless of the app's active Mode/Theme — charts read best on a
+   consistently dark ground, same reasoning nammahearth's own dark chart
+   cards follow (not restyled per light/dark theme, deliberately). */
+.bp-chart-card {
+  background: linear-gradient(165deg, #431671, #2a0f47);
+  border-radius: var(--bp-radius-lg);
+  padding: 18px 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bp-chart-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f7ede0;
+  margin: 0 0 4px;
+}
+
+.bp-chart-card-sub {
+  font-size: 11.5px;
+  color: rgba(247, 237, 224, 0.65);
+  margin: 0 0 14px;
+}
+
+.bp-chart-empty {
+  color: rgba(247, 237, 224, 0.65);
+  font-size: 13px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.bp-chart-legend-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgba(247, 237, 224, 0.75);
+  margin-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .bp-chart-card {
+    padding: 14px 14px;
+  }
+}
