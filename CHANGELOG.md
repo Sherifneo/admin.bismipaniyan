@@ -10,7 +10,17 @@ inspect or restore any past version:
 
 ---
 
-## v7ad8ddfc — Remove Apply GST from the New Sale form — 2026-08-29
+## ve48f197e — Restore Apply GST, hidden when company is Composition-scheme — 2026-08-29
+
+**Version ID**: `e48f197e238780f914c5933e5c7f19273def0dcf` (short: `e48f197e`)
+**How to get this version**: `git checkout e48f197e238780f914c5933e5c7f19273def0dcf` (read-only) or `git show e48f197e238780f914c5933e5c7f19273def0dcf` (view the diff)
+
+**AS-IS (before):** The previous entry (`7ad8ddfc`) deleted the Apply GST checkbox/fields from the New Sale form entirely — correct for Bismi, but it also removed the feature from the shared shell codebase reused across other client projects.
+**TO-BE (after):** The checkbox, its amount/percent fields, and its line in the live totals preview are restored — but only rendered when a new `gstAllowed` flag is true, fetched once via `companySettingsApi.get()` and set to `false` whenever `gst_registration_type` contains "composition". For Bismi this always resolves to hidden; a future client project that's Regular-registered gets the feature automatically, no separate toggle needed. Matches the corresponding backend change (see backend CHANGELOG, `a3b90466`).
+
+---
+
+## v7ad8ddfc — Remove Apply GST from the New Sale form — 2026-08-29 — SUPERSEDED by e48f197e above
 
 **Version ID**: `7ad8ddfc40573e1bd77733f55324768b70d25677` (short: `7ad8ddfc`)
 **How to get this version**: `git checkout 7ad8ddfc40573e1bd77733f55324768b70d25677` (read-only) or `git show 7ad8ddfc40573e1bd77733f55324768b70d25677` (view the diff)
