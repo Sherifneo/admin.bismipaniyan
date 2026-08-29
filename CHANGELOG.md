@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vf2ff1bfa — Add premium dashboard: revenue trend, cash vs bank, top products, production pipeline charts — 2026-08-29 (+03:00)
+
+**Version ID**: `f2ff1bfae9549385a02cade89198c358a73c0960` (short: `f2ff1bfa`)
+**How to get this version**: `git checkout f2ff1bfae9549385a02cade89198c358a73c0960` (read-only) or `git show f2ff1bfae9549385a02cade89198c358a73c0960` (view the diff)
+
+**AS-IS (before):** `Dashboard.jsx` was the plain early version — 5 flat KPI cards, Quick Actions, a Low Stock table, no charts. `recharts@3.10.1` was already an installed dependency but completely unused anywhere in the app.
+**TO-BE (after):** Modeled on nammahearth's own dashboard (visual reference), restyled entirely with Bismi's own brand tokens (purple/amber, not nammahearth's literal plum/cream hex): a new "today" KPI row (Today's Sales, Today's Purchases Received, Today's Production Completed, Today's Production Cost) with a subtle `bp-kpi-featured` accent treatment; a Revenue trend area chart and Top products bar chart, both driven by a new 7/14/30/90-day period selector; a Cash vs. Bank position donut and a Production Pipeline bar chart (Bismi's own equivalent of a shipping-pipeline chart — current Planned/In Progress/Completed/Cancelled run counts, since Bismi has no shipping-stage concept), both deliberately NOT affected by the period selector — live snapshots. Every number is backed by the new backend fields (see backend CHANGELOG) reconciling exactly with the existing P&L report and Financial Account balances. Fully read-only.
+
+---
+
 ## vd8458cd2 — Change sidebar active-item highlight from amber to light gray — 2026-08-29 (+03:00)
 
 **Version ID**: `d8458cd2e1e78248b60188dfa098838dcff8a7d6` (short: `d8458cd2`)
