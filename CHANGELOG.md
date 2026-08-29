@@ -12,6 +12,16 @@ Each entry states what the code/behavior was **AS-IS** (before) and what it beca
 
 ---
 
+## vd8458cd2 — Change sidebar active-item highlight from amber to light gray — 2026-08-29 (+03:00)
+
+**Version ID**: `d8458cd2e1e78248b60188dfa098838dcff8a7d6` (short: `d8458cd2`)
+**How to get this version**: `git checkout d8458cd2e1e78248b60188dfa098838dcff8a7d6` (read-only) or `git show d8458cd2e1e78248b60188dfa098838dcff8a7d6` (view the diff)
+
+**AS-IS (before):** The currently-open item in the main sidebar (and its flyout submenu) highlighted with a warm amber/orange background (`--bp-nav-accent`) in every theme — Glass Light/Dark and all three Standard themes (System, Light, Dark) plus their OS-dark variants.
+**TO-BE (after):** Every one of those 7 theme blocks now defines `--bp-nav-accent`/`--bp-nav-accent-text`/`--bp-nav-accent-soft` as a neutral light gray with dark text (or, on the two near-black sidebar variants — Standard+System's OS-dark mode and Standard+Dark — a slightly lighter neutral gray with white text, for contrast against that darker rail) instead of amber. Scoped deliberately narrow, per explicit confirmation: only the sidebar's own active-item tokens changed — the amber/orange accent used elsewhere in the app (tabs, buttons, other UI) is untouched.
+
+---
+
 ## vba50e6dc — Add per-column search to Inventory Cost tables — 2026-08-29 (+03:00)
 
 **Version ID**: `ba50e6dcdc570a5dd752d736e76480f548d126b0` (short: `ba50e6dc`)
